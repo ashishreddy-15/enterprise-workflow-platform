@@ -16,3 +16,7 @@ release.properties
 # OS & Logs
 .DS_Store
 *.log
+
+backend/audit-analytics-service/target
+backend/common-contracts/target
+backend/workflow-service/target

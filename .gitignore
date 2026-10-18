@@ -17,6 +17,6 @@ release.properties
 .DS_Store
 *.log
 
-backend/audit-analytics-service/target
-backend/common-contracts/target
-backend/workflow-service/target
+/backend/common-contracts/target/
+/backend/workflow-service/target/
+/backend/audit-analytics-service/target/

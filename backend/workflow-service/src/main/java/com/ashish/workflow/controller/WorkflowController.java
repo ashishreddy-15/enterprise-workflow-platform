@@ -40,8 +40,8 @@ public class WorkflowController {
             @RequestParam(required = false) String priority,
             @RequestParam(required = false) String requesterId) {
 
-        Specification<WorkflowInstance> spec = Specification
-                .where(WorkflowSpecifications.hasState(state))
+        Specification<WorkflowInstance> spec = Specification.<WorkflowInstance>unrestricted()
+                .and(WorkflowSpecifications.hasState(state))
                 .and(WorkflowSpecifications.hasPriority(priority))
                 .and(WorkflowSpecifications.requesterEquals(requesterId));
 

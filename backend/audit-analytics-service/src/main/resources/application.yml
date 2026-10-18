@@ -1,0 +1,27 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: audit-analytics-service
+
+  threads:
+    virtual:
+      enabled: true
+
+  mongodb:
+    uri: mongodb://ewp_admin:ewp_password@localhost:27017/audit_db?authSource=admin&uuidRepresentation=standard
+    uuid-representation: standard
+    auto-index-creation: true
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: audit-analytics-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      # Used by @RetryableTopic to publish failed messages to retry/DLT topics
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer

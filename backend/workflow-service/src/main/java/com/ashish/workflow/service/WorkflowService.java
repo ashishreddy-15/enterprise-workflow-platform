@@ -5,9 +5,9 @@ import com.ashish.workflow.domain.entity.OutboxEvent;
 import com.ashish.workflow.domain.entity.WorkflowInstance;
 import com.ashish.workflow.repository.OutboxRepository;
 import com.ashish.workflow.repository.WorkflowRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
 import java.util.Map;

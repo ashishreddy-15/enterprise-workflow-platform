@@ -24,7 +24,7 @@
         <module>template-service</module>
 <!--        <module>config-server</module>-->
 <!--        <module>discovery-server</module>-->
-<!--        <module>api-gateway</module>-->
+        <module>api-gateway</module>
         <module>workflow-service</module>
         <module>audit-analytics-service</module>
     </modules>

@@ -35,6 +35,8 @@ public class TaskService {
             String currentStepName,
             String actorScope,
             String requiredRole,
+            OffsetDateTime currentStepDueAt,
+            boolean slaBreached,
             OffsetDateTime updatedAt) {}
 
     public List<TaskInboxItem> getTasksForUser(UserContext caller) {
@@ -102,6 +104,8 @@ public class TaskService {
                         currentStep.stepName(),
                         scope,
                         currentStep.requiredRole(),
+                        workflow.getCurrentStepDueAt(),
+                        workflow.isSlaBreached(),
                         workflow.getUpdatedAt()));
             }
         }

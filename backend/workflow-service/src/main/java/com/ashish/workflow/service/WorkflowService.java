@@ -76,6 +76,7 @@ public class WorkflowService {
 
         // 2. Spawn initial generic WorkflowTask
         StepDefinitionDto initialStep = template.steps().get(template.initialState());
+        calculateAndApplySla(workflow, initialStep);
         if (initialStep != null && !initialStep.isTerminal()) {
             WorkflowTask initialTask = buildTaskFromStep(initialStep);
             workflow.addTask(initialTask);
@@ -252,6 +253,7 @@ public class WorkflowService {
 
         // Spawn next task if non-terminal
         StepDefinitionDto nextStepDef = snapshot.steps().get(newState);
+        calculateAndApplySla(workflow, nextStepDef);
         boolean isNextTerminal = nextStepDef == null
                 || nextStepDef.isTerminal()
                 || nextStepDef.transitions() == null
@@ -310,5 +312,14 @@ public class WorkflowService {
         task.setAssignedRole("ROLE".equalsIgnoreCase(step.actorScope()) ? step.requiredRole() : null);
         task.setStatus("PENDING");
         return task;
+    }
+
+    private void calculateAndApplySla(WorkflowInstance instance, StepDefinitionDto nextStep) {
+        instance.setSlaBreached(false);
+        if (nextStep != null && nextStep.slaHours() != null && nextStep.slaHours() > 0 && !nextStep.isTerminal()) {
+            instance.setCurrentStepDueAt(OffsetDateTime.now().plusHours(nextStep.slaHours()));
+        } else {
+            instance.setCurrentStepDueAt(null);
+        }
     }
 }

@@ -1,0 +1,30 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: template-service-route
+              uri: http://localhost:8083
+              predicates:
+                - Path=/templates/**
+
+            - id: workflow-service-route
+              uri: http://localhost:8081
+              predicates:
+                - Path=/workflows/**
+
+            - id: audit-analytics-service-route
+              uri: http://localhost:8082
+              predicates:
+                - Path=/analytics/**
+
+logging:
+  level:
+    com.ashish.workflow.gateway: DEBUG
+    org.springframework.cloud.gateway: INFO

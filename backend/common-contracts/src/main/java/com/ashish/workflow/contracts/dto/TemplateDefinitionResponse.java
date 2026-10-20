@@ -20,6 +20,7 @@ public record TemplateDefinitionResponse(
             String requiredRole, // Checked when actorScope == "ROLE"
             List<String> requiredPayloadKeys, // e.g. ["panCardUrl", "gstCertificateUrl"]
             boolean isTerminal, // true if workflow ends upon entering this state
+            Integer slaHours, // Nullable: null or 0 means no SLA deadline
             Map<String, String> transitions // Action -> Target State (e.g. "SUBMIT_DOCS" -> "PENDING_LEGAL")
             ) {}
 }

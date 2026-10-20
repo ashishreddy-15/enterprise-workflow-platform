@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,7 +25,7 @@ public class OutboxService {
     @Transactional
     public List<OutboxEvent> fetchPendingEventsWithLock() {
         log.debug("Fetching up to 50 pending outbox events with lock");
-        List<OutboxEvent> events = outboxRepository.findTop50PendingForUpdate();
+        List<OutboxEvent> events = outboxRepository.findPendingEventsForUpdate(PageRequest.of(0, 50));
         log.debug("Fetched {} pending outbox events", events.size());
         return events;
     }

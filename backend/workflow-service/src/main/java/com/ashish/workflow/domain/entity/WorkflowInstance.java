@@ -50,11 +50,33 @@ public class WorkflowInstance {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    @Column(name = "current_step_due_at")
+    private OffsetDateTime currentStepDueAt;
+
+    @Column(name = "sla_breached", nullable = false)
+    private boolean slaBreached = false;
+
     public WorkflowInstance() {}
 
     public void addTask(WorkflowTask task) {
         tasks.add(task);
         task.setWorkflowInstance(this);
+    }
+
+    public OffsetDateTime getCurrentStepDueAt() {
+        return currentStepDueAt;
+    }
+
+    public void setCurrentStepDueAt(OffsetDateTime currentStepDueAt) {
+        this.currentStepDueAt = currentStepDueAt;
+    }
+
+    public boolean isSlaBreached() {
+        return slaBreached;
+    }
+
+    public void setSlaBreached(boolean slaBreached) {
+        this.slaBreached = slaBreached;
     }
 
     public UUID getId() {

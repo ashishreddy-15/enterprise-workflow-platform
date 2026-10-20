@@ -80,3 +80,200 @@ X-User-Roles: ROLE_EMPLOYEE
 GET http://localhost:8081/api/v1/tasks/inbox
 X-User-Id: usr_rahul_finance
 X-User-Roles: ROLE_FINANCE_MANAGER
+
+### 1. Create a Blueprint in template-service via Gateway
+POST http://localhost:8080/templates/api/v1/templates
+Authorization: Bearer architect_admin:ROLE_WORKFLOW_ARCHITECT
+Content-Type: application/json
+
+{
+  "templateKey": "VENDOR_ONBOARDING_TEST",
+  "name": "Enterprise Vendor KYC & Legal Onboarding",
+  "description": "Requires requester KYC document upload followed by Legal verification",
+  "initialState": "AWAITING_KYC_DOCS",
+  "steps": {
+    "AWAITING_KYC_DOCS": {
+      "stepOrder": 1,
+      "stepName": "Upload Vendor KYC Documents",
+      "stepType": "DOCUMENT_SUBMISSION",
+      "actorScope": "REQUESTER",
+      "requiredPayloadKeys": [
+        "panCardUrl",
+        "gstCertUrl"
+      ],
+      "isTerminal": false,
+      "transitions": {
+        "SUBMIT_DOCS": "PENDING_LEGAL_VERIFY",
+        "CANCEL": "CANCELLED"
+      }
+    },
+    "PENDING_LEGAL_VERIFY": {
+      "stepOrder": 2,
+      "stepName": "Legal Counsel Compliance Review",
+      "stepType": "APPROVAL",
+      "actorScope": "ROLE",
+      "requiredRole": "ROLE_LEGAL_COUNSEL",
+      "requiredPayloadKeys": [],
+      "isTerminal": false,
+      "transitions": {
+        "VERIFY_AND_ONBOARD": "ONBOARDED",
+        "REJECT_VENDOR": "REJECTED"
+      }
+    },
+    "ONBOARDED": {
+      "stepOrder": 3,
+      "stepName": "Vendor Active",
+      "stepType": "TERMINAL",
+      "actorScope": "ANY",
+      "isTerminal": true,
+      "transitions": {}
+    }
+  }
+}
+
+### publish
+PUT http://localhost:8080/templates/api/v1/templates/VENDOR_ONBOARDING_TEST/versions/1/publish
+Authorization: Bearer architect_admin:ROLE_WORKFLOW_ARCHITECT
+Content-Type: application/json
+
+### 2. Create Workflow Instance in workflow-service via Gateway
+POST http://localhost:8080/workflows/api/v1/workflows
+Authorization: Bearer usr_ashish_01:ROLE_EMPLOYEE
+Content-Type: application/json
+
+{
+  "templateId": "VENDOR_ONBOARDING_TEST",
+  "title": "Namespaced Context Path Test"
+}
+
+### 3. Check Task Inbox via Gateway
+GET http://localhost:8080/workflows/api/v1/tasks/inbox
+Authorization: Bearer usr_ashish_01:ROLE_EMPLOYEE
+
+### 4. Fetch CQRS Projection from audit-analytics-service via Gateway
+GET http://localhost:8080/analytics/api/v1/analytics/workflows/0b158cf4-5f98-44af-913c-3977ab2e813e
+Authorization: Bearer usr_ashish_01:ROLE_EMPLOYEE
+
+
+### =========================================================================
+### PHASE E: SLA DEADLINE & ESALATION TEST FLOW (via Gateway :8080)
+### =========================================================================
+
+### 1. Publish SLA-Enabled Blueprint in template-service
+POST http://localhost:8080/templates/api/v1/templates
+Authorization: Bearer architect_01:ROLE_WORKFLOW_ARCHITECT
+Content-Type: application/json
+
+{
+  "templateKey": "VENDOR_ONBOARDING_SLA",
+  "name": "Vendor Onboarding with Step SLAs",
+  "description": "Blueprint featuring 24h KYC SLA and 48h Legal Counsel SLA",
+  "initialState": "AWAITING_KYC_DOCS",
+  "steps": {
+    "AWAITING_KYC_DOCS": {
+      "stepOrder": 1,
+      "stepName": "Submit KYC Documents",
+      "stepType": "DOCUMENT_SUBMISSION",
+      "actorScope": "REQUESTER",
+      "requiredRole": null,
+      "slaHours": 24,
+      "requiredPayloadKeys": ["panCardUrl", "gstCertUrl"],
+      "isTerminal": false,
+      "transitions": {
+        "SUBMIT_DOCS": "PENDING_LEGAL_VERIFY"
+      }
+    },
+    "PENDING_LEGAL_VERIFY": {
+      "stepOrder": 2,
+      "stepName": "Legal Counsel Verification",
+      "stepType": "APPROVAL",
+      "actorScope": "ROLE",
+      "requiredRole": "ROLE_LEGAL_COUNSEL",
+      "slaHours": 48,
+      "requiredPayloadKeys": [],
+      "isTerminal": false,
+      "transitions": {
+        "VERIFY_AND_ONBOARD": "ONBOARDED",
+        "REJECT": "REJECTED"
+      }
+    },
+    "ONBOARDED": {
+      "stepOrder": 3,
+      "stepName": "Vendor Fully Onboarded",
+      "stepType": "TERMINAL",
+      "actorScope": "ANY",
+      "requiredRole": null,
+      "slaHours": null,
+      "requiredPayloadKeys": [],
+      "isTerminal": true,
+      "transitions": {}
+    },
+    "REJECTED": {
+      "stepOrder": 4,
+      "stepName": "Application Rejected",
+      "stepType": "TERMINAL",
+      "actorScope": "ANY",
+      "requiredRole": null,
+      "slaHours": null,
+      "requiredPayloadKeys": [],
+      "isTerminal": true,
+      "transitions": {}
+    }
+  }
+}
+
+### 2. Publish the SLA Blueprint
+PUT http://localhost:8080/templates/api/v1/templates/VENDOR_ONBOARDING_SLA/versions/1/publish
+Authorization: Bearer architect_01:ROLE_WORKFLOW_ARCHITECT
+
+### 3. Create Workflow Instance (Expects: currentStepDueAt ~= now + 24h, slaBreached: false)
+POST http://localhost:8080/workflows/api/v1/workflows
+Authorization: Bearer usr_ashish_01:ROLE_EMPLOYEE
+Content-Type: application/json
+
+{
+  "templateId": "VENDOR_ONBOARDING_SLA",
+  "title": "Acme Corp SLA Test"
+}
+
+### 4. Check Requester Task Inbox (Expects: currentStepDueAt populated, slaBreached: false)
+GET http://localhost:8080/workflows/api/v1/tasks/inbox
+Authorization: Bearer usr_ashish_01:ROLE_EMPLOYEE
+
+### 5. Transition Workflow - Submit Documents (Expects: moves to PENDING_LEGAL_VERIFY, currentStepDueAt ~= now + 48h)
+POST http://localhost:8080/workflows/api/v1/workflows/<WORKFLOW_ID>/transition
+Authorization: Bearer usr_ashish_01:ROLE_EMPLOYEE
+Content-Type: application/json
+
+{
+  "action": "SUBMIT_DOCS",
+  "comments": "Submitting valid PAN and GST certificates",
+  "payload": {
+    "panCardUrl": "https://storage.internal/kyc/pan.pdf",
+    "gstCertUrl": "https://storage.internal/kyc/gst.pdf"
+  }
+}
+
+### 6. Segregation of Duties Negative Test (Requester cannot approve Legal step -> 403 Forbidden)
+POST http://localhost:8080/workflows/api/v1/workflows/<WORKFLOW_ID>/transition
+Authorization: Bearer usr_ashish_01:ROLE_LEGAL_COUNSEL
+Content-Type: application/json
+
+{
+  "action": "VERIFY_AND_ONBOARD",
+  "comments": "Attempting self-approval"
+}
+
+### 7. Legal Counsel Approval (Advances to ONBOARDED -> currentStepDueAt becomes null)
+POST http://localhost:8080/workflows/api/v1/workflows/<WORKFLOW_ID>/transition
+Authorization: Bearer legal_counsel_meera:ROLE_LEGAL_COUNSEL,ROLE_EMPLOYEE
+Content-Type: application/json
+
+{
+  "action": "VERIFY_AND_ONBOARD",
+  "comments": "KYC verified. Compliant."
+}
+
+### 8. Fetch CQRS Projection in audit-analytics-service
+GET http://localhost:8080/analytics/api/v1/analytics/workflows/<WORKFLOW_ID>
+Authorization: Bearer auditor_01:ROLE_AUDITOR

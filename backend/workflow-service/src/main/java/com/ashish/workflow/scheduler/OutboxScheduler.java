@@ -14,7 +14,8 @@ import org.springframework.stereotype.Component;
 public class OutboxScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(OutboxScheduler.class);
-    private static final String TOPIC = "workflow-events";
+    private static final String DEFAULT_TOPIC = "workflow-events";
+    private static final String SLA_BREACH_TOPIC = "workflow-sla-alerts";
 
     private final OutboxService outboxService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
@@ -36,14 +37,19 @@ public class OutboxScheduler {
         log.debug("Found {} pending outbox events to publish", pendingEvents.size());
         for (OutboxEvent event : pendingEvents) {
             try {
+                // Route to appropriate topic based on event type to isolate consumer contracts
+                String targetTopic = "WorkflowSlaBreachedEvent".equalsIgnoreCase(event.getEventType())
+                        ? SLA_BREACH_TOPIC
+                        : DEFAULT_TOPIC;
+
                 // Synchronously wait up to 5s for the Kafka broker ACK
                 kafkaTemplate
-                        .send(TOPIC, event.getAggregateId(), event.getPayload())
+                        .send(targetTopic, event.getAggregateId(), event.getPayload())
                         .get(5, TimeUnit.SECONDS);
 
                 // External call through the Spring proxy -> @Transactional executes
                 outboxService.markPublished(event.getId());
-                log.info("Successfully published outbox event id={} to topic '{}'", event.getId(), TOPIC);
+                log.info("Successfully published outbox event id={} to topic '{}'", event.getId(), targetTopic);
             } catch (Exception e) {
                 log.error("Failed to publish event id={} to Kafka: {}", event.getId(), e.getMessage());
                 outboxService.markFailed(event.getId());

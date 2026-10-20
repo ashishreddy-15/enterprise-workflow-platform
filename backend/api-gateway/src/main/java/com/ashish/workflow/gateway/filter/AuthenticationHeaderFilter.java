@@ -1,13 +1,18 @@
 package com.ashish.workflow.gateway.filter;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
@@ -19,62 +24,79 @@ public class AuthenticationHeaderFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        ServerHttpRequest request = exchange.getRequest();
-        String path = request.getURI().getPath();
-
-        // 1. Allow health checks and public paths without authentication
-        if (path.startsWith("/actuator") || path.equals("/health")) {
-            return chain.filter(exchange);
-        }
-
-        // 2. Extract Authorization Header
-        List<String> authHeaders = request.getHeaders().get("Authorization");
-        if (authHeaders == null || authHeaders.isEmpty()) {
-            log.warn("Unauthorized request to path: {} (missing Authorization header)", path);
-            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            return exchange.getResponse().setComplete();
-        }
-
-        String authHeader = authHeaders.get(0);
-        if (!authHeader.startsWith("Bearer ")) {
-            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            return exchange.getResponse().setComplete();
-        }
-
-        String token = authHeader.substring(7).trim();
-
-        // 3. Resolve Identity & Roles (Supports "userId:role1,role2" tokens or JWT decoding)
-        String userId;
-        String userRoles;
-
-        if (token.contains(":")) {
-            String[] parts = token.split(":", 2);
-            userId = parts[0];
-            userRoles = parts[1];
-        } else {
-            // Default fallback if a simple username token is passed (e.g., "Bearer ashish")
-            userId = token;
-            userRoles = "ROLE_EMPLOYEE";
-        }
-
-        // 4. SANITIZE & INJECT: Strip client headers and inject trusted headers
-        ServerHttpRequest mutatedRequest = exchange.getRequest()
+        // Always strip client-supplied identity headers first to prevent spoofing
+        ServerHttpRequest sanitizedRequest = exchange.getRequest()
                 .mutate()
                 .headers(httpHeaders -> {
                     httpHeaders.remove("X-User-Id");
                     httpHeaders.remove("X-User-Roles");
                 })
-                .header("X-User-Id", userId)
-                .header("X-User-Roles", userRoles)
                 .build();
 
-        log.debug("Gateway authenticated user='{}' roles='{}' -> routing to {}", userId, userRoles, path);
+        ServerWebExchange sanitizedExchange =
+                exchange.mutate().request(sanitizedRequest).build();
 
-        return chain.filter(exchange.mutate().request(mutatedRequest).build());
+        return ReactiveSecurityContextHolder.getContext()
+                .map(SecurityContext::getAuthentication)
+                .filter(auth -> auth instanceof JwtAuthenticationToken)
+                .cast(JwtAuthenticationToken.class)
+                .map(JwtAuthenticationToken::getToken)
+                .map(jwt -> injectClaimsIntoHeaders(sanitizedExchange, jwt))
+                .defaultIfEmpty(sanitizedExchange)
+                .flatMap(chain::filter);
+    }
+
+    private ServerWebExchange injectClaimsIntoHeaders(ServerWebExchange exchange, Jwt jwt) {
+        // Support standard 'sub' or Azure AD 'oid' / 'preferred_username'
+        String userId = jwt.getSubject();
+        if (userId == null || userId.isBlank()) {
+            userId = jwt.getClaimAsString("preferred_username");
+        }
+        if (userId == null || userId.isBlank()) {
+            userId = jwt.getClaimAsString("oid");
+        }
+
+        // Extract roles from 'roles' or 'scp'/'scope' claim
+        List<String> rolesList = extractRoles(jwt);
+        String rolesHeader = String.join(",", rolesList);
+
+        ServerHttpRequest mutatedRequest = exchange.getRequest()
+                .mutate()
+                .header("X-User-Id", userId)
+                .header("X-User-Roles", rolesHeader)
+                .build();
+
+        log.debug(
+                "Verified JWT -> Injected X-User-Id='{}', X-User-Roles='{}' for path={}",
+                userId,
+                rolesHeader,
+                exchange.getRequest().getURI().getPath());
+
+        return exchange.mutate().request(mutatedRequest).build();
+    }
+
+    private List<String> extractRoles(Jwt jwt) {
+        // 1. Direct 'roles' collection
+        Object rolesClaim = jwt.getClaims().get("roles");
+        if (rolesClaim instanceof Collection<?> collection) {
+            return collection.stream().map(Object::toString).collect(Collectors.toList());
+        }
+
+        // 2. Direct 'scope' or 'scp' claim
+        String scopeClaim = jwt.getClaimAsString("scope");
+        if (scopeClaim == null) {
+            scopeClaim = jwt.getClaimAsString("scp");
+        }
+        if (scopeClaim != null && !scopeClaim.isBlank()) {
+            return List.of(scopeClaim.split(" "));
+        }
+
+        return List.of("ROLE_EMPLOYEE");
     }
 
     @Override
     public int getOrder() {
-        return -100; // High priority: execute before routing filters
+        // Run after Spring Security WebFilterChain populates ReactiveSecurityContextHolder
+        return 1;
     }
 }

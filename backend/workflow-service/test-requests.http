@@ -1,3 +1,43 @@
+### ===================================================================
+### Phase D: Cryptographic OAuth2 / OIDC JWT Verification at Gateway
+### ===================================================================
+
+### 0a. Mint a signed JWT for Employee Ashish
+POST http://localhost:8080/auth/dev-token
+Content-Type: application/json
+
+{
+  "userId": "usr_ashish_01",
+  "roles": ["ROLE_EMPLOYEE"]
+}
+
+> {%
+    client.global.set("ashish_jwt", response.body.access_token);
+%}
+
+### 0b. Mint a signed JWT for Legal Counsel Meera
+POST http://localhost:8080/auth/dev-token
+Content-Type: application/json
+
+{
+  "userId": "legal_counsel_meera",
+  "roles": ["ROLE_LEGAL_COUNSEL", "ROLE_EMPLOYEE"]
+}
+
+> {%
+    client.global.set("meera_jwt", response.body.access_token);
+%}
+
+### 0c. Query Meera's Task Inbox through API Gateway using cryptographically signed JWT
+GET http://localhost:8080/workflows/api/v1/tasks/inbox
+Authorization: Bearer {{meera_jwt}}
+
+### 0d. Negative Test: Tampered / Invalid JWT Signature (Returns 401 Unauthorized at Gateway)
+GET http://localhost:8080/workflows/api/v1/tasks/inbox
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.tampered_payload.invalid_signature
+
+### ===================================================================
+
 ### Create Workflow while Kafka is down
 POST http://localhost:8081/api/v1/workflows
 Content-Type: application/json

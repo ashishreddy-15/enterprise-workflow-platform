@@ -1,0 +1,185 @@
+services:
+  # =====================================================================
+  # 1. INFRASTRUCTURE SERVICES
+  # =====================================================================
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: ewp-postgres
+    environment:
+      POSTGRES_USER: ewp_user
+      POSTGRES_PASSWORD: ewp_password
+      POSTGRES_DB: workflow_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ewp_user -d workflow_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ewp-network
+
+  mongodb:
+    image: mongo:7.0
+    container_name: ewp-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ewp_admin
+      MONGO_INITDB_ROOT_PASSWORD: ewp_password
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ewp-network
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: ewp-redis
+    command: redis-server --appendonly yes --requirepass ewp_redis_pass
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "ewp_redis_pass", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ewp-network
+
+  kafka:
+    image: apache/kafka:3.8.0
+    container_name: ewp-kafka
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,PLAINTEXT_INTERNAL://:29092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - ewp-network
+
+  # =====================================================================
+  # 2. APPLICATION MICROSERVICES
+  # =====================================================================
+
+  template-service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.jvm
+      args:
+        JAR_FILE: backend/template-service/target/template-service-1.0.0-SNAPSHOT.jar
+    container_name: ewp-template-service
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_MONGODB_URI: mongodb://ewp_admin:ewp_password@mongodb:27017/template_db?authSource=admin&uuidRepresentation=standard
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - ewp-network
+
+  workflow-service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.jvm
+      args:
+        JAR_FILE: backend/workflow-service/target/workflow-service-1.0.0-SNAPSHOT.jar
+    container_name: ewp-workflow-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/workflow_db
+      SPRING_DATASOURCE_USERNAME: ewp_user
+      SPRING_DATASOURCE_PASSWORD: ewp_password
+      SPRING_MONGODB_URI: mongodb://ewp_admin:ewp_password@mongodb:27017/template_db?authSource=admin&uuidRepresentation=standard
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SERVICES_TEMPLATE_SERVICE_URL: http://template-service:8083/templates
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      template-service:
+        condition: service_started
+    networks:
+      - ewp-network
+
+  audit-analytics-service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.jvm
+      args:
+        JAR_FILE: backend/audit-analytics-service/target/audit-analytics-service-1.0.0-SNAPSHOT.jar
+    container_name: ewp-audit-analytics-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_MONGODB_URI: mongodb://ewp_admin:ewp_password@mongodb:27017/audit_db?authSource=admin&uuidRepresentation=standard
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - ewp-network
+
+  api-gateway:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.jvm
+      args:
+        JAR_FILE: backend/api-gateway/target/api-gateway-1.0.0-SNAPSHOT.jar
+    container_name: ewp-api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_CLOUD_GATEWAY_SERVER_WEBFLUX_ROUTES_0_ID: template-service-route
+      SPRING_CLOUD_GATEWAY_SERVER_WEBFLUX_ROUTES_0_URI: http://template-service:8083
+      SPRING_CLOUD_GATEWAY_SERVER_WEBFLUX_ROUTES_0_PREDICATES_0: Path=/templates/**
+      SPRING_CLOUD_GATEWAY_SERVER_WEBFLUX_ROUTES_1_ID: workflow-service-route
+      SPRING_CLOUD_GATEWAY_SERVER_WEBFLUX_ROUTES_1_URI: http://workflow-service:8081
+      SPRING_CLOUD_GATEWAY_SERVER_WEBFLUX_ROUTES_1_PREDICATES_0: Path=/workflows/**
+      SPRING_CLOUD_GATEWAY_SERVER_WEBFLUX_ROUTES_2_ID: audit-analytics-service-route
+      SPRING_CLOUD_GATEWAY_SERVER_WEBFLUX_ROUTES_2_URI: http://audit-analytics-service:8082
+      SPRING_CLOUD_GATEWAY_SERVER_WEBFLUX_ROUTES_2_PREDICATES_0: Path=/analytics/**
+    depends_on:
+      - template-service
+      - workflow-service
+      - audit-analytics-service
+    networks:
+      - ewp-network
+
+volumes:
+  postgres_data:
+  mongo_data:
+  redis_data:
+  kafka_data:
+
+networks:
+  ewp-network:
+    driver: bridge

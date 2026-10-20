@@ -6,6 +6,8 @@ import com.ashish.workflow.dto.TransitionWorkflowRequest;
 import com.ashish.workflow.dto.WorkflowResponse;
 import com.ashish.workflow.repository.WorkflowRepository;
 import com.ashish.workflow.repository.WorkflowSpecifications;
+import com.ashish.workflow.security.UserContext;
+import com.ashish.workflow.security.UserContextHolder;
 import com.ashish.workflow.service.WorkflowService;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
@@ -28,10 +30,11 @@ public class WorkflowController {
     }
 
     @PostMapping
-    public ResponseEntity<WorkflowResponse> createWorkflow(@RequestBody CreateWorkflowRequest request) {
+    public ResponseEntity<WorkflowResponse> createWorkflow(@RequestBody CreateWorkflowRequest request) throws Exception {
+        UserContext caller = UserContextHolder.getRequiredContext();
         WorkflowInstance instance = workflowService.createAndTransitWorkflow(
                 request.templateId(),
-                request.requesterId(),
+                caller.userId(),
                 request.title()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(WorkflowResponse.from(instance));
@@ -54,11 +57,12 @@ public class WorkflowController {
     @PostMapping("/{id}/transition")
     public ResponseEntity<WorkflowResponse> transitionWorkflow(
             @PathVariable UUID id,
-            @RequestBody TransitionWorkflowRequest request) {
+            @RequestBody TransitionWorkflowRequest request) throws Exception {
+        UserContext caller = UserContextHolder.getRequiredContext();
         WorkflowInstance instance = workflowService.transitionWorkflow(
                 id,
                 request.action(),
-                request.actorId(),
+                caller,
                 request.comments(),
                 request.payload()
         );

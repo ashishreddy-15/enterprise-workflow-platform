@@ -16,3 +16,52 @@ POST http://localhost:8081/api/v1/admin/outbox/replay-failed
 
 ### Or replay a single event by ID
 POST http://localhost:8081/api/v1/admin/outbox/events/6617deac-76dc-4599-ab42-3bf60d6273ef/replay
+
+
+### 1. Create Workflow (Identity extracted from X-User-Id header)
+POST http://localhost:8081/api/v1/workflows
+Content-Type: application/json
+X-User-Id: usr_ashish_01
+X-User-Roles: ROLE_EMPLOYEE
+
+{
+  "templateId": "VENDOR_ONBOARDING",
+  "title": "Onboard Acme Cloud Services"
+}
+
+### 2. Submit KYC Documents as Requester (Succeeds -> moves to PENDING_LEGAL_VERIFY)
+POST http://localhost:8081/api/v1/workflows/fc6ad61b-41e6-439d-8068-f020c9972c4c/transition
+Content-Type: application/json
+X-User-Id: usr_ashish_01
+X-User-Roles: ROLE_EMPLOYEE
+
+{
+  "action": "SUBMIT_DOCS",
+  "comments": "Uploaded PAN and GST",
+  "payload": {
+    "panCardUrl": "https://storage.internal/kyc/pan.pdf",
+    "gstCertUrl": "https://storage.internal/kyc/gst.pdf"
+  }
+}
+
+### 3. Negative Test: Finance Manager tries to approve Legal step (Fails: Missing ROLE_LEGAL_COUNSEL)
+POST http://localhost:8081/api/v1/workflows/fc6ad61b-41e6-439d-8068-f020c9972c4c/transition
+Content-Type: application/json
+X-User-Id: usr_rahul_finance
+X-User-Roles: ROLE_FINANCE_MANAGER
+
+{
+  "action": "VERIFY_AND_ONBOARD",
+  "comments": "Trying to approve without Legal role"
+}
+
+### 4. Positive Test: Legal Counsel approves with ROLE_LEGAL_COUNSEL (Succeeds -> ONBOARDED)
+POST http://localhost:8081/api/v1/workflows/fc6ad61b-41e6-439d-8068-f020c9972c4c/transition
+Content-Type: application/json
+X-User-Id: legal_counsel_meera
+X-User-Roles: ROLE_LEGAL_COUNSEL,ROLE_EMPLOYEE
+
+{
+  "action": "VERIFY_AND_ONBOARD",
+  "comments": "Verified KYC compliance. Approved."
+}

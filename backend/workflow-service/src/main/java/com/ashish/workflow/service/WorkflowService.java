@@ -9,6 +9,7 @@ import com.ashish.workflow.domain.entity.WorkflowInstance;
 import com.ashish.workflow.domain.entity.WorkflowTask;
 import com.ashish.workflow.repository.OutboxRepository;
 import com.ashish.workflow.repository.WorkflowRepository;
+import com.ashish.workflow.security.UserContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
@@ -97,9 +98,11 @@ public class WorkflowService {
     public WorkflowInstance transitionWorkflow(
             UUID workflowId,
             String action,
-            String actorId,
+            UserContext caller,
             String comments,
-            Map<String, Object> payload){
+            Map<String, Object> payload) {
+
+        String actorId = caller.userId();
 
         WorkflowInstance workflow = workflowRepository.findById(workflowId)
                 .orElseThrow(() -> new IllegalArgumentException("Workflow not found: " + workflowId));
@@ -120,15 +123,33 @@ public class WorkflowService {
             throw new IllegalStateException("Workflow is already in a terminal state: " + previousState);
         }
 
-        // Scope & Segregation of Duties Check
+        // --- STRICT SCOPE, RBAC & SEGREGATION OF DUTIES CHECK ---
         String scope = currentStep.actorScope() != null ? currentStep.actorScope().toUpperCase() : "ANY";
-        if ("REQUESTER".equals(scope) && !workflow.getRequesterId().equalsIgnoreCase(actorId)) {
-            throw new IllegalStateException("Step '" + previousState + "' can only be performed by the requester (" + workflow.getRequesterId() + ").");
-        } else if ("ROLE".equals(scope) && workflow.getRequesterId().equalsIgnoreCase(actorId)) {
-            throw new IllegalStateException("Segregation of Duties violation: Requester (" + actorId + ") cannot act on step '" + previousState + "'.");
-        }
 
-        // Required Payload Validation (e.g. document URLs)
+        if ("REQUESTER".equals(scope)) {
+            if (!workflow.getRequesterId().equalsIgnoreCase(actorId)) {
+                throw new SecurityException(
+                        "Access Denied: Step '" + previousState + "' can only be performed by the requester (" + workflow.getRequesterId() + ")."
+                );
+            }
+        } else if ("ROLE".equals(scope)) {
+            // 1. Segregation of Duties: Requester cannot approve their own request
+            if (workflow.getRequesterId().equalsIgnoreCase(actorId)) {
+                throw new SecurityException(
+                        "Segregation of Duties violation: Requester (" + actorId + ") cannot act on role-restricted step '" + previousState + "'."
+                );
+            }
+            // 2. Role Enforcement: Caller must hold the step's requiredRole
+            String requiredRole = currentStep.requiredRole();
+            if (requiredRole != null && !requiredRole.isBlank() && !caller.hasRole(requiredRole)) {
+                throw new SecurityException(
+                        "Access Denied: Step '" + previousState + "' requires role '" + requiredRole + "', but caller holds " + caller.roles()
+                );
+            }
+        }
+        // --------------------------------------------------------
+
+        // Required Payload Validation
         if (currentStep.requiredPayloadKeys() != null && !currentStep.requiredPayloadKeys().isEmpty()) {
             if (payload == null) {
                 throw new IllegalArgumentException("Missing required payload keys: " + currentStep.requiredPayloadKeys());

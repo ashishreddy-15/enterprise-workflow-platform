@@ -2,13 +2,12 @@ package com.ashish.workflow.template.controller;
 
 import com.ashish.workflow.template.document.WorkflowTemplateDocument;
 import com.ashish.workflow.template.service.TemplateService;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/templates")
@@ -30,8 +29,7 @@ public class TemplateController {
 
     @PutMapping("/{templateKey}/versions/{version}/publish")
     public ResponseEntity<WorkflowTemplateDocument> publish(
-            @PathVariable String templateKey,
-            @PathVariable int version) {
+            @PathVariable String templateKey, @PathVariable int version) {
         log.info("REST: Publish template - key: '{}', version: {}", templateKey, version);
         return ResponseEntity.ok(templateService.publishTemplate(templateKey, version));
     }
@@ -39,7 +37,8 @@ public class TemplateController {
     @GetMapping("/{templateKey}")
     public ResponseEntity<WorkflowTemplateDocument> getActivePublished(@PathVariable String templateKey) {
         log.debug("REST: Get active published template - key: '{}'", templateKey);
-        return templateService.getActivePublishedTemplate(templateKey)
+        return templateService
+                .getActivePublishedTemplate(templateKey)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

@@ -2,7 +2,6 @@ package com.ashish.workflow.dto;
 
 import com.ashish.workflow.domain.entity.WorkflowInstance;
 import com.ashish.workflow.domain.entity.WorkflowTask;
-
 import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -20,8 +19,7 @@ public record WorkflowResponse(
         Map<String, Object> contextData,
         List<TaskResponse> tasks,
         OffsetDateTime createdAt,
-        OffsetDateTime updatedAt
-) {
+        OffsetDateTime updatedAt) {
     public record TaskResponse(
             UUID id,
             int stepOrder,
@@ -31,8 +29,7 @@ public record WorkflowResponse(
             String completedBy,
             String status,
             String comments,
-            OffsetDateTime actedAt
-    ) {
+            OffsetDateTime actedAt) {
         public static TaskResponse from(WorkflowTask task) {
             return new TaskResponse(
                     task.getId(),
@@ -43,8 +40,7 @@ public record WorkflowResponse(
                     task.getCompletedBy(),
                     task.getStatus(),
                     task.getComments(),
-                    task.getActedAt()
-            );
+                    task.getActedAt());
         }
     }
 
@@ -76,7 +72,6 @@ public record WorkflowResponse(
                 context,
                 taskResponses,
                 entity.getCreatedAt(),
-                entity.getUpdatedAt()
-        );
+                entity.getUpdatedAt());
     }
 }

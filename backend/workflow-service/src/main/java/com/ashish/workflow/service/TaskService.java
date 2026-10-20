@@ -4,15 +4,14 @@ import com.ashish.workflow.contracts.dto.TemplateDefinitionResponse;
 import com.ashish.workflow.domain.entity.WorkflowInstance;
 import com.ashish.workflow.repository.WorkflowRepository;
 import com.ashish.workflow.security.UserContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-import tools.jackson.databind.ObjectMapper;
-
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 public class TaskService {
@@ -36,8 +35,7 @@ public class TaskService {
             String currentStepName,
             String actorScope,
             String requiredRole,
-            OffsetDateTime updatedAt
-    ) {}
+            OffsetDateTime updatedAt) {}
 
     public List<TaskInboxItem> getTasksForUser(UserContext caller) {
         log.debug("Fetching task inbox for user: '{}', roles: {}", caller.userId(), caller.roles());
@@ -46,20 +44,23 @@ public class TaskService {
 
         log.debug("Evaluating {} active workflows for user '{}' eligibility", activeWorkflows.size(), caller.userId());
         for (WorkflowInstance workflow : activeWorkflows) {
-            TemplateDefinitionResponse snapshot = objectMapper.readValue(
-                    workflow.getTemplateSnapshot(),
-                    TemplateDefinitionResponse.class
-            );
+            TemplateDefinitionResponse snapshot =
+                    objectMapper.readValue(workflow.getTemplateSnapshot(), TemplateDefinitionResponse.class);
 
             String currentState = workflow.getCurrentState();
-            TemplateDefinitionResponse.StepDefinitionDto currentStep = snapshot.steps().get(currentState);
+            TemplateDefinitionResponse.StepDefinitionDto currentStep =
+                    snapshot.steps().get(currentState);
 
             if (currentStep == null || currentStep.isTerminal()) {
-                log.debug("Skipping workflow {} - state '{}' is terminal or has no step definition", workflow.getId(), currentState);
+                log.debug(
+                        "Skipping workflow {} - state '{}' is terminal or has no step definition",
+                        workflow.getId(),
+                        currentState);
                 continue;
             }
 
-            String scope = currentStep.actorScope() != null ? currentStep.actorScope().toUpperCase() : "ANY";
+            String scope =
+                    currentStep.actorScope() != null ? currentStep.actorScope().toUpperCase() : "ANY";
             boolean isEligible = false;
 
             if ("REQUESTER".equals(scope)) {
@@ -75,7 +76,10 @@ public class TaskService {
                         isEligible = true;
                     }
                 } else {
-                    log.warn("SoD violation: user '{}' is the requester of workflow {} and cannot action ROLE-scoped task", caller.userId(), workflow.getId());
+                    log.warn(
+                            "SoD violation: user '{}' is the requester of workflow {} and cannot action ROLE-scoped task",
+                            caller.userId(),
+                            workflow.getId());
                 }
             } else {
                 // "ANY" scope
@@ -83,7 +87,12 @@ public class TaskService {
             }
 
             if (isEligible) {
-                log.debug("User '{}' is eligible for workflow {} (scope: {}, role: {})", caller.userId(), workflow.getId(), scope, currentStep.requiredRole());
+                log.debug(
+                        "User '{}' is eligible for workflow {} (scope: {}, role: {})",
+                        caller.userId(),
+                        workflow.getId(),
+                        scope,
+                        currentStep.requiredRole());
                 inbox.add(new TaskInboxItem(
                         workflow.getId(),
                         workflow.getTemplateId(),
@@ -93,8 +102,7 @@ public class TaskService {
                         currentStep.stepName(),
                         scope,
                         currentStep.requiredRole(),
-                        workflow.getUpdatedAt()
-                ));
+                        workflow.getUpdatedAt()));
             }
         }
 

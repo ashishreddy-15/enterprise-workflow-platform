@@ -1,14 +1,13 @@
 package com.ashish.workflow.client;
 
 import com.ashish.workflow.contracts.dto.TemplateDefinitionResponse;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-
-import java.util.Optional;
 
 @Component
 public class TemplateServiceClient {
@@ -18,9 +17,7 @@ public class TemplateServiceClient {
     private final RestClient restClient;
 
     public TemplateServiceClient(@Value("${services.template-service.url}") String templateServiceUrl) {
-        this.restClient = RestClient.builder()
-                .baseUrl(templateServiceUrl)
-                .build();
+        this.restClient = RestClient.builder().baseUrl(templateServiceUrl).build();
     }
 
     /**
@@ -30,7 +27,8 @@ public class TemplateServiceClient {
     public Optional<TemplateDefinitionResponse> getActivePublishedTemplate(String templateKey) {
         log.debug("Calling template-service to fetch active published template for key: '{}'", templateKey);
         try {
-            TemplateDefinitionResponse response = restClient.get()
+            TemplateDefinitionResponse response = restClient
+                    .get()
                     .uri("/api/v1/templates/{templateKey}", templateKey)
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, (request, clientResponse) -> {

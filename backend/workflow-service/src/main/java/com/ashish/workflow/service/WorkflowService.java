@@ -10,17 +10,16 @@ import com.ashish.workflow.domain.entity.WorkflowTask;
 import com.ashish.workflow.repository.OutboxRepository;
 import com.ashish.workflow.repository.WorkflowRepository;
 import com.ashish.workflow.security.UserContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.databind.ObjectMapper;
-
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 public class WorkflowService {
@@ -44,16 +43,24 @@ public class WorkflowService {
     }
 
     @Transactional
-    public WorkflowInstance createAndTransitWorkflow(String templateKey, String requesterId, String title){
-        log.info("Creating workflow instance - templateKey: '{}', requesterId: '{}', title: '{}'",
-                templateKey, requesterId, title);
+    public WorkflowInstance createAndTransitWorkflow(String templateKey, String requesterId, String title) {
+        log.info(
+                "Creating workflow instance - templateKey: '{}', requesterId: '{}', title: '{}'",
+                templateKey,
+                requesterId,
+                title);
 
         // 1. Fetch active published blueprint from template-service
-        TemplateDefinitionResponse template = templateServiceClient.getActivePublishedTemplate(templateKey)
-                .orElseThrow(() -> new IllegalArgumentException("No active published template found for: " + templateKey));
+        TemplateDefinitionResponse template = templateServiceClient
+                .getActivePublishedTemplate(templateKey)
+                .orElseThrow(
+                        () -> new IllegalArgumentException("No active published template found for: " + templateKey));
 
-        log.debug("Loaded template definition '{}' v{} with initial state '{}'",
-                templateKey, template.version(), template.initialState());
+        log.debug(
+                "Loaded template definition '{}' v{} with initial state '{}'",
+                templateKey,
+                template.version(),
+                template.initialState());
 
         String serializedSnapshot = objectMapper.writeValueAsString(template);
 
@@ -72,26 +79,30 @@ public class WorkflowService {
         if (initialStep != null && !initialStep.isTerminal()) {
             WorkflowTask initialTask = buildTaskFromStep(initialStep);
             workflow.addTask(initialTask);
-            log.debug("Spawned initial task '{}' (scope: {}, requiredRole: {})",
-                    initialStep.stepName(), initialStep.actorScope(), initialStep.requiredRole());
+            log.debug(
+                    "Spawned initial task '{}' (scope: {}, requiredRole: {})",
+                    initialStep.stepName(),
+                    initialStep.actorScope(),
+                    initialStep.requiredRole());
         }
 
         WorkflowInstance saved = workflowRepository.save(workflow);
-        log.info("Workflow instance created successfully - workflowId: {}, state: '{}'",
-                saved.getId(), saved.getCurrentState());
+        log.info(
+                "Workflow instance created successfully - workflowId: {}, state: '{}'",
+                saved.getId(),
+                saved.getCurrentState());
 
         // 3. Stage Outbox Event
         WorkflowTransitionedEvent event = new WorkflowTransitionedEvent(
                 UUID.randomUUID(),
                 saved.getId(),
                 templateKey,
-                "INITIAL",                 // previousState
-                saved.getCurrentState(),   // nextState (e.g. "AWAITING_KYC_DOCS")
-                requesterId,               // actorId
+                "INITIAL", // previousState
+                saved.getCurrentState(), // nextState (e.g. "AWAITING_KYC_DOCS")
+                requesterId, // actorId
                 "Workflow created from template v" + template.version(),
                 Instant.now(),
-                Map.of("templateName", template.name(), "templateVersion", String.valueOf(template.version()))
-        );
+                Map.of("templateName", template.name(), "templateVersion", String.valueOf(template.version())));
 
         saveOutboxEvent(saved, event);
 
@@ -107,29 +118,30 @@ public class WorkflowService {
         outbox.setStatus("PENDING");
         outbox.setCreatedAt(OffsetDateTime.now());
         outboxRepository.save(outbox);
-        log.debug("Staged outbox event id={} for aggregateId={} (event: {})",
-                outbox.getId(), saved.getId(), outbox.getEventType());
+        log.debug(
+                "Staged outbox event id={} for aggregateId={} (event: {})",
+                outbox.getId(),
+                saved.getId(),
+                outbox.getEventType());
     }
 
     @Transactional
     public WorkflowInstance transitionWorkflow(
-            UUID workflowId,
-            String action,
-            UserContext caller,
-            String comments,
-            Map<String, Object> payload) {
+            UUID workflowId, String action, UserContext caller, String comments, Map<String, Object> payload) {
 
         String actorId = caller.userId();
-        log.info("Processing workflow transition - workflowId: {}, action: '{}', actorId: '{}'",
-                workflowId, action, actorId);
+        log.info(
+                "Processing workflow transition - workflowId: {}, action: '{}', actorId: '{}'",
+                workflowId,
+                action,
+                actorId);
 
-        WorkflowInstance workflow = workflowRepository.findById(workflowId)
+        WorkflowInstance workflow = workflowRepository
+                .findById(workflowId)
                 .orElseThrow(() -> new IllegalArgumentException("Workflow not found: " + workflowId));
 
-        TemplateDefinitionResponse snapshot = objectMapper.readValue(
-                workflow.getTemplateSnapshot(),
-                TemplateDefinitionResponse.class
-        );
+        TemplateDefinitionResponse snapshot =
+                objectMapper.readValue(workflow.getTemplateSnapshot(), TemplateDefinitionResponse.class);
 
         String previousState = workflow.getCurrentState();
         StepDefinitionDto currentStep = snapshot.steps().get(previousState);
@@ -138,51 +150,66 @@ public class WorkflowService {
             throw new IllegalStateException("Current state '" + previousState + "' not found in snapshot.");
         }
 
-        if (currentStep.isTerminal() || currentStep.transitions() == null || currentStep.transitions().isEmpty()) {
+        if (currentStep.isTerminal()
+                || currentStep.transitions() == null
+                || currentStep.transitions().isEmpty()) {
             throw new IllegalStateException("Workflow is already in a terminal state: " + previousState);
         }
 
         // --- STRICT SCOPE, RBAC & SEGREGATION OF DUTIES CHECK ---
-        String scope = currentStep.actorScope() != null ? currentStep.actorScope().toUpperCase() : "ANY";
+        String scope =
+                currentStep.actorScope() != null ? currentStep.actorScope().toUpperCase() : "ANY";
 
         if ("REQUESTER".equals(scope)) {
             if (!workflow.getRequesterId().equalsIgnoreCase(actorId)) {
-                log.warn("Access Denied: Workflow {} step '{}' can only be performed by requester '{}', but caller is '{}'",
-                        workflowId, previousState, workflow.getRequesterId(), actorId);
-                throw new SecurityException(
-                        "Access Denied: Step '" + previousState + "' can only be performed by the requester (" + workflow.getRequesterId() + ")."
-                );
+                log.warn(
+                        "Access Denied: Workflow {} step '{}' can only be performed by requester '{}', but caller is '{}'",
+                        workflowId,
+                        previousState,
+                        workflow.getRequesterId(),
+                        actorId);
+                throw new SecurityException("Access Denied: Step '" + previousState
+                        + "' can only be performed by the requester (" + workflow.getRequesterId() + ").");
             }
         } else if ("ROLE".equals(scope)) {
             // 1. Segregation of Duties: Requester cannot approve their own request
             if (workflow.getRequesterId().equalsIgnoreCase(actorId)) {
-                log.warn("Segregation of Duties violation on workflow {}: Requester '{}' cannot act on role-restricted step '{}'",
-                        workflowId, actorId, previousState);
-                throw new SecurityException(
-                        "Segregation of Duties violation: Requester (" + actorId + ") cannot act on role-restricted step '" + previousState + "'."
-                );
+                log.warn(
+                        "Segregation of Duties violation on workflow {}: Requester '{}' cannot act on role-restricted step '{}'",
+                        workflowId,
+                        actorId,
+                        previousState);
+                throw new SecurityException("Segregation of Duties violation: Requester (" + actorId
+                        + ") cannot act on role-restricted step '" + previousState + "'.");
             }
             // 2. Role Enforcement: Caller must hold the step's requiredRole
             String requiredRole = currentStep.requiredRole();
             if (requiredRole != null && !requiredRole.isBlank() && !caller.hasRole(requiredRole)) {
-                log.warn("Access Denied on workflow {}: Step '{}' requires role '{}', but caller '{}' holds roles {}",
-                        workflowId, previousState, requiredRole, actorId, caller.roles());
-                throw new SecurityException(
-                        "Access Denied: Step '" + previousState + "' requires role '" + requiredRole + "', but caller holds " + caller.roles()
-                );
+                log.warn(
+                        "Access Denied on workflow {}: Step '{}' requires role '{}', but caller '{}' holds roles {}",
+                        workflowId,
+                        previousState,
+                        requiredRole,
+                        actorId,
+                        caller.roles());
+                throw new SecurityException("Access Denied: Step '" + previousState + "' requires role '" + requiredRole
+                        + "', but caller holds " + caller.roles());
             }
         }
         // --------------------------------------------------------
 
         // Required Payload Validation
-        if (currentStep.requiredPayloadKeys() != null && !currentStep.requiredPayloadKeys().isEmpty()) {
+        if (currentStep.requiredPayloadKeys() != null
+                && !currentStep.requiredPayloadKeys().isEmpty()) {
             if (payload == null) {
-                throw new IllegalArgumentException("Missing required payload keys: " + currentStep.requiredPayloadKeys());
+                throw new IllegalArgumentException(
+                        "Missing required payload keys: " + currentStep.requiredPayloadKeys());
             }
             for (String requiredKey : currentStep.requiredPayloadKeys()) {
                 Object val = payload.get(requiredKey);
                 if (val == null || val.toString().isBlank()) {
-                    throw new IllegalArgumentException("Missing required key '" + requiredKey + "' for step '" + previousState + "'.");
+                    throw new IllegalArgumentException(
+                            "Missing required key '" + requiredKey + "' for step '" + previousState + "'.");
                 }
             }
         }
@@ -199,13 +226,16 @@ public class WorkflowService {
         String normalizedAction = action.trim().toUpperCase();
         String newState = currentStep.transitions().get(normalizedAction);
         if (newState == null) {
-            throw new IllegalArgumentException(
-                    "Action '" + normalizedAction + "' not allowed from '" + previousState + "'. Allowed: " + currentStep.transitions().keySet()
-            );
+            throw new IllegalArgumentException("Action '" + normalizedAction + "' not allowed from '" + previousState
+                    + "'. Allowed: " + currentStep.transitions().keySet());
         }
 
-        log.info("Transitioning workflow {} from '{}' -> '{}' via action '{}'",
-                workflowId, previousState, newState, normalizedAction);
+        log.info(
+                "Transitioning workflow {} from '{}' -> '{}' via action '{}'",
+                workflowId,
+                previousState,
+                newState,
+                normalizedAction);
 
         // Complete the active pending task
         workflow.getTasks().stream()
@@ -213,8 +243,11 @@ public class WorkflowService {
                 .findFirst()
                 .ifPresent(task -> {
                     task.complete(normalizedAction, actorId, comments);
-                    log.debug("Completed task '{}' (order: {}) for workflow {}",
-                            task.getStepName(), task.getStepOrder(), workflowId);
+                    log.debug(
+                            "Completed task '{}' (order: {}) for workflow {}",
+                            task.getStepName(),
+                            task.getStepOrder(),
+                            workflowId);
                 });
 
         // Spawn next task if non-terminal
@@ -227,8 +260,12 @@ public class WorkflowService {
         if (!isNextTerminal) {
             WorkflowTask nextTask = buildTaskFromStep(nextStepDef);
             workflow.addTask(nextTask);
-            log.debug("Spawned next task '{}' (order: {}, requiredRole: {}) for workflow {}",
-                    nextStepDef.stepName(), nextStepDef.stepOrder(), nextStepDef.requiredRole(), workflowId);
+            log.debug(
+                    "Spawned next task '{}' (order: {}, requiredRole: {}) for workflow {}",
+                    nextStepDef.stepName(),
+                    nextStepDef.stepOrder(),
+                    nextStepDef.requiredRole(),
+                    workflowId);
         } else {
             log.info("Workflow {} has reached terminal state '{}'", workflowId, newState);
         }
@@ -250,16 +287,18 @@ public class WorkflowService {
                 UUID.randomUUID(),
                 saved.getId(),
                 saved.getTemplateId(),
-                previousState,             // previousState
-                newState,                  // nextState
-                actorId,                   // actorId
+                previousState, // previousState
+                newState, // nextState
+                actorId, // actorId
                 comments,
                 Instant.now(),
-                eventMetadata
-        );
+                eventMetadata);
 
         saveOutboxEvent(saved, event);
-        log.info("Workflow {} transition successfully persisted. Current state: '{}'", saved.getId(), saved.getCurrentState());
+        log.info(
+                "Workflow {} transition successfully persisted. Current state: '{}'",
+                saved.getId(),
+                saved.getCurrentState());
         return saved;
     }
 

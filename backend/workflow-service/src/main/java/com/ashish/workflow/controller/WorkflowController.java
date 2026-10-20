@@ -9,15 +9,14 @@ import com.ashish.workflow.repository.WorkflowSpecifications;
 import com.ashish.workflow.security.UserContext;
 import com.ashish.workflow.security.UserContextHolder;
 import com.ashish.workflow.service.WorkflowService;
+import java.util.List;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/workflows")
@@ -34,16 +33,20 @@ public class WorkflowController {
     }
 
     @PostMapping
-    public ResponseEntity<WorkflowResponse> createWorkflow(@RequestBody CreateWorkflowRequest request) throws Exception {
+    public ResponseEntity<WorkflowResponse> createWorkflow(@RequestBody CreateWorkflowRequest request)
+            throws Exception {
         UserContext caller = UserContextHolder.getRequiredContext();
-        log.info("REST: Create workflow request - templateId: '{}', requesterId: '{}', title: '{}'",
-                request.templateId(), caller.userId(), request.title());
-        WorkflowInstance instance = workflowService.createAndTransitWorkflow(
+        log.info(
+                "REST: Create workflow request - templateId: '{}', requesterId: '{}', title: '{}'",
                 request.templateId(),
                 caller.userId(),
-                request.title()
-        );
-        log.info("REST: Workflow created successfully - id: {}, state: {}", instance.getId(), instance.getCurrentState());
+                request.title());
+        WorkflowInstance instance =
+                workflowService.createAndTransitWorkflow(request.templateId(), caller.userId(), request.title());
+        log.info(
+                "REST: Workflow created successfully - id: {}, state: {}",
+                instance.getId(),
+                instance.getCurrentState());
         return ResponseEntity.status(HttpStatus.CREATED).body(WorkflowResponse.from(instance));
     }
 
@@ -66,20 +69,20 @@ public class WorkflowController {
 
     @PostMapping("/{id}/transition")
     public ResponseEntity<WorkflowResponse> transitionWorkflow(
-            @PathVariable UUID id,
-            @RequestBody TransitionWorkflowRequest request) throws Exception {
+            @PathVariable UUID id, @RequestBody TransitionWorkflowRequest request) throws Exception {
         UserContext caller = UserContextHolder.getRequiredContext();
-        log.info("REST: Transition workflow request - workflowId: {}, action: '{}', caller: '{}', roles: {}",
-                id, request.action(), caller.userId(), caller.roles());
-        WorkflowInstance instance = workflowService.transitionWorkflow(
+        log.info(
+                "REST: Transition workflow request - workflowId: {}, action: '{}', caller: '{}', roles: {}",
                 id,
                 request.action(),
-                caller,
-                request.comments(),
-                request.payload()
-        );
-        log.info("REST: Workflow {} transitioned successfully to state: '{}'", instance.getId(), instance.getCurrentState());
+                caller.userId(),
+                caller.roles());
+        WorkflowInstance instance =
+                workflowService.transitionWorkflow(id, request.action(), caller, request.comments(), request.payload());
+        log.info(
+                "REST: Workflow {} transitioned successfully to state: '{}'",
+                instance.getId(),
+                instance.getCurrentState());
         return ResponseEntity.ok(WorkflowResponse.from(instance));
     }
-
 }

@@ -5,6 +5,7 @@ import com.ashish.workflow.audit.document.WorkflowAnalyticsView;
 import com.ashish.workflow.audit.repository.AuditLogRepository;
 import com.ashish.workflow.audit.repository.WorkflowAnalyticsRepository;
 import com.ashish.workflow.contracts.events.WorkflowTransitionedEvent;
+import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.BackOff;
@@ -16,8 +17,6 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
-import java.time.Instant;
-
 @Component
 public class WorkflowEventConsumer {
 
@@ -27,9 +26,10 @@ public class WorkflowEventConsumer {
     private final WorkflowAnalyticsRepository analyticsRepository;
     private final ObjectMapper objectMapper;
 
-    public WorkflowEventConsumer(AuditLogRepository auditLogRepository,
-                                 WorkflowAnalyticsRepository analyticsRepository,
-                                 ObjectMapper objectMapper) {
+    public WorkflowEventConsumer(
+            AuditLogRepository auditLogRepository,
+            WorkflowAnalyticsRepository analyticsRepository,
+            ObjectMapper objectMapper) {
         this.auditLogRepository = auditLogRepository;
         this.analyticsRepository = analyticsRepository;
         this.objectMapper = objectMapper;
@@ -39,11 +39,7 @@ public class WorkflowEventConsumer {
      * Non-blocking retry with exponential backoff (1s -> 2s -> 4s).
      * If all 3 attempts fail, Spring Kafka automatically forwards the message to 'workflow-events-dlt'.
      */
-    @RetryableTopic(
-            attempts = "3",
-            backOff = @BackOff(delay = 1000, multiplier = 2.0),
-            dltTopicSuffix = "-dlt"
-    )
+    @RetryableTopic(attempts = "3", backOff = @BackOff(delay = 1000, multiplier = 2.0), dltTopicSuffix = "-dlt")
     @KafkaListener(topics = "workflow-events", groupId = "audit-analytics-group")
     public void consumeWorkflowEvent(String rawJsonPayload) {
         // Handle case where JsonSerializer wrapped the string in quotes
@@ -70,35 +66,32 @@ public class WorkflowEventConsumer {
                 event.nextState(),
                 event.actorId(),
                 event.occurredAt(),
-                Instant.now()
-        );
+                Instant.now());
         auditLogRepository.save(auditDoc);
 
         // 3. Update Pre-Joined CQRS View
         String workflowIdStr = event.workflowId().toString();
-        WorkflowAnalyticsView view = analyticsRepository.findById(workflowIdStr)
-                .orElseGet(() -> {
-                    WorkflowAnalyticsView newView = new WorkflowAnalyticsView();
-                    newView.setWorkflowId(workflowIdStr);
-                    newView.setTemplateId(event.templateId());
-                    return newView;
-                });
+        WorkflowAnalyticsView view = analyticsRepository.findById(workflowIdStr).orElseGet(() -> {
+            WorkflowAnalyticsView newView = new WorkflowAnalyticsView();
+            newView.setWorkflowId(workflowIdStr);
+            newView.setTemplateId(event.templateId());
+            return newView;
+        });
 
         view.setCurrentState(event.nextState());
         view.setLastActorId(event.actorId());
         view.setTransitionCount(view.getTransitionCount() + 1);
         view.setLastUpdatedAt(event.occurredAt());
-        view.getHistory().add(new WorkflowAnalyticsView.TransitionEntry(
-                eventIdStr,
-                event.previousState(),
-                event.nextState(),
-                event.actorId(),
-                event.occurredAt()
-        ));
+        view.getHistory()
+                .add(new WorkflowAnalyticsView.TransitionEntry(
+                        eventIdStr, event.previousState(), event.nextState(), event.actorId(), event.occurredAt()));
 
         analyticsRepository.save(view);
-        log.info("Processed workflow eventId={} for workflowId={} -> state={}",
-                eventIdStr, workflowIdStr, event.nextState());
+        log.info(
+                "Processed workflow eventId={} for workflowId={} -> state={}",
+                eventIdStr,
+                workflowIdStr,
+                event.nextState());
     }
 
     @DltHandler

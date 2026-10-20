@@ -2,14 +2,13 @@ package com.ashish.workflow.service;
 
 import com.ashish.workflow.domain.entity.OutboxEvent;
 import com.ashish.workflow.repository.OutboxRepository;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.UUID;
 
 @Service
 public class OutboxService {
@@ -49,7 +48,11 @@ public class OutboxService {
             if (event.getRetryCount() >= 3) {
                 event.setStatus("FAILED");
             }
-            log.warn("Outbox event {} retry count now {}. Status: {}", eventId, event.getRetryCount(), event.getStatus());
+            log.warn(
+                    "Outbox event {} retry count now {}. Status: {}",
+                    eventId,
+                    event.getRetryCount(),
+                    event.getStatus());
             outboxRepository.save(event);
         });
     }

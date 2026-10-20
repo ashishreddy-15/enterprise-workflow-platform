@@ -2,14 +2,13 @@ package com.ashish.workflow.scheduler;
 
 import com.ashish.workflow.domain.entity.OutboxEvent;
 import com.ashish.workflow.service.OutboxService;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 @Component
 public class OutboxScheduler {
@@ -38,7 +37,8 @@ public class OutboxScheduler {
         for (OutboxEvent event : pendingEvents) {
             try {
                 // Synchronously wait up to 5s for the Kafka broker ACK
-                kafkaTemplate.send(TOPIC, event.getAggregateId(), event.getPayload())
+                kafkaTemplate
+                        .send(TOPIC, event.getAggregateId(), event.getPayload())
                         .get(5, TimeUnit.SECONDS);
 
                 // External call through the Spring proxy -> @Transactional executes

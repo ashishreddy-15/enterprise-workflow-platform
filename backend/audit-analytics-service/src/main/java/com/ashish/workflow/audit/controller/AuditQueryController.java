@@ -4,13 +4,12 @@ import com.ashish.workflow.audit.document.AuditLogDocument;
 import com.ashish.workflow.audit.document.WorkflowAnalyticsView;
 import com.ashish.workflow.audit.repository.AuditLogRepository;
 import com.ashish.workflow.audit.repository.WorkflowAnalyticsRepository;
+import java.util.List;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/analytics")
@@ -21,8 +20,8 @@ public class AuditQueryController {
     private final WorkflowAnalyticsRepository analyticsRepository;
     private final AuditLogRepository auditLogRepository;
 
-    public AuditQueryController(WorkflowAnalyticsRepository analyticsRepository,
-                                AuditLogRepository auditLogRepository) {
+    public AuditQueryController(
+            WorkflowAnalyticsRepository analyticsRepository, AuditLogRepository auditLogRepository) {
         this.analyticsRepository = analyticsRepository;
         this.auditLogRepository = auditLogRepository;
     }
@@ -31,15 +30,15 @@ public class AuditQueryController {
     @GetMapping("/workflows/{workflowId}")
     public ResponseEntity<WorkflowAnalyticsView> getWorkflowAnalytics(@PathVariable String workflowId) {
         log.debug("REST: Fetching analytics view for workflowId: '{}'", workflowId);
-        return analyticsRepository.findById(workflowId)
+        return analyticsRepository
+                .findById(workflowId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     // List all pre-joined workflow views (optionally filtered by state)
     @GetMapping("/workflows")
-    public ResponseEntity<List<WorkflowAnalyticsView>> getAllViews(
-            @RequestParam(required = false) String state) {
+    public ResponseEntity<List<WorkflowAnalyticsView>> getAllViews(@RequestParam(required = false) String state) {
         log.debug("REST: Fetching all analytics views, state filter: '{}'", state);
         if (state != null && !state.isBlank()) {
             return ResponseEntity.ok(analyticsRepository.findByCurrentState(state));

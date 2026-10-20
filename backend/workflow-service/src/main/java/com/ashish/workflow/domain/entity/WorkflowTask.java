@@ -1,6 +1,5 @@
 package com.ashish.workflow.domain.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -73,33 +72,83 @@ public class WorkflowTask {
         this.actedAt = OffsetDateTime.now();
     }
 
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
+    public UUID getId() {
+        return id;
+    }
 
-    public WorkflowInstance getWorkflowInstance() { return workflowInstance; }
-    public void setWorkflowInstance(WorkflowInstance workflowInstance) { this.workflowInstance = workflowInstance; }
+    public void setId(UUID id) {
+        this.id = id;
+    }
 
-    public Integer getStepOrder() { return stepOrder; }
-    public void setStepOrder(Integer stepOrder) { this.stepOrder = stepOrder; }
+    public WorkflowInstance getWorkflowInstance() {
+        return workflowInstance;
+    }
 
-    public String getStepName() { return stepName; }
-    public void setStepName(String stepName) { this.stepName = stepName; }
+    public void setWorkflowInstance(WorkflowInstance workflowInstance) {
+        this.workflowInstance = workflowInstance;
+    }
 
-    public String getTaskType() { return taskType; }
-    public void setTaskType(String taskType) { this.taskType = taskType; }
+    public Integer getStepOrder() {
+        return stepOrder;
+    }
 
-    public String getAssignedRole() { return assignedRole; }
-    public void setAssignedRole(String assignedRole) { this.assignedRole = assignedRole; }
+    public void setStepOrder(Integer stepOrder) {
+        this.stepOrder = stepOrder;
+    }
 
-    public String getCompletedBy() { return completedBy; }
-    public void setCompletedBy(String completedBy) { this.completedBy = completedBy; }
+    public String getStepName() {
+        return stepName;
+    }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public void setStepName(String stepName) {
+        this.stepName = stepName;
+    }
 
-    public String getComments() { return comments; }
-    public void setComments(String comments) { this.comments = comments; }
+    public String getTaskType() {
+        return taskType;
+    }
 
-    public OffsetDateTime getActedAt() { return actedAt; }
-    public void setActedAt(OffsetDateTime actedAt) { this.actedAt = actedAt; }
+    public void setTaskType(String taskType) {
+        this.taskType = taskType;
+    }
+
+    public String getAssignedRole() {
+        return assignedRole;
+    }
+
+    public void setAssignedRole(String assignedRole) {
+        this.assignedRole = assignedRole;
+    }
+
+    public String getCompletedBy() {
+        return completedBy;
+    }
+
+    public void setCompletedBy(String completedBy) {
+        this.completedBy = completedBy;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getComments() {
+        return comments;
+    }
+
+    public void setComments(String comments) {
+        this.comments = comments;
+    }
+
+    public OffsetDateTime getActedAt() {
+        return actedAt;
+    }
+
+    public void setActedAt(OffsetDateTime actedAt) {
+        this.actedAt = actedAt;
+    }
 }

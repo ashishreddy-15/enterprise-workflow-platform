@@ -1,11 +1,10 @@
 package com.ashish.workflow.domain.entity;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
-
 import java.time.OffsetDateTime;
 import java.util.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "workflow_instances")
@@ -58,39 +57,99 @@ public class WorkflowInstance {
         task.setWorkflowInstance(this);
     }
 
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
+    public UUID getId() {
+        return id;
+    }
 
-    public String getTemplateId() { return templateId; }
-    public void setTemplateId(String templateId) { this.templateId = templateId; }
+    public void setId(UUID id) {
+        this.id = id;
+    }
 
-    public int getTemplateVersion() { return templateVersion; }
-    public void setTemplateVersion(int templateVersion) { this.templateVersion = templateVersion; }
+    public String getTemplateId() {
+        return templateId;
+    }
 
-    public String getRequesterId() { return requesterId; }
-    public void setRequesterId(String requesterId) { this.requesterId = requesterId; }
+    public void setTemplateId(String templateId) {
+        this.templateId = templateId;
+    }
 
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
+    public int getTemplateVersion() {
+        return templateVersion;
+    }
 
-    public String getCurrentState() { return currentState; }
-    public void setCurrentState(String currentState) { this.currentState = currentState; }
+    public void setTemplateVersion(int templateVersion) {
+        this.templateVersion = templateVersion;
+    }
 
-    public Long getVersion() { return version; }
-    public void setVersion(Long version) { this.version = version; }
+    public String getRequesterId() {
+        return requesterId;
+    }
 
-    public String getTemplateSnapshot() { return templateSnapshot; }
-    public void setTemplateSnapshot(String templateSnapshot) { this.templateSnapshot = templateSnapshot; }
+    public void setRequesterId(String requesterId) {
+        this.requesterId = requesterId;
+    }
 
-    public Map<String, Object> getContextData() { return contextData; }
-    public void setContextData(Map<String, Object> contextData) { this.contextData = contextData; }
+    public String getTitle() {
+        return title;
+    }
 
-    public List<WorkflowTask> getTasks() { return tasks; }
-    public void setTasks(List<WorkflowTask> tasks) { this.tasks = tasks; }
+    public void setTitle(String title) {
+        this.title = title;
+    }
 
-    public OffsetDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
+    public String getCurrentState() {
+        return currentState;
+    }
 
-    public OffsetDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(OffsetDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public void setCurrentState(String currentState) {
+        this.currentState = currentState;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
+    }
+
+    public String getTemplateSnapshot() {
+        return templateSnapshot;
+    }
+
+    public void setTemplateSnapshot(String templateSnapshot) {
+        this.templateSnapshot = templateSnapshot;
+    }
+
+    public Map<String, Object> getContextData() {
+        return contextData;
+    }
+
+    public void setContextData(Map<String, Object> contextData) {
+        this.contextData = contextData;
+    }
+
+    public List<WorkflowTask> getTasks() {
+        return tasks;
+    }
+
+    public void setTasks(List<WorkflowTask> tasks) {
+        this.tasks = tasks;
+    }
+
+    public OffsetDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(OffsetDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public OffsetDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(OffsetDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 }

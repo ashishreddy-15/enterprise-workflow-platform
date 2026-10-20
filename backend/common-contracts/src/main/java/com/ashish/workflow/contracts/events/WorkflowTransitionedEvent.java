@@ -13,5 +13,4 @@ public record WorkflowTransitionedEvent(
         String actorId,
         String comments,
         Instant occurredAt,
-        Map<String, String> metadata
-) {}
+        Map<String, String> metadata) {}

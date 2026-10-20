@@ -9,6 +9,8 @@ import com.ashish.workflow.repository.WorkflowSpecifications;
 import com.ashish.workflow.security.UserContext;
 import com.ashish.workflow.security.UserContextHolder;
 import com.ashish.workflow.service.WorkflowService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +23,8 @@ import java.util.UUID;
 @RequestMapping("/api/v1/workflows")
 public class WorkflowController {
 
+    private static final Logger log = LoggerFactory.getLogger(WorkflowController.class);
+
     private final WorkflowService workflowService;
     private final WorkflowRepository workflowRepository;
 
@@ -32,11 +36,14 @@ public class WorkflowController {
     @PostMapping
     public ResponseEntity<WorkflowResponse> createWorkflow(@RequestBody CreateWorkflowRequest request) throws Exception {
         UserContext caller = UserContextHolder.getRequiredContext();
+        log.info("REST: Create workflow request - templateId: '{}', requesterId: '{}', title: '{}'",
+                request.templateId(), caller.userId(), request.title());
         WorkflowInstance instance = workflowService.createAndTransitWorkflow(
                 request.templateId(),
                 caller.userId(),
                 request.title()
         );
+        log.info("REST: Workflow created successfully - id: {}, state: {}", instance.getId(), instance.getCurrentState());
         return ResponseEntity.status(HttpStatus.CREATED).body(WorkflowResponse.from(instance));
     }
 
@@ -46,12 +53,15 @@ public class WorkflowController {
             @RequestParam(required = false) String priority,
             @RequestParam(required = false) String requesterId) {
 
+        log.debug("REST: Search workflows - state: {}, priority: {}, requesterId: {}", state, priority, requesterId);
         Specification<WorkflowInstance> spec = Specification.<WorkflowInstance>unrestricted()
                 .and(WorkflowSpecifications.hasState(state))
                 .and(WorkflowSpecifications.hasPriority(priority))
                 .and(WorkflowSpecifications.requesterEquals(requesterId));
 
-        return ResponseEntity.ok(workflowRepository.findAll(spec));
+        List<WorkflowInstance> results = workflowRepository.findAll(spec);
+        log.debug("REST: Found {} workflows matching criteria", results.size());
+        return ResponseEntity.ok(results);
     }
 
     @PostMapping("/{id}/transition")
@@ -59,6 +69,8 @@ public class WorkflowController {
             @PathVariable UUID id,
             @RequestBody TransitionWorkflowRequest request) throws Exception {
         UserContext caller = UserContextHolder.getRequiredContext();
+        log.info("REST: Transition workflow request - workflowId: {}, action: '{}', caller: '{}', roles: {}",
+                id, request.action(), caller.userId(), caller.roles());
         WorkflowInstance instance = workflowService.transitionWorkflow(
                 id,
                 request.action(),
@@ -66,6 +78,7 @@ public class WorkflowController {
                 request.comments(),
                 request.payload()
         );
+        log.info("REST: Workflow {} transitioned successfully to state: '{}'", instance.getId(), instance.getCurrentState());
         return ResponseEntity.ok(WorkflowResponse.from(instance));
     }
 

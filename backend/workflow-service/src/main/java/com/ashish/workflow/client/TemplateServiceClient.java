@@ -1,6 +1,8 @@
 package com.ashish.workflow.client;
 
 import com.ashish.workflow.contracts.dto.TemplateDefinitionResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
@@ -10,6 +12,8 @@ import java.util.Optional;
 
 @Component
 public class TemplateServiceClient {
+
+    private static final Logger log = LoggerFactory.getLogger(TemplateServiceClient.class);
 
     private final RestClient restClient;
 
@@ -24,6 +28,7 @@ public class TemplateServiceClient {
      * GET http://localhost:8083/api/v1/templates/{templateKey}
      */
     public Optional<TemplateDefinitionResponse> getActivePublishedTemplate(String templateKey) {
+        log.debug("Calling template-service to fetch active published template for key: '{}'", templateKey);
         try {
             TemplateDefinitionResponse response = restClient.get()
                     .uri("/api/v1/templates/{templateKey}", templateKey)
@@ -33,8 +38,14 @@ public class TemplateServiceClient {
                     })
                     .body(TemplateDefinitionResponse.class);
 
+            if (response != null) {
+                log.debug("Received template '{}' v{} from template-service", templateKey, response.version());
+            } else {
+                log.warn("Template-service returned null/empty body for template key: '{}'", templateKey);
+            }
             return Optional.ofNullable(response);
         } catch (Exception e) {
+            log.error("Failed to fetch template '{}' from template-service: {}", templateKey, e.getMessage());
             return Optional.empty();
         }
     }

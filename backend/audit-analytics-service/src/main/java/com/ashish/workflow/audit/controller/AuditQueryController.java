@@ -4,6 +4,8 @@ import com.ashish.workflow.audit.document.AuditLogDocument;
 import com.ashish.workflow.audit.document.WorkflowAnalyticsView;
 import com.ashish.workflow.audit.repository.AuditLogRepository;
 import com.ashish.workflow.audit.repository.WorkflowAnalyticsRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,6 +15,8 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/analytics")
 public class AuditQueryController {
+
+    private static final Logger log = LoggerFactory.getLogger(AuditQueryController.class);
 
     private final WorkflowAnalyticsRepository analyticsRepository;
     private final AuditLogRepository auditLogRepository;
@@ -26,6 +30,7 @@ public class AuditQueryController {
     // Query the pre-joined CQRS view for a specific workflow
     @GetMapping("/workflows/{workflowId}")
     public ResponseEntity<WorkflowAnalyticsView> getWorkflowAnalytics(@PathVariable String workflowId) {
+        log.debug("REST: Fetching analytics view for workflowId: '{}'", workflowId);
         return analyticsRepository.findById(workflowId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -35,6 +40,7 @@ public class AuditQueryController {
     @GetMapping("/workflows")
     public ResponseEntity<List<WorkflowAnalyticsView>> getAllViews(
             @RequestParam(required = false) String state) {
+        log.debug("REST: Fetching all analytics views, state filter: '{}'", state);
         if (state != null && !state.isBlank()) {
             return ResponseEntity.ok(analyticsRepository.findByCurrentState(state));
         }
@@ -44,6 +50,7 @@ public class AuditQueryController {
     // Fetch raw immutable audit logs for a workflow
     @GetMapping("/audit-logs/{workflowId}")
     public ResponseEntity<List<AuditLogDocument>> getAuditTrail(@PathVariable UUID workflowId) {
+        log.debug("REST: Fetching audit trail for workflowId: '{}'", workflowId);
         return ResponseEntity.ok(auditLogRepository.findByWorkflowIdOrderByOccurredAtAsc(workflowId));
     }
 }

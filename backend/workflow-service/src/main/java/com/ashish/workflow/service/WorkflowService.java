@@ -10,6 +10,8 @@ import com.ashish.workflow.domain.entity.WorkflowTask;
 import com.ashish.workflow.repository.OutboxRepository;
 import com.ashish.workflow.repository.WorkflowRepository;
 import com.ashish.workflow.security.UserContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
@@ -22,6 +24,8 @@ import java.util.UUID;
 
 @Service
 public class WorkflowService {
+
+    private static final Logger log = LoggerFactory.getLogger(WorkflowService.class);
 
     private final WorkflowRepository workflowRepository;
     private final OutboxRepository outboxRepository;
@@ -41,9 +45,15 @@ public class WorkflowService {
 
     @Transactional
     public WorkflowInstance createAndTransitWorkflow(String templateKey, String requesterId, String title){
+        log.info("Creating workflow instance - templateKey: '{}', requesterId: '{}', title: '{}'",
+                templateKey, requesterId, title);
+
         // 1. Fetch active published blueprint from template-service
         TemplateDefinitionResponse template = templateServiceClient.getActivePublishedTemplate(templateKey)
                 .orElseThrow(() -> new IllegalArgumentException("No active published template found for: " + templateKey));
+
+        log.debug("Loaded template definition '{}' v{} with initial state '{}'",
+                templateKey, template.version(), template.initialState());
 
         String serializedSnapshot = objectMapper.writeValueAsString(template);
 
@@ -60,10 +70,15 @@ public class WorkflowService {
         // 2. Spawn initial generic WorkflowTask
         StepDefinitionDto initialStep = template.steps().get(template.initialState());
         if (initialStep != null && !initialStep.isTerminal()) {
-            workflow.addTask(buildTaskFromStep(initialStep));
+            WorkflowTask initialTask = buildTaskFromStep(initialStep);
+            workflow.addTask(initialTask);
+            log.debug("Spawned initial task '{}' (scope: {}, requiredRole: {})",
+                    initialStep.stepName(), initialStep.actorScope(), initialStep.requiredRole());
         }
 
         WorkflowInstance saved = workflowRepository.save(workflow);
+        log.info("Workflow instance created successfully - workflowId: {}, state: '{}'",
+                saved.getId(), saved.getCurrentState());
 
         // 3. Stage Outbox Event
         WorkflowTransitionedEvent event = new WorkflowTransitionedEvent(
@@ -92,6 +107,8 @@ public class WorkflowService {
         outbox.setStatus("PENDING");
         outbox.setCreatedAt(OffsetDateTime.now());
         outboxRepository.save(outbox);
+        log.debug("Staged outbox event id={} for aggregateId={} (event: {})",
+                outbox.getId(), saved.getId(), outbox.getEventType());
     }
 
     @Transactional
@@ -103,6 +120,8 @@ public class WorkflowService {
             Map<String, Object> payload) {
 
         String actorId = caller.userId();
+        log.info("Processing workflow transition - workflowId: {}, action: '{}', actorId: '{}'",
+                workflowId, action, actorId);
 
         WorkflowInstance workflow = workflowRepository.findById(workflowId)
                 .orElseThrow(() -> new IllegalArgumentException("Workflow not found: " + workflowId));
@@ -128,6 +147,8 @@ public class WorkflowService {
 
         if ("REQUESTER".equals(scope)) {
             if (!workflow.getRequesterId().equalsIgnoreCase(actorId)) {
+                log.warn("Access Denied: Workflow {} step '{}' can only be performed by requester '{}', but caller is '{}'",
+                        workflowId, previousState, workflow.getRequesterId(), actorId);
                 throw new SecurityException(
                         "Access Denied: Step '" + previousState + "' can only be performed by the requester (" + workflow.getRequesterId() + ")."
                 );
@@ -135,6 +156,8 @@ public class WorkflowService {
         } else if ("ROLE".equals(scope)) {
             // 1. Segregation of Duties: Requester cannot approve their own request
             if (workflow.getRequesterId().equalsIgnoreCase(actorId)) {
+                log.warn("Segregation of Duties violation on workflow {}: Requester '{}' cannot act on role-restricted step '{}'",
+                        workflowId, actorId, previousState);
                 throw new SecurityException(
                         "Segregation of Duties violation: Requester (" + actorId + ") cannot act on role-restricted step '" + previousState + "'."
                 );
@@ -142,6 +165,8 @@ public class WorkflowService {
             // 2. Role Enforcement: Caller must hold the step's requiredRole
             String requiredRole = currentStep.requiredRole();
             if (requiredRole != null && !requiredRole.isBlank() && !caller.hasRole(requiredRole)) {
+                log.warn("Access Denied on workflow {}: Step '{}' requires role '{}', but caller '{}' holds roles {}",
+                        workflowId, previousState, requiredRole, actorId, caller.roles());
                 throw new SecurityException(
                         "Access Denied: Step '" + previousState + "' requires role '" + requiredRole + "', but caller holds " + caller.roles()
                 );
@@ -179,11 +204,18 @@ public class WorkflowService {
             );
         }
 
+        log.info("Transitioning workflow {} from '{}' -> '{}' via action '{}'",
+                workflowId, previousState, newState, normalizedAction);
+
         // Complete the active pending task
         workflow.getTasks().stream()
                 .filter(t -> "PENDING".equals(t.getStatus()))
                 .findFirst()
-                .ifPresent(task -> task.complete(normalizedAction, actorId, comments));
+                .ifPresent(task -> {
+                    task.complete(normalizedAction, actorId, comments);
+                    log.debug("Completed task '{}' (order: {}) for workflow {}",
+                            task.getStepName(), task.getStepOrder(), workflowId);
+                });
 
         // Spawn next task if non-terminal
         StepDefinitionDto nextStepDef = snapshot.steps().get(newState);
@@ -193,7 +225,12 @@ public class WorkflowService {
                 || nextStepDef.transitions().isEmpty();
 
         if (!isNextTerminal) {
-            workflow.addTask(buildTaskFromStep(nextStepDef));
+            WorkflowTask nextTask = buildTaskFromStep(nextStepDef);
+            workflow.addTask(nextTask);
+            log.debug("Spawned next task '{}' (order: {}, requiredRole: {}) for workflow {}",
+                    nextStepDef.stepName(), nextStepDef.stepOrder(), nextStepDef.requiredRole(), workflowId);
+        } else {
+            log.info("Workflow {} has reached terminal state '{}'", workflowId, newState);
         }
 
         workflow.setCurrentState(newState);
@@ -222,6 +259,7 @@ public class WorkflowService {
         );
 
         saveOutboxEvent(saved, event);
+        log.info("Workflow {} transition successfully persisted. Current state: '{}'", saved.getId(), saved.getCurrentState());
         return saved;
     }
 

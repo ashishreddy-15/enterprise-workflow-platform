@@ -27,12 +27,14 @@ public class OutboxScheduler {
 
     @Scheduled(fixedDelay = 2000)
     public void pollAndPublishOutboxEvents() {
+        log.debug("Outbox scheduler polling for pending events...");
         // Calls through the Spring proxy -> @Transactional executes
         List<OutboxEvent> pendingEvents = outboxService.fetchPendingEventsWithLock();
         if (pendingEvents.isEmpty()) {
             return;
         }
 
+        log.debug("Found {} pending outbox events to publish", pendingEvents.size());
         for (OutboxEvent event : pendingEvents) {
             try {
                 // Synchronously wait up to 5s for the Kafka broker ACK
@@ -41,6 +43,7 @@ public class OutboxScheduler {
 
                 // External call through the Spring proxy -> @Transactional executes
                 outboxService.markPublished(event.getId());
+                log.info("Successfully published outbox event id={} to topic '{}'", event.getId(), TOPIC);
             } catch (Exception e) {
                 log.error("Failed to publish event id={} to Kafka: {}", event.getId(), e.getMessage());
                 outboxService.markFailed(event.getId());

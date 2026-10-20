@@ -65,3 +65,18 @@ X-User-Roles: ROLE_LEGAL_COUNSEL,ROLE_EMPLOYEE
   "action": "VERIFY_AND_ONBOARD",
   "comments": "Verified KYC compliance. Approved."
 }
+
+### 1. Check Inbox as Legal Counsel (Meera) - Should see workflows waiting for legal verification
+GET http://localhost:8081/api/v1/tasks/inbox
+X-User-Id: legal_counsel_meera
+X-User-Roles: ROLE_LEGAL_COUNSEL,ROLE_EMPLOYEE
+
+### 2. Check Inbox as Requester (Ashish) - Should see workflows waiting for initial document upload
+GET http://localhost:8081/api/v1/tasks/inbox
+X-User-Id: user_ashish_01
+X-User-Roles: ROLE_EMPLOYEE
+
+### 3. Check Inbox as Finance Manager (Rahul) - Should see nothing if no finance steps are pending
+GET http://localhost:8081/api/v1/tasks/inbox
+X-User-Id: usr_rahul_finance
+X-User-Roles: ROLE_FINANCE_MANAGER

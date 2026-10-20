@@ -23,6 +23,7 @@ public class GlobalExceptionHandler {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         problem.setTitle("Validation Error / Bad Request");
         problem.setType(URI.create("https://api.workflow.ashish.com/errors/bad-request"));
+        System.out.println("ERROR: " + ex.getMessage());
         return problem;
     }
 

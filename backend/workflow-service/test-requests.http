@@ -1,0 +1,18 @@
+### Create Workflow while Kafka is down
+POST http://localhost:8081/api/v1/workflows
+Content-Type: application/json
+
+{
+  "templateId": "VENDOR_ONBOARDING",
+  "requesterId": "usr_ashish_01",
+  "title": "Kafka Failure Resiliency Test 2"
+}
+
+### Verify CQRS Projection in Analytics Service
+GET http://localhost:8082/api/v1/analytics/workflows/6617deac-76dc-4599-ab42-3bf60d6273ef
+
+### Replay all quarantined events after recovering Kafka
+POST http://localhost:8081/api/v1/admin/outbox/replay-failed
+
+### Or replay a single event by ID
+POST http://localhost:8081/api/v1/admin/outbox/events/6617deac-76dc-4599-ab42-3bf60d6273ef/replay

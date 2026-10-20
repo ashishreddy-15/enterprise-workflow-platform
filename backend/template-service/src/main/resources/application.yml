@@ -1,0 +1,15 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: template-service
+
+  threads:
+    virtual:
+      enabled: true
+
+  mongodb:
+    uri: mongodb://ewp_admin:ewp_password@localhost:27017/template_db?authSource=admin&uuidRepresentation=standard
+    uuid-representation: standard
+    auto-index-creation: true

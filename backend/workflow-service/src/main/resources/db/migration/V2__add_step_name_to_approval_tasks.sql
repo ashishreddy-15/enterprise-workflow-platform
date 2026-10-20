@@ -1,0 +1,2 @@
+ALTER TABLE approval_tasks
+    ADD COLUMN step_name VARCHAR(100) NOT NULL DEFAULT 'L1_APPROVAL';

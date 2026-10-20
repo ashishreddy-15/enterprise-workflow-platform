@@ -45,7 +45,7 @@ public class WorkflowEventConsumer {
             dltTopicSuffix = "-dlt"
     )
     @KafkaListener(topics = "workflow-events", groupId = "audit-analytics-group")
-    public void consumeWorkflowEvent(String rawJsonPayload) throws Exception {
+    public void consumeWorkflowEvent(String rawJsonPayload) {
         // Handle case where JsonSerializer wrapped the string in quotes
         String cleanJson = rawJsonPayload;
         if (rawJsonPayload.startsWith("\"") && rawJsonPayload.endsWith("\"")) {
@@ -67,7 +67,7 @@ public class WorkflowEventConsumer {
                 event.workflowId(),
                 event.templateId(),
                 event.previousState(),
-                event.newState(),
+                event.nextState(),
                 event.actorId(),
                 event.occurredAt(),
                 Instant.now()
@@ -84,21 +84,21 @@ public class WorkflowEventConsumer {
                     return newView;
                 });
 
-        view.setCurrentState(event.newState());
+        view.setCurrentState(event.nextState());
         view.setLastActorId(event.actorId());
         view.setTransitionCount(view.getTransitionCount() + 1);
         view.setLastUpdatedAt(event.occurredAt());
         view.getHistory().add(new WorkflowAnalyticsView.TransitionEntry(
                 eventIdStr,
                 event.previousState(),
-                event.newState(),
+                event.nextState(),
                 event.actorId(),
                 event.occurredAt()
         ));
 
         analyticsRepository.save(view);
         log.info("Processed workflow eventId={} for workflowId={} -> state={}",
-                eventIdStr, workflowIdStr, event.newState());
+                eventIdStr, workflowIdStr, event.nextState());
     }
 
     @DltHandler

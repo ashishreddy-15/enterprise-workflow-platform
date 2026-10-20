@@ -16,6 +16,11 @@ spring:
     password: ewp_password
     driver-class-name: org.postgresql.Driver
 
+  mongodb:
+    uri: mongodb://ewp_admin:ewp_password@localhost:27017/template_db?authSource=admin&uuidRepresentation=standard
+    uuid-representation: standard
+    auto-index-creation: true
+
   jpa:
     hibernate:
       ddl-auto: validate
@@ -33,3 +38,7 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+services:
+  template-service:
+    url: http://localhost:8083

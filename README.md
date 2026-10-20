@@ -1,41 +1,198 @@
 # Enterprise Workflow Platform
 
-An event-driven microservices platform built with **Java 21** and **Spring Boot 3.x** designed to manage complex, multi-stage enterprise approval workflows with strict transactional integrity, fault-tolerant event streaming, and polyglot persistence.
+An event-driven microservices platform built with **Java 21** and **Spring Boot 4.x** designed to manage multi-stage, data-driven enterprise approval workflows (e.g. vendor onboarding, KYC compliance, loan approvals) with transactional integrity, fault-tolerant event streaming, and polyglot persistence.
+
+Workflows are **fully data-driven** — state graphs, required roles, payload requirements, and transition rules are defined in versioned MongoDB templates, allowing new business processes to be modeled without application code changes.
 
 ---
 
-## System Architecture & Design Patterns
-
-This repository implements core distributed systems patterns from [microservices.io](https://microservices.io) to solve real-world data consistency and scalability challenges:
-
-* **Database per Service (Polyglot Persistence):**
-  * **PostgreSQL (`workflow_db`):** Owns the core transactional state machine (`workflow_instances`, `approval_tasks`) requiring strict ACID guarantees and optimistic locking (`@Version`).
-  * **MongoDB (`audit_db`):** Stores immutable, schema-flexible audit logs and pre-joined analytics views.
-  * **Redis:** Provides distributed caching and API Gateway rate limiting.
-* **Transactional Outbox Pattern:** Eliminates the dual-write problem between PostgreSQL and Apache Kafka. Workflow state transitions and `outbox_events` records are committed in a single local ACID transaction.
-* **Polling Publisher & Partial Indexing:** An asynchronous scheduler polls pending outbox events backed by a PostgreSQL partial index (`WHERE status = 'PENDING'`) to keep read overhead near zero even as historical event volume grows.
-* **CQRS (Command Query Responsibility Segregation):** Separates high-integrity transactional writes (`workflow-service`) from denormalized, event-driven read projections and compliance timelines (`audit-analytics-service`).
-* **Idempotent Consumer & Dead-Letter Queue (DLQ):** Guarantees safe processing under At-Least-Once Kafka delivery semantics by deduplicating event IDs before persisting to MongoDB.
-
-### Event Flow
+## Architecture Overview
 
 ```text
-[Client] 
-   │  POST /api/v1/workflows
-   ▼
-[workflow-service] (Java 21 + Virtual Threads)
-   │  Single @Transactional Commit
-   ├──► 1. INSERT/UPDATE workflow_instances & approval_tasks (PostgreSQL)
-   └──► 2. INSERT outbox_events [status = PENDING] (PostgreSQL)
-              │
-              ▼ (Polled every 2s via Partial Index)
-      [OutboxScheduler]
-              │  Publishes JSON Event (Key = workflowId)
-              ▼
-       [Apache Kafka] (KRaft Mode - Topic: workflow-events)
-              │
-              ▼
-[audit-analytics-service] (Idempotent Consumer)
-              │
-              ▼
-         [MongoDB] (Immutable Audit Trail & CQRS Read View)
+                               ┌─────────────────────────┐
+                               │     Client / Gateway    │
+                               └────────────┬────────────┘
+                                            │
+               ┌────────────────────────────┼────────────────────────────┐
+               │ REST (:8083)               │ REST (:8081)               │ REST (:8082)
+               ▼                            ▼                            ▼
+    ┌──────────────────────┐     ┌──────────────────────┐     ┌────────────────────────┐
+    │   template-service   │◄────┤   workflow-service   │     │ audit-analytics-service│
+    └──────────┬───────────┘HTTP └──────────┬───────────┘     └───────────▲────────────┘
+               │ (Blueprints)               │ (Core Engine)               │
+               │                            │                             │ Kafka Consumer
+               ▼                            ▼                             │ (workflow-events)
+        ┌─────────────┐            ┌──────────────────┐                   │
+        │   MongoDB   │            │    PostgreSQL    │                   │
+        │(template_db)│            │  (workflow_db)   │                   │
+        └─────────────┘            └────────┬─────────┘                   │
+                                            │                             │
+                                            ▼ (Outbox Poller every 2s)    │
+                                   ┌──────────────────┐                   │
+                                   │   Apache Kafka   ├───────────────────┘
+                                   │  (KRaft Mode)    │
+                                   └──────────────────┘
+```
+
+---
+
+## Core Distributed Systems & Design Patterns
+
+* **Transactional Outbox Pattern:** Eliminates the dual-write problem between PostgreSQL and Apache Kafka. Workflow state transitions and `outbox_events` are committed within a single local ACID transaction. A background scheduler polls pending events using `SELECT ... FOR UPDATE SKIP LOCKED` and a partial index (`WHERE status = 'PENDING'`).
+* **Data-Driven Dynamic State Machine:** Workflows are orchestrated based on template graphs defined in MongoDB rather than hardcoded logic. Each step configures actor scope (`REQUESTER`, `ROLE`, or `ANY`), permitted actions, and target states.
+* **Frozen Template Snapshots:** When an instance is created, a complete JSONB snapshot of the template definition is frozen on the workflow instance (`template_snapshot`). Publishing a new template version never breaks in-flight workflows.
+* **Segregation of Duties (SoD) & RBAC:** Enforced in transition logic. A user who initiated a workflow cannot action `ROLE`-scoped approval tasks on their own workflow, preventing unauthorized self-approvals.
+* **Optimistic Locking:** Managed via JPA `@Version` on `workflow_instances`. Prevents lost updates under concurrent transitions; concurrent conflicts throw `OptimisticLockException` and return an HTTP `409 Conflict` ProblemDetail response.
+* **CQRS (Command Query Responsibility Segregation):** Write operations are handled by `workflow-service` with normalized PostgreSQL storage; read analytics and audit trails are projected into MongoDB by `audit-analytics-service` as pre-aggregated documents (`workflow_analytics_views`).
+* **Idempotent Consumer:** Kafka consumer verifies `eventId` in MongoDB before processing. Duplicate deliveries under at-least-once semantics are discarded safely.
+* **Non-Blocking Retry & Dead-Letter Topic (DLT):** Configured via Spring Kafka `@RetryableTopic` with exponential backoff (1s -> 2s -> 4s). Unrecoverable messages land on `workflow-events-dlt` and trigger alerting via `@DltHandler`.
+* **Java 21 Virtual Threads:** Enabled across all services (`spring.threads.virtual.enabled=true`) for high concurrent I/O throughput.
+
+---
+
+## Project Structure & Modules
+
+The repository is structured as a multi-module Maven project:
+
+```text
+enterprise-workflow-platform/
+├── backend/
+│   ├── pom.xml                        # Root parent POM (Spring Boot 4.1.1, Spotless, Java 21)
+│   ├── common-contracts/              # Shared records: events & cross-service DTOs
+│   ├── template-service/              # Port 8083: Workflow blueprint authoring & versioning (MongoDB)
+│   ├── workflow-service/              # Port 8081: Core workflow state machine & Outbox (PostgreSQL)
+│   └── audit-analytics-service/       # Port 8082: Kafka event consumer & CQRS read views (MongoDB)
+└── docker/
+    └── docker-compose.infra.yml       # Local PostgreSQL 16, MongoDB 7, Kafka 3.8 (KRaft), Redis 7
+```
+
+| Module | Port | Storage | Responsibility |
+|---|---|---|---|
+| [`common-contracts`](file:///d:/ashish/enterprise-workflow-platform/backend/common-contracts) | — | — | Shared immutable records (`WorkflowTransitionedEvent`, `TemplateDefinitionResponse`). |
+| [`template-service`](file:///d:/ashish/enterprise-workflow-platform/backend/template-service) | 8083 | MongoDB (`template_db`) | Template creation, versioning (`DRAFT` → `PUBLISHED`), and step definitions. |
+| [`workflow-service`](file:///d:/ashish/enterprise-workflow-platform/backend/workflow-service) | 8081 | PostgreSQL (`workflow_db`) | Instance creation, transitions, RBAC & SoD enforcement, task inbox, transactional outbox scheduler. |
+| [`audit-analytics-service`](file:///d:/ashish/enterprise-workflow-platform/backend/audit-analytics-service) | 8082 | MongoDB (`audit_db`) | Consumes `workflow-events`, writes immutable audit logs, maintains pre-joined CQRS analytics views. |
+
+---
+
+## Database Schemas & Collections
+
+### PostgreSQL (`workflow_db`)
+
+Managed via **Flyway migrations** (`backend/workflow-service/src/main/resources/db/migration/`):
+
+* **`workflow_instances`**: Stores running workflows with optimistic locking (`version`), state (`current_state`), requester metadata, frozen blueprint (`template_snapshot` JSONB), and contextual form payload (`context_data` JSONB).
+* **`workflow_tasks`**: Actionable tasks spawned for human actors with `step_name`, `task_type`, `assigned_role`, `completed_by`, `status`, and remarks.
+* **`outbox_events`**: Atomic staging buffer for Kafka messages. Indexed with `status = 'PENDING'` for fast polling; tracks retry attempts and quarantine status (`FAILED`).
+
+### MongoDB
+
+* **`template_db.workflow_templates`**: Holds workflow templates with compound unique indexing on `{ templateKey: 1, version: 1 }`. Contains full graph of steps, validation rules, and valid transitions.
+* **`audit_db.audit_logs`**: Immutable, append-only chronological log of every transition keyed by `eventId`.
+* **`audit_db.workflow_analytics_views`**: Denormalized CQRS read-model containing current state, total transition counts, and complete chronological transition history.
+
+---
+
+## API Reference
+
+### 1. Template Service (`:8083`)
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/v1/templates` | Create a draft workflow template (auto-increments version) |
+| `PUT` | `/api/v1/templates/{key}/versions/{version}/publish` | Publish a template version |
+| `GET` | `/api/v1/templates/{key}` | Fetch latest published blueprint |
+| `GET` | `/api/v1/templates/{key}/versions` | List all versions of a template |
+
+### 2. Workflow Service (`:8081`)
+
+*All requests require authentication headers: `X-User-Id` and `X-User-Roles` (comma-separated).*
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/v1/workflows` | Start a new workflow instance from a template key |
+| `POST` | `/api/v1/workflows/{id}/transition` | Trigger a state transition (`action`, `comments`, `payload`) |
+| `GET` | `/api/v1/workflows` | Search workflows (query params: `state`, `priority`, `requesterId`) |
+| `GET` | `/api/v1/tasks/inbox` | List eligible pending tasks for the calling user (evaluated with SoD) |
+| `POST` | `/api/v1/admin/outbox/replay-failed` | Bulk re-queue quarantined `FAILED` outbox events |
+| `POST` | `/api/v1/admin/outbox/events/{id}/replay` | Re-queue a specific failed event |
+
+### 3. Audit & Analytics Service (`:8082`)
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/analytics/workflows/{workflowId}` | Get pre-joined CQRS analytics view and history |
+| `GET` | `/api/v1/analytics/workflows?state=...` | List pre-joined workflow analytics views by state |
+| `GET` | `/api/v1/analytics/audit-logs/{workflowId}` | Fetch raw immutable audit logs for a workflow |
+
+---
+
+## Code Formatting & Style
+
+The codebase enforces **Palantir Java Format** via the **Spotless Maven Plugin**. Formatting checks are automatically executed during `mvn compile`.
+
+```bash
+# Auto-format all Java files across all modules
+mvn spotless:apply
+
+# Verify format compliance without modifying files
+mvn spotless:check
+```
+
+---
+
+## Getting Started Locally
+
+### Prerequisites
+
+* **Java 21** (Eclipse Adoptium JDK recommended)
+* **Maven 3.9+**
+* **Docker & Docker Compose**
+
+### 1. Start Infrastructure Services
+
+Launch PostgreSQL, MongoDB, Apache Kafka (KRaft), and Redis:
+
+```bash
+docker compose -f docker/docker-compose.infra.yml up -d
+```
+
+Verify containers are healthy:
+
+```bash
+docker ps
+```
+
+### 2. Build the Platform
+
+From the `backend` directory:
+
+```bash
+cd backend
+mvn clean install -DskipTests
+```
+
+### 3. Run Microservices
+
+Start each service in a separate terminal:
+
+```bash
+# 1. Template Service (:8083)
+mvn -pl template-service spring-boot:run
+
+# 2. Workflow Service (:8081)
+mvn -pl workflow-service spring-boot:run
+
+# 3. Audit & Analytics Service (:8082)
+mvn -pl audit-analytics-service spring-boot:run
+```
+
+---
+
+## Error Handling & Problem Details
+
+All REST APIs conform to **RFC 7807 (Problem Details for HTTP APIs)**:
+* `403 Forbidden` (`SecurityException`): Triggered by missing authentication headers, role mismatches, or Segregation of Duties violations.
+* `409 Conflict` (`OptimisticLockException` / `ObjectOptimisticLockingFailureException`): Triggered when concurrent requests attempt to mutate the same workflow version simultaneously.
+* `400 Bad Request` (`IllegalArgumentException`): Input or payload validation failure.
+* `500 Internal Server Error`: Generic unhandled exceptions.

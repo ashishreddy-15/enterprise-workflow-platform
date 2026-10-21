@@ -76,3 +76,27 @@ export interface WorkflowTransitionResponse {
     actedAt: string | null;
   }>;
 }
+
+export interface WorkflowResponse {
+  id: string;
+  templateId: string;
+  templateVersion: number;
+  requesterId: string;
+  title: string;
+  currentState: string;
+  currentStepDueAt: string | null;
+  slaBreached: boolean;
+  version: number;
+  contextData: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TemplateCatalogItem {
+  key: string;
+  name: string;
+  category: string;
+  description: string;
+  initialStep: string;
+  estimatedSla: string;
+}

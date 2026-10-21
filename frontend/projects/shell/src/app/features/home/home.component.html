@@ -18,6 +18,11 @@
         <span>{{ tasks().length }}</span>
       </span>
 
+      <a routerLink="/workflows" [queryParams]="{ action: 'new' }"
+         class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-white rounded-md text-xs font-medium transition flex items-center gap-1 shadow-xs cursor-pointer">
+        <span>+</span> New Request
+      </a>
+
       <a routerLink="/workflows" class="px-2.5 py-1 bg-white border border-zinc-200 hover:border-zinc-900 rounded-md text-xs font-medium text-zinc-900 transition">
         Open Split-Pane Inbox &rarr;
       </a>

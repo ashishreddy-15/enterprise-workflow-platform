@@ -1,8 +1,9 @@
 import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { WorkflowService } from '../../services/workflow.service';
-import { TaskInboxItem, WorkflowAction, WorkflowTemplate } from '../../models/workflow.model';
+import { TaskInboxItem, WorkflowAction, WorkflowTemplate, TemplateCatalogItem } from '../../models/workflow.model';
 
 @Component({
   selector: 'app-inbox',
@@ -13,6 +14,8 @@ import { TaskInboxItem, WorkflowAction, WorkflowTemplate } from '../../models/wo
 })
 export class InboxComponent implements OnInit, OnDestroy {
   private workflowService = inject(WorkflowService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
 
   // Reactive State Signals
   readonly tasks = signal<TaskInboxItem[]>([]);
@@ -23,6 +26,38 @@ export class InboxComponent implements OnInit, OnDestroy {
   readonly actionMessage = signal<string | null>(null);
   readonly actionSuccess = signal<boolean>(true);
   readonly templateMap = signal<Map<string, WorkflowTemplate>>(new Map());
+
+  // Initiate Workflow Modal State Signals
+  readonly isCreateModalOpen = signal<boolean>(false);
+  readonly isCreating = signal<boolean>(false);
+  readonly createErrorMessage = signal<string | null>(null);
+  readonly selectedTemplateKey = signal<string>('VENDOR_ONBOARDING');
+  readonly newWorkflowTitle = signal<string>('');
+
+  readonly templateCatalog: TemplateCatalogItem[] = [
+    {
+      key: 'VENDOR_ONBOARDING',
+      name: 'Enterprise Vendor KYC & Legal Onboarding',
+      category: 'Procurement & Compliance',
+      description: 'Two-stage multi-party vendor onboarding. Requester uploads verified PAN & GST credentials, routed to Legal & Compliance officers for final verification.',
+      initialStep: 'Awaiting KYC Documents',
+      estimatedSla: '24h'
+    },
+    {
+      key: 'VENDOR_ONBOARDING_TEST',
+      name: 'Fast-Track Vendor Audit & Risk Check',
+      category: 'Vendor Governance',
+      description: 'Expedited compliance audit with automated state machine transitions and audit logging.',
+      initialStep: 'Awaiting KYC Documents',
+      estimatedSla: '12h'
+    }
+  ];
+
+  readonly quickFillTitles: string[] = [
+    'Acme Industrial Technologies Ltd',
+    'Starlight Global Logistics Inc',
+    'Zenith Semiconductor Labs'
+  ];
 
   // Dynamic Form Model State (Signals for instantaneous zoneless UI reactivity)
   readonly panCardUrl = signal<string>('https://storage.corp.internal/kyc/pan.pdf');
@@ -141,15 +176,70 @@ export class InboxComponent implements OnInit, OnDestroy {
     this.loadInbox();
     // Re-fetch inbox whenever the persona switcher in Shell changes roles
     window.addEventListener('ewp:persona-changed', this.personaChangeListener);
+
+    // Deep link support: /workflows?action=new opens the launch modal directly
+    this.route.queryParams.subscribe(params => {
+      if (params['action'] === 'new') {
+        this.openCreateModal();
+      }
+    });
   }
 
   ngOnDestroy(): void {
     window.removeEventListener('ewp:persona-changed', this.personaChangeListener);
   }
 
-  loadInbox(): void {
+  openCreateModal(): void {
+    this.newWorkflowTitle.set('');
+    this.createErrorMessage.set(null);
+    this.isCreateModalOpen.set(true);
+  }
+
+  closeCreateModal(): void {
+    this.isCreateModalOpen.set(false);
+    this.createErrorMessage.set(null);
+    this.router.navigate([], { relativeTo: this.route, queryParams: {} });
+  }
+
+  selectCatalogTemplate(key: string): void {
+    this.selectedTemplateKey.set(key);
+  }
+
+  setQuickTitle(title: string): void {
+    this.newWorkflowTitle.set(title);
+  }
+
+  createAndLaunchWorkflow(): void {
+    const title = this.newWorkflowTitle().trim();
+    if (!title) {
+      return;
+    }
+
+    this.isCreating.set(true);
+    this.createErrorMessage.set(null);
+
+    this.workflowService.createWorkflow(this.selectedTemplateKey(), title).subscribe({
+      next: (res) => {
+        this.isCreating.set(false);
+        this.isCreateModalOpen.set(false);
+        this.actionSuccess.set(true);
+        this.actionMessage.set(`Workflow '${res.title}' initiated successfully! State: ${res.currentState}`);
+        this.router.navigate([], { relativeTo: this.route, queryParams: {} });
+        this.loadInbox(res.id);
+      },
+      error: (err) => {
+        this.isCreating.set(false);
+        const detail = err.error?.detail || err.error?.message || 'Failed to initiate workflow.';
+        this.createErrorMessage.set(detail);
+      }
+    });
+  }
+
+  loadInbox(targetWorkflowId?: string): void {
     this.isLoading.set(true);
-    this.actionMessage.set(null);
+    if (!targetWorkflowId) {
+      this.actionMessage.set(null);
+    }
 
     this.workflowService.getInbox().subscribe({
       next: (items) => {
@@ -159,6 +249,15 @@ export class InboxComponent implements OnInit, OnDestroy {
         // Pre-fetch template definitions for tasks in the inbox
         for (const item of items) {
           this.loadTemplate(item.templateId);
+        }
+
+        // If targetWorkflowId is specified, find and select that workflow
+        if (targetWorkflowId) {
+          const targetTask = items.find(i => i.workflowId === targetWorkflowId);
+          if (targetTask) {
+            this.selectTask(targetTask);
+            return;
+          }
         }
 
         // Keep current selected item if present, else auto-select first

@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { TaskInboxItem, WorkflowTransitionRequest, WorkflowTransitionResponse, WorkflowTemplate } from '../models/workflow.model';
+import { TaskInboxItem, WorkflowTransitionRequest, WorkflowTransitionResponse, WorkflowResponse, WorkflowTemplate } from '../models/workflow.model';
 
 @Injectable({
   providedIn: 'root'
@@ -17,6 +17,13 @@ export class WorkflowService {
 
   getTemplate(templateKey: string): Observable<WorkflowTemplate> {
     return this.http.get<WorkflowTemplate>(`${this.templateBaseUrl}/templates/${templateKey}`);
+  }
+
+  createWorkflow(templateId: string, title: string): Observable<WorkflowResponse> {
+    return this.http.post<WorkflowResponse>(`${this.gatewayBaseUrl}/workflows`, {
+      templateId,
+      title
+    });
   }
 
   transitionWorkflow(workflowId: string, request: WorkflowTransitionRequest): Observable<WorkflowTransitionResponse> {

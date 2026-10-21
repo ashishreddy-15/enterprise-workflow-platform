@@ -1,80 +1,71 @@
-<div class="app-layout">
-  <!-- TOP NAVIGATION BAR -->
-  <header class="app-header">
-    <div class="header-container">
+<div class="min-h-screen flex flex-col bg-zinc-50 text-zinc-900">
+  <!-- Minimalist Top Navigation -->
+  <header class="bg-white border-b border-zinc-200 sticky top-0 z-50">
+    <div class="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
       
-      <!-- Brand / Logo -->
-      <a routerLink="/" class="brand-section">
-        <div class="brand-icon">⚡</div>
-        <div>
-          <span class="brand-title">Enterprise Workflow</span>
-          <span class="brand-tag">MFE Shell</span>
-        </div>
-      </a>
+      <!-- Brand & Navigation Links -->
+      <div class="flex items-center gap-6">
+        <a routerLink="/" class="flex items-center gap-2 font-semibold text-sm tracking-tight text-zinc-950">
+          <span class="w-6 h-6 rounded bg-zinc-900 text-white flex items-center justify-center text-xs font-bold">W</span>
+          <span>Workflow Platform</span>
+        </a>
 
-      <!-- Main Navigation Links -->
-      <nav class="nav-links">
-        <a routerLink="/workflows" routerLinkActive="active-link" class="nav-link">
-          Task Inbox
-        </a>
-        <a routerLink="/templates" routerLinkActive="active-link" class="nav-link">
-          Template Studio
-        </a>
-        <a routerLink="/analytics" routerLinkActive="active-link" class="nav-link">
-          Audit & Analytics
-        </a>
-      </nav>
+        <nav class="hidden sm:flex items-center gap-1 text-sm">
+          <a routerLink="/workflows" routerLinkActive="bg-zinc-100 text-zinc-950 font-medium"
+             class="px-2.5 py-1.5 rounded-md text-zinc-600 hover:text-zinc-950 hover:bg-zinc-50 transition">
+            Inbox
+          </a>
+          <a routerLink="/templates" routerLinkActive="bg-zinc-100 text-zinc-950 font-medium"
+             class="px-2.5 py-1.5 rounded-md text-zinc-600 hover:text-zinc-950 hover:bg-zinc-50 transition">
+            Blueprints
+          </a>
+          <a routerLink="/analytics" routerLinkActive="bg-zinc-100 text-zinc-950 font-medium"
+             class="px-2.5 py-1.5 rounded-md text-zinc-600 hover:text-zinc-950 hover:bg-zinc-50 transition">
+            Analytics
+          </a>
+        </nav>
+      </div>
 
-      <!-- Persona Switcher Dropdown & Live Auth Indicator -->
-      <div class="user-controls">
-        <div class="persona-pill">
-          <div class="persona-avatar" [ngClass]="auth.activePersona().avatarColor">
-            {{ auth.activePersona().name.substring(0, 2).toUpperCase() }}
-          </div>
-          <div class="persona-info">
-            <span class="persona-name">{{ auth.activePersona().name }}</span>
-            <span class="persona-role">{{ auth.activePersona().role }}</span>
-          </div>
-          
-          <select [value]="auth.activePersona().id" (change)="onPersonaChange($event)" class="persona-select">
+      <!-- Persona Switcher -->
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 border border-zinc-200 rounded-md bg-white px-2 py-1 text-xs">
+          <span class="w-2 h-2 rounded-full"
+                [ngClass]="{
+                  'bg-emerald-500': auth.isAuthenticated(),
+                  'bg-amber-400 animate-pulse': auth.isAuthenticating(),
+                  'bg-rose-500': !auth.isAuthenticated() && !auth.isAuthenticating()
+                }">
+          </span>
+
+          <select [value]="auth.activePersona().id" (change)="onPersonaChange($event)"
+                  class="bg-transparent font-medium text-zinc-800 outline-none cursor-pointer">
             @for (p of auth.personas; track p.id) {
-              <option [value]="p.id">{{ p.name }} ({{ p.role }})</option>
+              <option [value]="p.id">{{ p.name }} &bull; {{ p.role }}</option>
             }
           </select>
-        </div>
-
-        <!-- Auth Status Dot -->
-        <div class="status-indicator" title="API Gateway JWT Status">
-          @if (auth.isAuthenticating()) {
-            <span class="status-dot authenticating" title="Minting JWT..."></span>
-          } @else if (auth.isAuthenticated()) {
-            <span class="status-dot active" title="JWT Active"></span>
-          } @else {
-            <span class="status-dot error" title="Auth Offline"></span>
-          }
         </div>
       </div>
 
     </div>
   </header>
 
-  <!-- AUTH ERROR BANNER -->
+  <!-- Error Banner (Only shown if Gateway fails) -->
   @if (auth.authError()) {
-    <div class="error-banner">
-      <span>⚠️ <strong>Gateway Notice:</strong> {{ auth.authError() }}. Ensure API Gateway is running on port 8080.</span>
-      <button (click)="auth.switchPersona(auth.activePersona())" class="retry-button">
-        Retry Connection
+    <div class="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-900 flex justify-between items-center max-w-5xl mx-auto w-full">
+      <span>{{ auth.authError() }} (Gateway: localhost:8080)</span>
+      <button (click)="auth.switchPersona(auth.activePersona())" class="underline font-semibold hover:text-amber-950">
+        Retry
       </button>
     </div>
   }
 
-  <!-- MAIN CONTENT ROUTER OUTLET -->
-  <main class="app-main">
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-5xl w-full mx-auto px-4 py-8">
     <router-outlet></router-outlet>
   </main>
 
-  <!-- FOOTER -->
-  <footer class="app-footer">
-    Enterprise Workflow & Event-Driven Audit Platform &bull; Angular Native Federation &bull; Port 4200
+  <!-- Clean Footer -->
+  <footer class="border-t border-zinc-200 bg-white py-4 text-center text-xs text-zinc-400">
+    Enterprise Workflow Platform &bull; Angular Micro-Frontends
   </footer>
 </div>

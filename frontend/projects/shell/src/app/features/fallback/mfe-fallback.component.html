@@ -1,13 +1,18 @@
-<div class="fallback-container">
-  <div class="fallback-icon">⏳</div>
-  <h2 class="fallback-title">{{ remoteName }} Remote Module</h2>
-  <p class="fallback-description">
-    This Micro-Frontend is registered under Native Federation at <span class="fallback-code">{{ expectedPort }}</span>.
-    It is either compiling or currently transitioning into Phase 2 development.
-  </p>
-  <div class="fallback-diagnostics">
-    <div class="diagnostic-item"><strong>Status:</strong> Native Federation Standby</div>
-    <div class="diagnostic-item"><strong>Expected Entry:</strong> http://localhost:{{ expectedPort }}/remoteEntry.json</div>
-    <div class="diagnostic-item"><strong>Exposed Contract:</strong> {{ exposedRoutes }}</div>
+<div class="max-w-md mx-auto my-16 p-6 bg-white border border-zinc-200 rounded-lg text-center space-y-4">
+  <div class="w-8 h-8 rounded-full bg-zinc-100 border border-zinc-200 text-zinc-600 flex items-center justify-center mx-auto text-xs font-mono font-medium">
+    MFE
+  </div>
+  
+  <div>
+    <h2 class="text-base font-semibold text-zinc-900">{{ remoteName }}</h2>
+    <p class="text-xs text-zinc-500 mt-1 leading-relaxed">
+      This Micro-Frontend module is configured at <code class="bg-zinc-100 px-1 py-0.5 rounded text-zinc-800">localhost:{{ expectedPort }}</code>.
+    </p>
+  </div>
+
+  <div class="p-3 bg-zinc-50 border border-zinc-100 rounded text-left text-[11px] font-mono text-zinc-600 space-y-1">
+    <div><span class="text-zinc-400">Status:</span> Standby / Phase 2</div>
+    <div><span class="text-zinc-400">Entry:</span> :{{ expectedPort }}/remoteEntry.json</div>
+    <div><span class="text-zinc-400">Route:</span> {{ exposedRoutes }}</div>
   </div>
 </div>

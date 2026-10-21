@@ -10,8 +10,6 @@ body {
   background-color: #fafafa;
   color: #09090b;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  letter-spacing: -0.011em;
 }
 
 code, kbd, samp, pre {

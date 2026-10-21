@@ -1,94 +1,86 @@
-<div class="home-container">
-  <!-- Clean Enterprise Page Header (No duplicate buttons) -->
-  <header class="page-header">
-    <h1>Command Center</h1>
-    <p>
-      Logged in as <span class="current-user-tag">{{ auth.activePersona().name }}</span> ({{ auth.activePersona().role }}) &bull; Active OAuth2/OIDC Session
+<div class="space-y-8">
+  <!-- Minimalist Heading -->
+  <div>
+    <h1 class="text-xl font-semibold tracking-tight text-zinc-950">Overview</h1>
+    <p class="text-sm text-zinc-500 mt-1">
+      Signed in as <strong class="text-zinc-900 font-medium">{{ auth.activePersona().name }}</strong>
+      ({{ auth.activePersona().role }}) &bull; {{ auth.activePersona().department }}
     </p>
-  </header>
+  </div>
 
-  <!-- Single Clickable Micro-Frontend System Cards -->
-  <section>
-    <div class="section-heading">Micro-Frontend Applications</div>
-    <div class="mfe-grid">
+  <!-- Micro-Frontend Modules List -->
+  <div class="space-y-3">
+    <div class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Applications</div>
+    
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <!-- Remote 1 -->
-      <a routerLink="/workflows" class="mfe-card">
-        <div class="mfe-header">
-          <span class="mfe-badge badge-blue">Remote &bull; Workflow</span>
-          <span class="mfe-port">:4201</span>
+      <a routerLink="/workflows"
+         class="group block p-4 bg-white border border-zinc-200 rounded-lg hover:border-zinc-900 transition">
+        <div class="flex items-center justify-between text-xs text-zinc-400 font-mono">
+          <span>PORT 4201</span>
+          <span class="group-hover:translate-x-0.5 transition-transform text-zinc-900">&rarr;</span>
         </div>
-        <h3 class="mfe-title">Task Inbox</h3>
-        <p class="mfe-description">
-          Role-scoped inbox, dynamic JSON Schema form inputs, real-time SLA countdown badges, and step transitions.
+        <div class="text-sm font-semibold text-zinc-900 mt-2">Task Inbox</div>
+        <p class="text-xs text-zinc-500 mt-1 line-clamp-2">
+          View assigned approval tasks, submit documents, and monitor SLA deadlines.
         </p>
-        <div class="mfe-footer">
-          <span class="mfe-status-label">Native Federation Standby</span>
-          <span class="mfe-link-arrow">Open &rarr;</span>
-        </div>
       </a>
 
       <!-- Remote 2 -->
-      <a routerLink="/templates" class="mfe-card">
-        <div class="mfe-header">
-          <span class="mfe-badge badge-purple">Remote &bull; Blueprint</span>
-          <span class="mfe-port">:4202</span>
+      <a routerLink="/templates"
+         class="group block p-4 bg-white border border-zinc-200 rounded-lg hover:border-zinc-900 transition">
+        <div class="flex items-center justify-between text-xs text-zinc-400 font-mono">
+          <span>PORT 4202</span>
+          <span class="group-hover:translate-x-0.5 transition-transform text-zinc-900">&rarr;</span>
         </div>
-        <h3 class="mfe-title">Template Studio</h3>
-        <p class="mfe-description">
-          Visual workflow step graph designer, SLA policy configuration, role governance, and blueprint publishing.
+        <div class="text-sm font-semibold text-zinc-900 mt-2">Blueprints</div>
+        <p class="text-xs text-zinc-500 mt-1 line-clamp-2">
+          Model step transitions, configure roles, and publish immutable versions.
         </p>
-        <div class="mfe-footer">
-          <span class="mfe-status-label">Native Federation Standby</span>
-          <span class="mfe-link-arrow">Open &rarr;</span>
-        </div>
       </a>
 
       <!-- Remote 3 -->
-      <a routerLink="/analytics" class="mfe-card">
-        <div class="mfe-header">
-          <span class="mfe-badge badge-emerald">Remote &bull; CQRS</span>
-          <span class="mfe-port">:4203</span>
+      <a routerLink="/analytics"
+         class="group block p-4 bg-white border border-zinc-200 rounded-lg hover:border-zinc-900 transition">
+        <div class="flex items-center justify-between text-xs text-zinc-400 font-mono">
+          <span>PORT 4203</span>
+          <span class="group-hover:translate-x-0.5 transition-transform text-zinc-900">&rarr;</span>
         </div>
-        <h3 class="mfe-title">Audit & Analytics</h3>
-        <p class="mfe-description">
-          CQRS read-model timeline projection, immutable actor audit logs, Kafka event streaming, and SLA reports.
+        <div class="text-sm font-semibold text-zinc-900 mt-2">Audit & Analytics</div>
+        <p class="text-xs text-zinc-500 mt-1 line-clamp-2">
+          Inspect immutable CQRS audit timeline, actor logs, and SLA breach reports.
         </p>
-        <div class="mfe-footer">
-          <span class="mfe-status-label">Native Federation Standby</span>
-          <span class="mfe-link-arrow">Open &rarr;</span>
-        </div>
       </a>
     </div>
-  </section>
+  </div>
 
-  <!-- Cryptographic Identity & Security Claims Panel -->
-  <section>
-    <div class="section-heading">Cryptographic Session Claims</div>
-    <div class="session-panel">
-      <div class="session-grid">
-        <div class="session-stat">
-          <div class="stat-label">Subject ID (sub)</div>
-          <div class="stat-value mono">{{ auth.activePersona().id }}</div>
-        </div>
-        <div class="session-stat">
-          <div class="stat-label">Assigned Roles Claim</div>
-          <div class="stat-value mono">{{ auth.activePersona().roles.join(', ') }}</div>
-        </div>
-        <div class="session-stat">
-          <div class="stat-label">Department / Unit</div>
-          <div class="stat-value">{{ auth.activePersona().department }}</div>
-        </div>
-        <div class="session-stat">
-          <div class="stat-label">Token Verification</div>
-          <div class="stat-value">
-            @if (auth.currentToken()) {
-              <span class="stat-badge emerald">HS256 Verified ({{ auth.currentToken()!.length }}b)</span>
-            } @else {
-              <span class="stat-badge amber">Authenticating...</span>
-            }
-          </div>
-        </div>
+  <!-- Session Token Details -->
+  <div class="space-y-3">
+    <div class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Security Context</div>
+    
+    <div class="bg-white border border-zinc-200 rounded-lg divide-y divide-zinc-100 text-xs">
+      <div class="px-4 py-3 flex justify-between items-center">
+        <span class="text-zinc-500">Subject ID (sub)</span>
+        <span class="font-mono text-zinc-900 font-medium">{{ auth.activePersona().id }}</span>
+      </div>
+      <div class="px-4 py-3 flex justify-between items-center">
+        <span class="text-zinc-500">Roles Claim</span>
+        <span class="font-mono text-zinc-900 font-medium">{{ auth.activePersona().roles.join(', ') }}</span>
+      </div>
+      <div class="px-4 py-3 flex justify-between items-center">
+        <span class="text-zinc-500">API Gateway Auth</span>
+        <span>
+          @if (auth.currentToken()) {
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
+              HS256 Verified
+            </span>
+          } @else {
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200 font-mono">
+              Pending
+            </span>
+          }
+        </span>
       </div>
     </div>
-  </section>
+  </div>
 </div>

@@ -598,13 +598,14 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
   readonly selectedPresetId = signal<string>('it-procurement');
   readonly builderMode = signal<'visual' | 'dsl'>('visual');
   readonly builderPreviewTab = signal<'canvas' | 'dsl'>('canvas');
+  readonly isStudioFullscreen = signal<boolean>(true);
   readonly builderKey = signal<string>('IT_HARDWARE_PROCUREMENT_V1');
   readonly builderName = signal<string>('IT Equipment & Hardware Procurement');
   readonly builderDescription = signal<string>('Employee hardware request with IT approval and procurement fulfillment');
   readonly builderInitialState = signal<string>('REQUEST_SUBMISSION');
   readonly builderStates = signal<StateBuilderItem[]>([]);
-  readonly builderZoomLevel = signal<number>(0.85);
-  readonly builderPanOffset = signal<{ x: number; y: number }>({ x: 20, y: 20 });
+  readonly builderZoomLevel = signal<number>(1.0);
+  readonly builderPanOffset = signal<{ x: number; y: number }>({ x: 30, y: 30 });
   readonly isBuilderPanning = signal<boolean>(false);
   private builderPanStart = { x: 0, y: 0 };
 
@@ -968,8 +969,13 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
   }
 
   resetBuilderZoom(): void {
-    this.builderZoomLevel.set(0.85);
-    this.builderPanOffset.set({ x: 20, y: 20 });
+    this.builderZoomLevel.set(1.0);
+    this.builderPanOffset.set({ x: 30, y: 30 });
+  }
+
+  toggleStudioFullscreen(): void {
+    this.isStudioFullscreen.update(f => !f);
+    setTimeout(() => this.resetBuilderZoom(), 50);
   }
 
   @HostListener('window:mouseup')
@@ -1012,6 +1018,7 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     this.builderMode.set('visual');
     this.builderPreviewTab.set('canvas');
     this.createError.set(null);
+    this.isStudioFullscreen.set(true);
     this.loadPreset('it-procurement');
     this.isCreateModalOpen.set(true);
     this.setScrollLock(true);

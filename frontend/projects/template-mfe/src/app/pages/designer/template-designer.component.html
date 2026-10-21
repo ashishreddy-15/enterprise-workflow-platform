@@ -680,12 +680,13 @@
   <!-- Dual-mode: Interactive Visual Builder & Raw JSON DSL                -->
   <!-- =================================================================== -->
   @if (isCreateModalOpen()) {
-    <div class="fixed inset-0 z-50 bg-zinc-950/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6 overscroll-contain select-none animate-in fade-in duration-150"
-         (click)="closeCreateModal()"
+    <div class="fixed inset-0 z-50 bg-zinc-950/75 backdrop-blur-sm select-none animate-in fade-in duration-150"
+         [ngClass]="isStudioFullscreen() ? 'p-1 sm:p-2.5 flex flex-col' : 'p-3 sm:p-6 flex items-center justify-center'"
          (wheel)="$event.preventDefault()">
       
       <!-- Studio Modal Container -->
-      <div class="w-full max-w-6xl bg-white rounded-2xl border border-zinc-200 shadow-2xl flex flex-col h-[94vh] max-h-[960px] overflow-hidden select-text"
+      <div class="bg-white border border-zinc-200 shadow-2xl flex flex-col overflow-hidden select-text relative"
+           [ngClass]="isStudioFullscreen() ? 'w-full h-full rounded-xl' : 'w-full max-w-6xl h-[92vh] max-h-[980px] rounded-2xl'"
            (click)="$event.stopPropagation()"
            (wheel)="$event.stopPropagation()">
         
@@ -706,7 +707,7 @@
           </div>
 
           <!-- Quick Presets & Mode Switcher -->
-          <div class="flex items-center gap-3 shrink-0">
+          <div class="flex items-center gap-2.5 shrink-0">
             <!-- Preset Templates Dropdown -->
             <div class="flex items-center gap-1.5 text-xs font-mono">
               <span class="text-zinc-400 text-[11px] hidden sm:inline">Presets:</span>
@@ -736,6 +737,14 @@
               </button>
             </div>
 
+            <!-- Fullscreen / Windowed Toggle Button -->
+            <button (click)="toggleStudioFullscreen()"
+                    [title]="isStudioFullscreen() ? 'Switch to Windowed Modal' : 'Expand to Fullscreen Studio'"
+                    class="px-2.5 py-1 text-xs font-mono font-medium rounded border border-zinc-300 hover:border-zinc-900 bg-white hover:bg-zinc-100 text-zinc-800 transition cursor-pointer flex items-center gap-1 shadow-2xs">
+              <span>{{ isStudioFullscreen() ? '▫' : '⛶' }}</span>
+              <span class="hidden md:inline">{{ isStudioFullscreen() ? 'Windowed' : 'Full Screen' }}</span>
+            </button>
+
             <!-- Close Studio Button -->
             <button (click)="closeCreateModal()"
                     aria-label="Close Studio"
@@ -753,7 +762,7 @@
             <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
               
               <!-- Left Column: Form & Node Configuration (Scrollable) -->
-              <div class="w-full lg:w-7/12 flex flex-col border-b lg:border-b-0 lg:border-r border-zinc-200 overflow-y-auto p-4 sm:p-5 space-y-5 bg-white">
+              <div class="w-full lg:w-1/2 xl:w-5/12 flex flex-col border-b lg:border-b-0 lg:border-r border-zinc-200 overflow-y-auto p-4 sm:p-6 space-y-5 bg-white">
                 
                 <!-- Section 1: Blueprint Metadata Card -->
                 <div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4 space-y-3 shadow-2xs">
@@ -972,7 +981,7 @@
 
                         <!-- Terminal State Checkbox & Payload Input -->
                         <div class="pt-2 border-t border-zinc-100 flex flex-wrap items-center justify-between gap-3 text-xs">
-                          <label class="flex items-center gap-2 cursor-pointer font-medium text-zinc-800">
+                          <label class="flex items-center gap-2 cursor-pointer font-medium text-zinc-800 shrink-0">
                             <input type="checkbox"
                                    [checked]="state.isTerminal"
                                    (change)="toggleTerminal(idx, $any($event.target).checked)"
@@ -980,12 +989,12 @@
                             <span>Is Terminal State (Workflow stops here)</span>
                           </label>
 
-                          <div class="flex items-center gap-2 min-w-[260px] flex-1">
+                          <div class="flex items-center gap-2 min-w-[280px] flex-1">
                             <span class="text-zinc-400 text-[10px] font-mono whitespace-nowrap">Payload Keys:</span>
                             <input type="text"
                                    [(ngModel)]="state.payloadKeysInput"
                                    placeholder="e.g. invoiceNumber, amount, vendorEmail"
-                                   class="flex-1 px-2 py-1 font-mono text-xs bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:bg-white focus:border-zinc-900 transition">
+                                   class="flex-1 px-2.5 py-1.5 font-mono text-xs bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:bg-white focus:border-zinc-900 transition">
                           </div>
                         </div>
 
@@ -997,7 +1006,7 @@
                                 Outgoing Transitions ({{ state.transitions.length }})
                               </span>
                               <button (click)="addTransition(idx)"
-                                      class="px-2 py-0.5 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1">
+                                      class="px-2.5 py-1 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1">
                                 <span>+</span>
                                 <span>Add Transition</span>
                               </button>
@@ -1010,18 +1019,18 @@
                             } @else {
                               <div class="space-y-1.5">
                                 @for (trans of state.transitions; track $index; let tIdx = $index) {
-                                  <div class="flex items-center gap-2 bg-zinc-50 border border-zinc-200 rounded-md p-1.5 text-xs font-mono">
+                                  <div class="flex items-center gap-2 bg-zinc-50 border border-zinc-200 rounded-lg p-2 text-xs font-mono">
                                     <span class="text-zinc-400 text-[10px] uppercase">Action:</span>
                                     <input type="text"
                                            [ngModel]="trans.action"
                                            (ngModelChange)="trans.action = ($event || '').toUpperCase().replace(/[^A-Z0-9_]/g, '_')"
                                            placeholder="e.g. APPROVE"
-                                           class="w-36 px-2 py-1 font-mono text-xs bg-white border border-zinc-300 rounded outline-none focus:border-zinc-900">
+                                           class="w-40 px-2.5 py-1.5 font-mono text-xs bg-white border border-zinc-300 rounded outline-none focus:border-zinc-900">
                                     
                                     <span class="text-zinc-400 font-bold">&rarr;</span>
                                     <span class="text-zinc-400 text-[10px] uppercase">Target:</span>
                                     <select [(ngModel)]="trans.targetState"
-                                            class="flex-1 px-2 py-1 font-mono text-xs bg-white border border-zinc-300 rounded outline-none focus:border-zinc-900 cursor-pointer">
+                                            class="flex-1 min-w-[140px] px-2.5 py-1.5 font-mono text-xs bg-white border border-zinc-300 rounded outline-none focus:border-zinc-900 cursor-pointer">
                                       @for (targetState of builderStates(); track targetState.id) {
                                         <option [value]="targetState.stateKey">
                                           {{ targetState.stateKey }} ({{ targetState.stepName }})
@@ -1031,7 +1040,7 @@
 
                                     <button (click)="removeTransition(idx, tIdx)"
                                             title="Remove Transition"
-                                            class="p-1 rounded text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer text-xs font-bold leading-none">
+                                            class="p-1.5 rounded text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer text-xs font-bold leading-none">
                                       ✕
                                     </button>
                                   </div>
@@ -1050,7 +1059,7 @@
               </div>
 
               <!-- Right Column: Live Interactive Topology Canvas & Preview -->
-              <div class="w-full lg:w-5/12 flex flex-col bg-zinc-50 overflow-hidden">
+              <div class="w-full lg:w-1/2 xl:w-7/12 flex flex-col bg-zinc-50 overflow-hidden">
                 
                 <!-- Preview Toolbar Header -->
                 <div class="px-4 py-2.5 border-b border-zinc-200 bg-white flex items-center justify-between gap-2 shrink-0">

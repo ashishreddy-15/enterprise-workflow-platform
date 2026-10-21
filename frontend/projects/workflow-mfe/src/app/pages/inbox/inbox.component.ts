@@ -6,6 +6,7 @@ import { WorkflowService } from '../../services/workflow.service';
 import { TaskInboxItem, WorkflowAction, WorkflowTemplate, TemplateCatalogItem, WorkflowStepperNode } from '../../models/workflow.model';
 import { computeSlaCountdown } from '../../utils/sla.util';
 import { buildStepperNodes } from '../../utils/stepper.util';
+import { onPersonaChanged } from '../../utils/auth-bridge.util';
 import { CreateWorkflowModalComponent } from '../../components/create-workflow-modal/create-workflow-modal.component';
 
 @Component({
@@ -54,11 +55,7 @@ export class InboxComponent implements OnInit, OnDestroy {
   // Live Clock Signal for real-time SLA countdown updating
   readonly now = signal<number>(Date.now());
   private clockInterval: any;
-
-  private personaChangeListener = () => {
-    this.loadInbox();
-    this.loadTemplates();
-  };
+  private destroyPersonaBridge?: () => void;
 
   // Live SLA Countdown Computation (delegated to pure utility)
   readonly slaCountdown = computed(() => {
@@ -240,7 +237,10 @@ export class InboxComponent implements OnInit, OnDestroy {
     this.loadInbox();
     this.loadTemplates();
     // Re-fetch inbox whenever the persona switcher in Shell changes roles
-    window.addEventListener('ewp:persona-changed', this.personaChangeListener);
+    this.destroyPersonaBridge = onPersonaChanged(() => {
+      this.loadInbox();
+      this.loadTemplates();
+    });
 
     // Live clock ticker every 15s for dynamic SLA countdown
     this.clockInterval = setInterval(() => {
@@ -300,7 +300,7 @@ export class InboxComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    window.removeEventListener('ewp:persona-changed', this.personaChangeListener);
+    this.destroyPersonaBridge?.();
     if (this.clockInterval) {
       clearInterval(this.clockInterval);
     }

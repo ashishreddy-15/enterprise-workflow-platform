@@ -3,6 +3,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AnalyticsService } from '../../services/analytics.service';
 import { WorkflowAnalyticsView, AuditLogEntry, AnalyticsKpiSummary } from '../../models/analytics.model';
+import { onPersonaChanged } from '../../utils/auth-bridge.util';
 
 @Component({
   selector: 'app-analytics-dashboard',
@@ -29,7 +30,7 @@ export class AnalyticsDashboardComponent implements OnInit, OnDestroy {
   readonly selectedWorkflowAuditLogs = signal<AuditLogEntry[]>([]);
   readonly isLoadingWorkflowAudit = signal<boolean>(false);
 
-  private personaListener?: (event: Event) => void;
+  private destroyPersonaBridge?: () => void;
 
   // Computed KPIs
   readonly kpis = computed<AnalyticsKpiSummary>(() => {
@@ -129,18 +130,12 @@ export class AnalyticsDashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadData();
-
-    this.personaListener = () => {
-      this.loadData();
-    };
-    window.addEventListener('ewp:persona-changed', this.personaListener);
+    this.destroyPersonaBridge = onPersonaChanged(() => this.loadData());
   }
 
   ngOnDestroy(): void {
     this.setScrollLock(false);
-    if (this.personaListener) {
-      window.removeEventListener('ewp:persona-changed', this.personaListener);
-    }
+    this.destroyPersonaBridge?.();
   }
 
   @HostListener('document:keydown.escape')

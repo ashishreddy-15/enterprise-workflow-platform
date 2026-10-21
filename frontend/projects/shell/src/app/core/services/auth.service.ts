@@ -2,13 +2,15 @@ import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { PRECONFIGURED_PERSONAS, UserPersona, DevTokenResponse } from '../models/persona.model';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
+import { dispatchPersonaChanged } from '../utils/auth-bridge.util';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
   private http = inject(HttpClient);
-  private readonly gatewayBaseUrl = 'http://localhost:8080';
+  private readonly gatewayBaseUrl = environment.gatewayUrl;
 
   readonly personas = PRECONFIGURED_PERSONAS;
   readonly activePersona = signal<UserPersona>(this.getInitialPersona());
@@ -80,9 +82,7 @@ export class AuthService {
         this.isAuthenticating.set(false);
 
         // Broadcast to all MFEs that the persona & token changed
-        window.dispatchEvent(new CustomEvent('ewp:persona-changed', {
-          detail: { persona, token: res.access_token }
-        }));
+        dispatchPersonaChanged({ persona, token: res.access_token });
       },
       error: (err) => {
         console.error('Failed to obtain JWT from API Gateway:', err);

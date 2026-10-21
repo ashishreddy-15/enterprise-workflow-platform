@@ -14,6 +14,7 @@ import {
 } from '../../models/template.model';
 import { buildDagNodes, computeCanvasLayout } from '../../utils/graph-layout.util';
 import { BLUEPRINT_PRESETS } from '../../data/template-presets.data';
+import { onPersonaChanged } from '../../utils/auth-bridge.util';
 import {
   AVAILABLE_STEP_TYPES,
   AVAILABLE_ACTOR_SCOPES,
@@ -91,7 +92,7 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
   readonly availableActorScopes = AVAILABLE_ACTOR_SCOPES;
   readonly availableRoles = AVAILABLE_ROLES;
 
-  private personaListener?: (event: Event) => void;
+  private destroyPersonaBridge?: () => void;
 
   readonly publishedCount = computed(() =>
     this.templates().filter(t => t.status === 'PUBLISHED').length
@@ -249,18 +250,12 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadTemplates();
-
-    this.personaListener = () => {
-      this.loadTemplates();
-    };
-    window.addEventListener('ewp:persona-changed', this.personaListener);
+    this.destroyPersonaBridge = onPersonaChanged(() => this.loadTemplates());
   }
 
   ngOnDestroy(): void {
     this.setScrollLock(false);
-    if (this.personaListener) {
-      window.removeEventListener('ewp:persona-changed', this.personaListener);
-    }
+    this.destroyPersonaBridge?.();
   }
 
   @HostListener('document:keydown.escape')

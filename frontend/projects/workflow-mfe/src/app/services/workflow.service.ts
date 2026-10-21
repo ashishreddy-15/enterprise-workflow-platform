@@ -2,14 +2,15 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { TaskInboxItem, WorkflowTransitionRequest, WorkflowTransitionResponse, WorkflowResponse, WorkflowTemplate } from '../models/workflow.model';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class WorkflowService {
   private http = inject(HttpClient);
-  private readonly gatewayBaseUrl = 'http://localhost:8080/workflows/api/v1';
-  private readonly templateBaseUrl = 'http://localhost:8080/templates/api/v1';
+  private readonly gatewayBaseUrl = `${environment.gatewayUrl}/workflows/api/v1`;
+  private readonly templateBaseUrl = `${environment.gatewayUrl}/templates/api/v1`;
 
   getInbox(filter: 'inbox' | 'participated' | 'initiated' = 'inbox'): Observable<TaskInboxItem[]> {
     return this.http.get<TaskInboxItem[]>(`${this.gatewayBaseUrl}/tasks/inbox?filter=${filter}`);

@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
+import { onPersonaChanged } from '../../core/utils/auth-bridge.util';
 
 interface WorkflowQueueSummary {
   workflowId: string;
@@ -30,23 +32,20 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   readonly tasks = signal<WorkflowQueueSummary[]>([]);
   readonly isLoading = signal<boolean>(false);
-
-  private personaChangeListener = () => {
-    this.loadWorkQueue();
-  };
+  private destroyPersonaBridge?: () => void;
 
   ngOnInit(): void {
     this.loadWorkQueue();
-    window.addEventListener('ewp:persona-changed', this.personaChangeListener);
+    this.destroyPersonaBridge = onPersonaChanged(() => this.loadWorkQueue());
   }
 
   ngOnDestroy(): void {
-    window.removeEventListener('ewp:persona-changed', this.personaChangeListener);
+    this.destroyPersonaBridge?.();
   }
 
   loadWorkQueue(): void {
     this.isLoading.set(true);
-    this.http.get<WorkflowQueueSummary[]>('http://localhost:8080/workflows/api/v1/tasks/inbox').subscribe({
+    this.http.get<WorkflowQueueSummary[]>(`${environment.gatewayUrl}/workflows/api/v1/tasks/inbox`).subscribe({
       next: (data) => {
         this.tasks.set(data);
         this.isLoading.set(false);

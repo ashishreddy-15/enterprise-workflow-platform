@@ -77,7 +77,13 @@
 									"maximumError": "8kB"
 								}
 							],
-							"outputHashing": "all"
+							"outputHashing": "all",
+							"fileReplacements": [
+								{
+									"replace": "projects/shell/src/environments/environment.ts",
+									"with": "projects/shell/src/environments/environment.prod.ts"
+								}
+							]
 						},
 						"development": {
 							"optimization": false,
@@ -175,7 +181,13 @@
 									"maximumError": "8kB"
 								}
 							],
-							"outputHashing": "all"
+							"outputHashing": "all",
+							"fileReplacements": [
+								{
+									"replace": "projects/workflow-mfe/src/environments/environment.ts",
+									"with": "projects/workflow-mfe/src/environments/environment.prod.ts"
+								}
+							]
 						},
 						"development": {
 							"optimization": false,
@@ -273,7 +285,13 @@
 									"maximumError": "8kB"
 								}
 							],
-							"outputHashing": "all"
+							"outputHashing": "all",
+							"fileReplacements": [
+								{
+									"replace": "projects/analytics-mfe/src/environments/environment.ts",
+									"with": "projects/analytics-mfe/src/environments/environment.prod.ts"
+								}
+							]
 						},
 						"development": {
 							"optimization": false,
@@ -371,7 +389,13 @@
 									"maximumError": "8kB"
 								}
 							],
-							"outputHashing": "all"
+							"outputHashing": "all",
+							"fileReplacements": [
+								{
+									"replace": "projects/template-mfe/src/environments/environment.ts",
+									"with": "projects/template-mfe/src/environments/environment.prod.ts"
+								}
+							]
 						},
 						"development": {
 							"optimization": false,

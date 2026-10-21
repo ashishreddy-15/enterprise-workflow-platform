@@ -37,9 +37,8 @@ export class InboxComponent implements OnInit, OnDestroy {
   readonly templateCatalog = signal<TemplateCatalogItem[]>([]);
   readonly isTemplatesLoading = signal<boolean>(false);
 
-  // Dynamic Form Model State (Signals for instantaneous zoneless UI reactivity)
-  readonly panCardUrl = signal<string>('');
-  readonly gstCertUrl = signal<string>('');
+  // Dynamic Form Model State: arbitrary step payload key-value store
+  readonly payloadForm = signal<Record<string, string>>({});
   readonly reviewComments = signal<string>('');
 
   // Selected template object dynamically computed for the launch modal
@@ -147,43 +146,35 @@ export class InboxComponent implements OnInit, OnDestroy {
       });
     }
 
-    // High fidelity fallback sequence if template is loading
-    const isPastKyc = task.currentState !== 'AWAITING_KYC_DOCS';
-    const isPastLegal = task.currentState === 'ONBOARDED' || task.currentState === 'REJECTED';
+    // Dynamic fallback derived purely from instance state and task history
+    const historyNodes: WorkflowStepperNode[] = (task.taskHistory || []).map((h, i) => ({
+      stepKey: h.stepName,
+      stepOrder: h.stepOrder || (i + 1),
+      stepName: h.stepName,
+      actorScope: 'ROLE',
+      requiredRole: null,
+      isTerminal: false,
+      status: 'COMPLETED' as const,
+      completedBy: h.completedBy,
+      actedAt: h.actedAt
+    }));
 
-    return [
-      {
-        stepKey: 'AWAITING_KYC_DOCS',
-        stepOrder: 1,
-        stepName: 'Upload Vendor KYC Documents',
-        actorScope: 'REQUESTER',
-        requiredRole: null,
-        isTerminal: false,
-        status: task.currentState === 'AWAITING_KYC_DOCS' ? 'CURRENT' : 'COMPLETED',
-        completedBy: isPastKyc ? (task.taskHistory?.[0]?.completedBy || task.requesterId) : null,
-        actedAt: isPastKyc ? task.taskHistory?.[0]?.actedAt : null
-      },
-      {
-        stepKey: 'PENDING_LEGAL_VERIFY',
-        stepOrder: 2,
-        stepName: 'Legal Compliance Review',
-        actorScope: 'ROLE',
-        requiredRole: 'ROLE_LEGAL_COUNSEL',
-        isTerminal: false,
-        status: task.currentState === 'PENDING_LEGAL_VERIFY' ? 'CURRENT' : (isPastLegal ? 'COMPLETED' : 'UPCOMING'),
-        completedBy: isPastLegal ? (task.taskHistory?.[1]?.completedBy || 'legal_counsel_meera') : null,
-        actedAt: isPastLegal ? task.taskHistory?.[1]?.actedAt : null
-      },
-      {
-        stepKey: 'ONBOARDED',
-        stepOrder: 3,
-        stepName: task.currentState === 'REJECTED' ? 'Vendor Rejected' : 'Vendor Active & Onboarded',
-        actorScope: 'ANY',
-        requiredRole: null,
-        isTerminal: true,
-        status: (task.currentState === 'ONBOARDED' || task.currentState === 'REJECTED') ? 'CURRENT' : 'UPCOMING'
-      }
-    ];
+    const isCurrentTerminal = task.currentState === 'ONBOARDED' ||
+                              task.currentState === 'APPROVED' ||
+                              task.currentState === 'REJECTED' ||
+                              task.currentState === 'CANCELLED';
+
+    const currentNode: WorkflowStepperNode = {
+      stepKey: task.currentState,
+      stepOrder: historyNodes.length + 1,
+      stepName: task.currentStepName || task.currentState,
+      actorScope: task.actorScope,
+      requiredRole: task.requiredRole,
+      isTerminal: isCurrentTerminal,
+      status: 'CURRENT' as const
+    };
+
+    return [...historyNodes, currentNode];
   });
 
   readonly currentStepIndex = computed<number>(() => {
@@ -222,50 +213,55 @@ export class InboxComponent implements OnInit, OnDestroy {
       }));
     }
 
-    // Intelligent default actions based on known workflow blueprint states
-    if (task.currentState === 'PENDING_LEGAL_VERIFY') {
-      return [
-        { key: 'REJECT_VENDOR', label: 'Reject', variant: 'danger', targetState: 'REJECTED' },
-        { key: 'VERIFY_AND_ONBOARD', label: 'Verify & Onboard \u2192', variant: 'primary', targetState: 'ONBOARDED' }
-      ];
-    }
-    if (task.currentState === 'AWAITING_KYC_DOCS') {
-      return [
-        { key: 'SUBMIT_DOCS', label: 'Submit KYC Documents \u2192', variant: 'primary', targetState: 'PENDING_LEGAL_VERIFY' },
-        { key: 'CANCEL', label: 'Cancel', variant: 'secondary', targetState: 'CANCELLED' }
-      ];
-    }
-
+    // Generic fallback actions if template transitions not populated
     return [
       { key: 'REJECT', label: 'Reject', variant: 'danger', targetState: 'REJECTED' },
       { key: 'APPROVE', label: 'Approve \u2192', variant: 'primary', targetState: 'APPROVED' }
     ];
   });
 
-  isPayloadValid(task: TaskInboxItem): boolean {
+  // Keys required by the currently active step (derived directly from template definition)
+  readonly currentStepRequiredKeys = computed<string[]>(() => {
+    const task = this.selectedTask();
+    if (!task) return [];
     const tpl = this.templateMap().get(task.templateId);
     const step = tpl?.steps?.[task.currentState];
-    const requiredKeys = step?.requiredPayloadKeys || (task.currentState === 'AWAITING_KYC_DOCS' ? ['panCardUrl', 'gstCertUrl'] : []);
+    if (step?.requiredPayloadKeys && step.requiredPayloadKeys.length > 0) {
+      return step.requiredPayloadKeys;
+    }
+    return [];
+  });
 
-    if (requiredKeys.includes('panCardUrl') && !this.panCardUrl().trim()) {
-      return false;
-    }
-    if (requiredKeys.includes('gstCertUrl') && !this.gstCertUrl().trim()) {
-      return false;
-    }
-    return true;
+  setPayloadValue(key: string, value: string): void {
+    this.payloadForm.set({
+      ...this.payloadForm(),
+      [key]: value
+    });
+  }
+
+  formatFieldLabel(key: string): string {
+    if (key === 'panCardUrl') return 'PAN Card Document URL';
+    if (key === 'gstCertUrl') return 'GST Certificate URL';
+    return key
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/_/g, ' ')
+      .replace(/^./, str => str.toUpperCase())
+      .trim();
+  }
+
+  isPayloadValid(task: TaskInboxItem): boolean {
+    const requiredKeys = this.currentStepRequiredKeys();
+    if (requiredKeys.length === 0) return true;
+    const form = this.payloadForm();
+    return requiredKeys.every(k => (form[k] || '').trim().length > 0);
   }
 
   actionRequiresPayload(actionKey: string, task: TaskInboxItem): boolean {
     const upper = actionKey.toUpperCase();
-    // Non-submitting actions (reject/cancel) do not require document payload
     if (upper.includes('REJECT') || upper.includes('CANCEL') || upper.includes('DECLINE')) {
       return false;
     }
-    const tpl = this.templateMap().get(task.templateId);
-    const step = tpl?.steps?.[task.currentState];
-    const requiredKeys = step?.requiredPayloadKeys || (task.currentState === 'AWAITING_KYC_DOCS' ? ['panCardUrl', 'gstCertUrl'] : []);
-    return requiredKeys.length > 0;
+    return this.currentStepRequiredKeys().length > 0;
   }
 
   isActionDisabled(action: WorkflowAction, task: TaskInboxItem): boolean {
@@ -283,9 +279,10 @@ export class InboxComponent implements OnInit, OnDestroy {
       return 'Processing request...';
     }
     if (this.actionRequiresPayload(action.key, task) && !this.isPayloadValid(task)) {
-      const missing: string[] = [];
-      if (!this.panCardUrl().trim()) missing.push('PAN Card URL');
-      if (!this.gstCertUrl().trim()) missing.push('GST Certificate URL');
+      const form = this.payloadForm();
+      const missing = this.currentStepRequiredKeys()
+        .filter(k => !(form[k] || '').trim())
+        .map(k => this.formatFieldLabel(k));
       return `Required fields missing: ${missing.join(', ')}`;
     }
     return '';
@@ -483,9 +480,16 @@ export class InboxComponent implements OnInit, OnDestroy {
     this.reviewComments.set('');
     this.loadTemplate(task.templateId);
 
-    // If task contextData already contains submitted values, populate form inputs, else reset
-    this.panCardUrl.set(task.contextData?.['panCardUrl'] ? String(task.contextData['panCardUrl']) : '');
-    this.gstCertUrl.set(task.contextData?.['gstCertUrl'] ? String(task.contextData['gstCertUrl']) : '');
+    // Pre-populate payload form from task contextData or initialize empty
+    const initialPayload: Record<string, string> = {};
+    if (task.contextData) {
+      for (const [k, v] of Object.entries(task.contextData)) {
+        if (typeof v === 'string') {
+          initialPayload[k] = v;
+        }
+      }
+    }
+    this.payloadForm.set(initialPayload);
   }
 
   onSearchInput(event: Event): void {
@@ -500,7 +504,7 @@ export class InboxComponent implements OnInit, OnDestroy {
   formatActionLabel(key: string): string {
     if (key === 'REJECT_VENDOR') return 'Reject';
     if (key === 'VERIFY_AND_ONBOARD') return 'Verify & Onboard \u2192';
-    if (key === 'SUBMIT_DOCS') return 'Submit KYC Documents \u2192';
+    if (key === 'SUBMIT_DOCS') return 'Submit Documents \u2192';
     return key
       .split('_')
       .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
@@ -523,17 +527,17 @@ export class InboxComponent implements OnInit, OnDestroy {
     this.actionMessage.set(null);
 
     let payload: Record<string, unknown> | undefined = undefined;
-    if (actionKey === 'SUBMIT_DOCS' || task.currentState === 'AWAITING_KYC_DOCS') {
-      payload = {
-        panCardUrl: this.panCardUrl().trim(),
-        gstCertUrl: this.gstCertUrl().trim()
-      };
+    if (this.currentStepRequiredKeys().length > 0) {
+      const form = this.payloadForm();
+      const cleanPayload: Record<string, string> = {};
+      for (const k of this.currentStepRequiredKeys()) {
+        cleanPayload[k] = (form[k] || '').trim();
+      }
+      payload = cleanPayload;
     }
 
     const userComments = this.reviewComments().trim();
-    const commentToSend = userComments || (task.currentState === 'AWAITING_KYC_DOCS'
-      ? 'Submitted vendor KYC documents for review'
-      : `Action ${this.formatActionLabel(actionKey)} executed via Workbench`);
+    const commentToSend = userComments || `Action ${this.formatActionLabel(actionKey)} executed via Workbench`;
 
     this.workflowService.transitionWorkflow(task.workflowId, {
       action: actionKey,

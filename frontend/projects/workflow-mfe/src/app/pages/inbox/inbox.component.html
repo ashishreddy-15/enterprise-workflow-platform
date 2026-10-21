@@ -264,123 +264,107 @@
         <div class="border border-zinc-200 rounded-lg p-3.5 space-y-3">
           <div class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Step Context & Payload</div>
 
-          @if (task.currentState === 'AWAITING_KYC_DOCS') {
+          @if (currentStepRequiredKeys().length > 0) {
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div>
-                <label class="block font-medium text-zinc-700 mb-1">
-                  PAN Card Document URL
-                  <span class="text-rose-500 font-bold ml-0.5">*</span>
-                </label>
-                <input type="text"
-                       [ngModel]="panCardUrl()"
-                       (ngModelChange)="panCardUrl.set($event)"
-                       placeholder="https://storage.internal/kyc/pan.pdf"
-                       [ngClass]="{'border-amber-300 focus:border-amber-500': !panCardUrl().trim()}"
-                       class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1 text-xs font-mono text-zinc-900 outline-none focus:border-zinc-900 transition">
-              </div>
-              <div>
-                <label class="block font-medium text-zinc-700 mb-1">
-                  GST Certificate URL
-                  <span class="text-rose-500 font-bold ml-0.5">*</span>
-                </label>
-                <input type="text"
-                       [ngModel]="gstCertUrl()"
-                       (ngModelChange)="gstCertUrl.set($event)"
-                       placeholder="https://storage.internal/kyc/gst.pdf"
-                       [ngClass]="{'border-amber-300 focus:border-amber-500': !gstCertUrl().trim()}"
-                       class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1 text-xs font-mono text-zinc-900 outline-none focus:border-zinc-900 transition">
-              </div>
+              @for (fieldKey of currentStepRequiredKeys(); track fieldKey) {
+                <div>
+                  <label class="block font-medium text-zinc-700 mb-1">
+                    {{ formatFieldLabel(fieldKey) }}
+                    <span class="text-rose-500 font-bold ml-0.5">*</span>
+                  </label>
+                  <input type="text"
+                         [value]="payloadForm()[fieldKey] || ''"
+                         (input)="setPayloadValue(fieldKey, $any($event.target).value)"
+                         placeholder="https://..."
+                         [ngClass]="{'border-amber-300 focus:border-amber-500': !(payloadForm()[fieldKey]?.trim())}"
+                         class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1 text-xs font-mono text-zinc-900 outline-none focus:border-zinc-900 transition">
+                </div>
+              }
             </div>
 
             @if (!isPayloadValid(task)) {
               <div class="text-[11px] text-amber-700 bg-amber-50/80 border border-amber-200/80 rounded px-2.5 py-1 flex items-center gap-1.5">
                 <span class="font-mono text-amber-500">&bull;</span>
-                <span>Both PAN Card and GST Certificate URLs are required to submit this step.</span>
+                <span>Please provide all required fields to submit this step.</span>
               </div>
             }
-          } @else {
-            <div class="space-y-3 text-xs">
-              <!-- Submitted Documents / Fields from Earlier Steps -->
-              @if (task.contextData && getContextDataEntries(task).length > 0) {
-                <div class="p-3 bg-zinc-50 border border-zinc-200 rounded-lg space-y-2">
-                  <div class="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 flex items-center justify-between">
-                    <span>Submitted Step Payload & Documents</span>
-                    <span class="font-mono text-zinc-400 font-normal">{{ getContextDataEntries(task).length }} fields</span>
+          }
+
+          <!-- Submitted Documents / Fields from Earlier Steps -->
+          @if (task.contextData && getContextDataEntries(task).length > 0) {
+            <div class="p-3 bg-zinc-50 border border-zinc-200 rounded-lg space-y-2 text-xs">
+              <div class="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 flex items-center justify-between">
+                <span>Submitted Step Payload & Documents</span>
+                <span class="font-mono text-zinc-400 font-normal">{{ getContextDataEntries(task).length }} fields</span>
+              </div>
+              
+              <div class="divide-y divide-zinc-200/70 font-mono text-[11px]">
+                @for (entry of getContextDataEntries(task); track entry.key) {
+                  <div class="py-1.5 flex items-center justify-between gap-3">
+                    <span class="text-zinc-500 shrink-0 font-sans font-medium text-xs">{{ entry.key }}</span>
+                    @if (isUrl(entry.value)) {
+                      <div class="flex items-center gap-2 truncate">
+                        <span class="text-zinc-800 truncate select-all">{{ entry.value }}</span>
+                        <a [href]="entry.value" target="_blank" rel="noopener noreferrer"
+                           class="text-[10px] px-2 py-0.5 rounded bg-white border border-zinc-300 hover:border-zinc-900 text-zinc-800 font-sans font-medium shrink-0 transition">
+                          Open Link &rarr;
+                        </a>
+                      </div>
+                    } @else {
+                      <span class="text-zinc-900 font-semibold truncate">{{ entry.value }}</span>
+                    }
                   </div>
-                  
-                  <div class="divide-y divide-zinc-200/70 font-mono text-[11px]">
-                    @for (entry of getContextDataEntries(task); track entry.key) {
-                      <div class="py-1.5 flex items-center justify-between gap-3">
-                        <span class="text-zinc-500 shrink-0 font-sans font-medium text-xs">{{ entry.key }}</span>
-                        @if (isUrl(entry.value)) {
-                          <div class="flex items-center gap-2 truncate">
-                            <span class="text-zinc-800 truncate select-all">{{ entry.value }}</span>
-                            <a [href]="entry.value" target="_blank" rel="noopener noreferrer"
-                               class="text-[10px] px-2 py-0.5 rounded bg-white border border-zinc-300 hover:border-zinc-900 text-zinc-800 font-sans font-medium shrink-0 transition">
-                              Open Link &rarr;
-                            </a>
-                          </div>
-                        } @else {
-                          <span class="text-zinc-900 font-semibold truncate">{{ entry.value }}</span>
-                        }
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Prior Step Notes & Audit Trail -->
+          @if (task.taskHistory && task.taskHistory.length > 0) {
+            <div class="p-3 bg-zinc-50 border border-zinc-200 rounded-lg space-y-2 text-xs">
+              <div class="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 flex items-center justify-between">
+                <span>Prior Step Comments & History</span>
+                <span class="font-mono text-zinc-400 font-normal">{{ task.taskHistory.length }} step(s)</span>
+              </div>
+
+              <div class="space-y-2 divide-y divide-zinc-200/60">
+                @for (step of task.taskHistory; track step.id) {
+                  <div class="pt-2 first:pt-0 space-y-1">
+                    <div class="flex items-center justify-between gap-2 text-xs">
+                      <span class="font-semibold text-zinc-900">{{ step.stepName }}</span>
+                      <span class="font-mono text-[10px] text-zinc-400">{{ step.actedAt | date:'MMM d, h:mm a' }}</span>
+                    </div>
+
+                    <div class="flex items-center gap-2 text-[11px] text-zinc-500">
+                      <span>By <strong class="text-zinc-800 font-mono">{{ step.completedBy }}</strong></span>
+                      <span>&bull;</span>
+                      <span class="font-mono text-[10px] px-1.5 py-0.2 rounded bg-white text-zinc-700 border border-zinc-200">
+                        {{ step.status }}
+                      </span>
+                    </div>
+
+                    @if (step.comments) {
+                      <div class="mt-1 p-2 bg-white rounded border border-zinc-200 text-zinc-700 text-xs flex items-start gap-1.5">
+                        <span class="text-zinc-400 text-xs select-none">&ldquo;</span>
+                        <span class="flex-1 text-zinc-800">{{ step.comments }}</span>
+                        <span class="text-zinc-400 text-xs select-none">&rdquo;</span>
                       </div>
                     }
                   </div>
-                </div>
-              } @else {
-                <div class="p-3 bg-zinc-50 border border-zinc-100 rounded text-xs text-zinc-400 text-center font-mono">
-                  No previous step context recorded.
-                </div>
-              }
-
-              <!-- Prior Step Notes & Audit Trail -->
-              @if (task.taskHistory && task.taskHistory.length > 0) {
-                <div class="p-3 bg-zinc-50 border border-zinc-200 rounded-lg space-y-2">
-                  <div class="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 flex items-center justify-between">
-                    <span>Prior Step Comments & History</span>
-                    <span class="font-mono text-zinc-400 font-normal">{{ task.taskHistory.length }} step(s)</span>
-                  </div>
-
-                  <div class="space-y-2 divide-y divide-zinc-200/60">
-                    @for (step of task.taskHistory; track step.id) {
-                      <div class="pt-2 first:pt-0 space-y-1">
-                        <div class="flex items-center justify-between gap-2 text-xs">
-                          <span class="font-semibold text-zinc-900">{{ step.stepName }}</span>
-                          <span class="font-mono text-[10px] text-zinc-400">{{ step.actedAt | date:'MMM d, h:mm a' }}</span>
-                        </div>
-
-                        <div class="flex items-center gap-2 text-[11px] text-zinc-500">
-                          <span>By <strong class="text-zinc-800 font-mono">{{ step.completedBy }}</strong></span>
-                          <span>&bull;</span>
-                          <span class="font-mono text-[10px] px-1.5 py-0.2 rounded bg-white text-zinc-700 border border-zinc-200">
-                            {{ step.status }}
-                          </span>
-                        </div>
-
-                        @if (step.comments) {
-                          <div class="mt-1 p-2 bg-white rounded border border-zinc-200 text-zinc-700 text-xs flex items-start gap-1.5">
-                            <span class="text-zinc-400 text-xs select-none">&ldquo;</span>
-                            <span class="flex-1 text-zinc-800">{{ step.comments }}</span>
-                            <span class="text-zinc-400 text-xs select-none">&rdquo;</span>
-                          </div>
-                        }
-                      </div>
-                    }
-                  </div>
-                </div>
-              }
+                }
+              </div>
             </div>
           }
 
           <!-- Decision / Submission Comments (Available for all steps) -->
           <div class="pt-1">
             <label class="block font-medium text-zinc-700 mb-1 text-xs">
-              {{ task.currentState === 'AWAITING_KYC_DOCS' ? 'Submission Notes / Remarks' : 'Decision / Review Comments' }}
+              {{ currentStepRequiredKeys().length > 0 ? 'Submission Notes / Remarks' : 'Decision / Review Comments' }}
             </label>
             <textarea [ngModel]="reviewComments()"
                       (ngModelChange)="reviewComments.set($event)"
                       rows="2"
-                      [placeholder]="task.currentState === 'AWAITING_KYC_DOCS' ? 'Add optional submission notes or context for the legal reviewer...' : 'Add decision notes, compliance justification, or rejection reason...'"
+                      [placeholder]="currentStepRequiredKeys().length > 0 ? 'Add optional submission notes...' : 'Add decision notes or comments...'"
                       class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1 text-xs text-zinc-900 outline-none focus:border-zinc-900 transition"></textarea>
           </div>
         </div>
@@ -505,7 +489,7 @@
                  type="text"
                  [value]="newWorkflowTitle()"
                  (input)="newWorkflowTitle.set($any($event.target).value)"
-                 placeholder="e.g., Vendor Onboarding - Acme Industrial Supplies Ltd"
+                 placeholder="Enter workflow title or reference..."
                  class="w-full bg-zinc-50 border border-zinc-200 rounded-md px-3 py-2 text-xs text-zinc-950 placeholder:text-zinc-400 outline-none focus:bg-white focus:border-zinc-900 transition">
         </div>
 

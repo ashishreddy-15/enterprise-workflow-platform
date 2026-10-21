@@ -32,6 +32,12 @@
     },
     {
       "path": "./projects/workflow-mfe/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/template-mfe/tsconfig.app.json"
+    },
+    {
+      "path": "./projects/analytics-mfe/tsconfig.app.json"
     }
   ]
 }

@@ -28,6 +28,13 @@ public class TemplateController {
         return ResponseEntity.status(HttpStatus.CREATED).body(templateService.createDraft(doc));
     }
 
+    @PutMapping("/{templateKey}/versions/{version}")
+    public ResponseEntity<WorkflowTemplateDocument> updateDraft(
+            @PathVariable String templateKey, @PathVariable int version, @RequestBody WorkflowTemplateDocument doc) {
+        log.info("REST: Update draft template - key: '{}', version: {}", templateKey, version);
+        return ResponseEntity.ok(templateService.updateDraft(templateKey, version, doc));
+    }
+
     @PutMapping("/{templateKey}/versions/{version}/publish")
     public ResponseEntity<WorkflowTemplateDocument> publish(
             @PathVariable String templateKey, @PathVariable int version) {

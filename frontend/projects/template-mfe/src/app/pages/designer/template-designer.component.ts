@@ -593,6 +593,11 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
   readonly createError = signal<string | null>(null);
   readonly isSubmitting = signal<boolean>(false);
 
+  // Existing Draft Editing & Branching State
+  readonly editingTemplate = signal<WorkflowTemplate | null>(null);
+  readonly isEditingDraft = computed(() => this.editingTemplate()?.status === 'DRAFT');
+  readonly isEditingExisting = computed(() => !!this.editingTemplate());
+
   // Visual Studio Specific State
   readonly builderPresets = BLUEPRINT_PRESETS;
   readonly selectedPresetId = signal<string>('it-procurement');
@@ -1019,6 +1024,7 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
   // ===========================================================================
 
   openCreateModal(): void {
+    this.editingTemplate.set(null);
     this.builderMode.set('visual');
     this.builderPreviewTab.set('canvas');
     this.createError.set(null);
@@ -1028,8 +1034,37 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     this.setScrollLock(true);
   }
 
+  openEditDraft(target?: WorkflowTemplate): void {
+    const tpl = target || this.selectedTemplate();
+    if (!tpl) return;
+    this.editingTemplate.set(tpl);
+    this.builderMode.set('visual');
+    this.builderPreviewTab.set('canvas');
+    this.createError.set(null);
+    this.isStudioFullscreen.set(true);
+    this.applyTemplateToBuilder(tpl);
+    this.resetBuilderZoom();
+    this.isCreateModalOpen.set(true);
+    this.setScrollLock(true);
+  }
+
+  openNewVersionDraft(target?: WorkflowTemplate): void {
+    const tpl = target || this.selectedTemplate();
+    if (!tpl) return;
+    this.editingTemplate.set(null);
+    this.builderMode.set('visual');
+    this.builderPreviewTab.set('canvas');
+    this.createError.set(null);
+    this.isStudioFullscreen.set(true);
+    this.applyTemplateToBuilder(tpl);
+    this.resetBuilderZoom();
+    this.isCreateModalOpen.set(true);
+    this.setScrollLock(true);
+  }
+
   closeCreateModal(): void {
     this.isCreateModalOpen.set(false);
+    this.editingTemplate.set(null);
     this.setScrollLock(false);
   }
 
@@ -1291,32 +1326,49 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     this.isSubmitting.set(true);
     this.createError.set(null);
 
-    this.templateService.createDraft(templateToSubmit).subscribe({
-      next: (created: WorkflowTemplate) => {
+    const isEdit = this.isEditingDraft() && !!this.editingTemplate();
+    const saveObservable = isEdit
+      ? this.templateService.updateDraft(this.editingTemplate()!.templateKey, this.editingTemplate()!.version, templateToSubmit)
+      : this.templateService.createDraft(templateToSubmit);
+
+    saveObservable.subscribe({
+      next: (result: WorkflowTemplate) => {
         if (publishImmediately) {
-          this.templateService.publishTemplate(created.templateKey, created.version).subscribe({
+          this.templateService.publishTemplate(result.templateKey, result.version).subscribe({
             next: (published: WorkflowTemplate) => {
               this.isSubmitting.set(false);
               this.closeCreateModal();
-              this.successMessage.set(`Successfully created & published "${published.name}" (v${published.version})!`);
+              this.successMessage.set(
+                isEdit
+                  ? `Successfully updated & published "${published.name}" (v${published.version})!`
+                  : `Successfully created & published "${published.name}" (v${published.version})!`
+              );
               this.loadTemplates(published.templateKey);
             },
             error: (err: any) => {
               this.isSubmitting.set(false);
               this.closeCreateModal();
-              this.successMessage.set(`Saved as draft "${created.name}". Publish manually when ready.`);
-              this.loadTemplates(created.templateKey);
+              this.successMessage.set(
+                isEdit
+                  ? `Updated draft "${result.name}". Publish manually when ready.`
+                  : `Saved as draft "${result.name}". Publish manually when ready.`
+              );
+              this.loadTemplates(result.templateKey);
             }
           });
         } else {
           this.isSubmitting.set(false);
           this.closeCreateModal();
-          this.successMessage.set(`Saved "${created.name}" as DRAFT (v${created.version}). You can publish it anytime.`);
-          this.loadTemplates(created.templateKey);
+          this.successMessage.set(
+            isEdit
+              ? `Successfully updated draft "${result.name}" (v${result.version}).`
+              : `Saved "${result.name}" as DRAFT (v${result.version}). You can publish it anytime.`
+          );
+          this.loadTemplates(result.templateKey);
         }
       },
       error: (err: any) => {
-        console.error('Failed to create template draft:', err);
+        console.error('Failed to save template draft:', err);
         this.createError.set(err?.error?.message || 'Server rejected template. Check blueprint parameters.');
         this.isSubmitting.set(false);
       }

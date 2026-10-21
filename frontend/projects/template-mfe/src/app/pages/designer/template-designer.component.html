@@ -152,10 +152,18 @@
                     PUBLISHED
                   </span>
                 } @else {
-                  <span class="inline-flex items-center gap-1 text-amber-700 font-semibold px-1.5 py-0.2 rounded bg-amber-50 border border-amber-200">
-                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                    DRAFT
-                  </span>
+                  <div class="flex items-center gap-1.5">
+                    <span class="inline-flex items-center gap-1 text-amber-700 font-semibold px-1.5 py-0.2 rounded bg-amber-50 border border-amber-200">
+                      <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                      DRAFT
+                    </span>
+                    <button (click)="$event.stopPropagation(); openEditDraft(tpl)"
+                            title="Edit this draft in Blueprint Studio"
+                            class="px-1.5 py-0.5 rounded text-[10px] font-mono text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 font-semibold transition cursor-pointer flex items-center gap-1 shadow-2xs">
+                      <span>✏️</span>
+                      <span>Edit</span>
+                    </button>
+                  </div>
                 }
 
                 <span class="text-zinc-500">
@@ -186,18 +194,27 @@
                 </div>
               </div>
 
-              <!-- Publish Button -->
-              <button (click)="publishSelectedTemplate()"
-                      [disabled]="isPublishing()"
-                      class="px-3 py-1.5 rounded bg-zinc-950 hover:bg-zinc-800 disabled:opacity-50 text-white text-xs font-medium tracking-tight transition flex items-center gap-1.5 cursor-pointer shadow-xs shrink-0">
-                @if (isPublishing()) {
-                  <span class="animate-spin text-xs">↻</span>
-                  <span>Publishing...</span>
-                } @else {
-                  <span>🚀</span>
-                  <span>Publish Blueprint</span>
-                }
-              </button>
+              <!-- Action Buttons -->
+              <div class="flex items-center gap-2 shrink-0">
+                <button (click)="openEditDraft()"
+                        class="px-3 py-1.5 rounded bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold tracking-tight transition flex items-center gap-1.5 cursor-pointer shadow-xs">
+                  <span>✏️</span>
+                  <span>Edit Draft</span>
+                </button>
+
+                <!-- Publish Button -->
+                <button (click)="publishSelectedTemplate()"
+                        [disabled]="isPublishing()"
+                        class="px-3 py-1.5 rounded bg-zinc-950 hover:bg-zinc-800 disabled:opacity-50 text-white text-xs font-medium tracking-tight transition flex items-center gap-1.5 cursor-pointer shadow-xs shrink-0">
+                  @if (isPublishing()) {
+                    <span class="animate-spin text-xs">↻</span>
+                    <span>Publishing...</span>
+                  } @else {
+                    <span>🚀</span>
+                    <span>Publish Blueprint</span>
+                  }
+                </button>
+              </div>
             </div>
           }
 
@@ -211,6 +228,14 @@
                 <span class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-mono font-medium border border-blue-200">
                   v{{ selectedTemplate()?.version }}
                 </span>
+                @if (selectedTemplate()?.status === 'PUBLISHED') {
+                  <button (click)="openNewVersionDraft()"
+                          title="Create a new draft version from this blueprint"
+                          class="px-2 py-0.5 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-[10px] font-mono font-semibold border border-zinc-300 transition cursor-pointer flex items-center gap-1 shadow-2xs">
+                    <span>🌱</span>
+                    <span>New Version Draft</span>
+                  </button>
+                }
               </div>
               <p class="text-xs text-zinc-500 mt-1">
                 {{ selectedTemplate()?.description || 'Declarative state machine blueprint schema' }}
@@ -693,15 +718,20 @@
         <!-- Studio Header Bar -->
         <div class="px-5 py-3 border-b border-zinc-200 bg-zinc-50/90 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div class="flex items-center gap-3">
-            <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold bg-zinc-900 text-white shrink-0 tracking-wider">
-              BLUEPRINT STUDIO
+            <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold text-white shrink-0 tracking-wider"
+                  [ngClass]="isEditingDraft() ? 'bg-amber-600' : 'bg-zinc-900'">
+              {{ isEditingDraft() ? 'EDIT DRAFT' : 'BLUEPRINT STUDIO' }}
             </span>
             <div>
               <h3 class="text-sm font-bold text-zinc-950 tracking-tight">
                 {{ builderName() || 'Draft Workflow Blueprint' }}
               </h3>
               <p class="text-[11px] text-zinc-500 font-mono">
-                Key: <span class="text-zinc-800 font-semibold">{{ builderKey() || 'UNTITLED' }}</span> &bull; Status: <span class="text-amber-700 font-semibold">DRAFT</span>
+                Key: <span class="text-zinc-800 font-semibold">{{ builderKey() || 'UNTITLED' }}</span>
+                @if (isEditingDraft()) {
+                  <span> &bull; Version: <span class="text-purple-700 font-semibold">v{{ editingTemplate()?.version }}</span></span>
+                }
+                &bull; Status: <span class="text-amber-700 font-semibold">DRAFT</span>
               </p>
             </div>
           </div>
@@ -775,14 +805,23 @@
 
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div>
-                      <label class="block text-zinc-600 font-medium mb-1">
-                        Template Key <span class="text-rose-500">*</span>
-                      </label>
+                      <div class="flex items-center justify-between mb-1">
+                        <label class="block text-zinc-600 font-medium">
+                          Template Key <span class="text-rose-500">*</span>
+                        </label>
+                        @if (isEditingDraft()) {
+                          <span class="text-[9px] font-mono text-amber-700 bg-amber-100 px-1 rounded font-semibold">Locked</span>
+                        }
+                      </div>
                       <input type="text"
+                             [disabled]="isEditingDraft()"
                              [ngModel]="builderKey()"
                              (ngModelChange)="builderKey.set(($event || '').toUpperCase().replace(/[^A-Z0-9_]/g, '_'))"
                              placeholder="e.g. VENDOR_ONBOARDING_V1"
-                             class="w-full px-2.5 py-1.5 font-mono text-xs bg-white border border-zinc-300 rounded-md outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition">
+                             class="w-full px-2.5 py-1.5 font-mono text-xs bg-white border border-zinc-300 rounded-md outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition disabled:bg-zinc-100 disabled:text-zinc-500 disabled:cursor-not-allowed">
+                      @if (isEditingDraft()) {
+                        <span class="text-[10px] font-mono text-amber-700 mt-0.5 block">Locked for existing draft version</span>
+                      }
                     </div>
 
                     <div>
@@ -1358,23 +1397,23 @@
           </div>
 
           <div class="flex items-center gap-2">
-            <!-- Save as Draft -->
+            <!-- Save as Draft / Update Draft -->
             <button (click)="submitNewTemplate(false)"
                     [disabled]="isSubmitting() || (builderMode() === 'visual' && builderValidationErrors().length > 0)"
                     class="px-4 py-1.5 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-100 disabled:opacity-40 text-zinc-800 text-xs font-medium transition cursor-pointer shadow-2xs">
-              Save as Draft
+              {{ isEditingDraft() ? 'Update Draft' : 'Save as Draft' }}
             </button>
 
-            <!-- Deploy & Publish -->
+            <!-- Deploy & Publish / Update & Publish -->
             <button (click)="submitNewTemplate(true)"
                     [disabled]="isSubmitting() || (builderMode() === 'visual' && builderValidationErrors().length > 0)"
                     class="px-4 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 disabled:opacity-40 text-white text-xs font-medium transition flex items-center gap-1.5 cursor-pointer shadow-xs">
               @if (isSubmitting()) {
                 <span class="animate-spin text-xs">↻</span>
-                <span>Deploying...</span>
+                <span>{{ isEditingDraft() ? 'Updating & Publishing...' : 'Deploying...' }}</span>
               } @else {
                 <span>🚀</span>
-                <span>Save & Publish Now</span>
+                <span>{{ isEditingDraft() ? 'Update & Publish' : 'Save & Publish Now' }}</span>
               }
             </button>
           </div>

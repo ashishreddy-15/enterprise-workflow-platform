@@ -39,6 +39,12 @@ export class TemplateService {
     });
   }
 
+  updateDraft(key: string, version: number, doc: Partial<WorkflowTemplate>): Observable<WorkflowTemplate> {
+    return this.http.put<WorkflowTemplate>(`${this.baseUrl}/${key}/versions/${version}`, doc, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
   publishTemplate(key: string, version: number): Observable<WorkflowTemplate> {
     return this.http.put<WorkflowTemplate>(`${this.baseUrl}/${key}/versions/${version}/publish`, {}, {
       headers: this.getAuthHeaders()

@@ -44,6 +44,28 @@ public class TemplateService {
         return saved;
     }
 
+    public WorkflowTemplateDocument updateDraft(String templateKey, int version, WorkflowTemplateDocument updated) {
+        log.info("Updating draft template '{}' version {}", templateKey, version);
+        WorkflowTemplateDocument doc = templateRepository
+                .findByTemplateKeyAndVersion(templateKey, version)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Template version not found: " + templateKey + " v" + version));
+
+        if (!"DRAFT".equalsIgnoreCase(doc.getStatus())) {
+            throw new IllegalStateException(
+                    "Cannot directly edit a published template. Please create a new draft version.");
+        }
+
+        doc.setName(updated.getName());
+        doc.setDescription(updated.getDescription());
+        doc.setInitialState(updated.getInitialState());
+        doc.setSteps(updated.getSteps());
+        doc.setUpdatedAt(Instant.now());
+        WorkflowTemplateDocument saved = templateRepository.save(doc);
+        log.info("Draft template '{}' v{} successfully updated", templateKey, version);
+        return saved;
+    }
+
     public WorkflowTemplateDocument publishTemplate(String templateKey, int version) {
         log.info("Publishing template '{}' version {}", templateKey, version);
         WorkflowTemplateDocument doc = templateRepository

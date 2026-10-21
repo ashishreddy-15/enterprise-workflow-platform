@@ -219,49 +219,53 @@
           }
 
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <div class="flex items-center gap-2">
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
                 <h2 class="text-sm font-bold text-zinc-950">{{ selectedTemplate()?.name }}</h2>
-                <span class="px-2 py-0.5 rounded bg-zinc-100 text-zinc-800 text-[10px] font-mono font-medium border border-zinc-200">
+                <span class="px-2 py-0.5 rounded bg-zinc-100 text-zinc-800 text-[10px] font-mono font-medium border border-zinc-200 shrink-0">
                   {{ selectedTemplate()?.templateKey }}
                 </span>
-                <span class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-mono font-medium border border-blue-200">
+                <span class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-mono font-medium border border-blue-200 shrink-0">
                   v{{ selectedTemplate()?.version }}
                 </span>
-                @if (selectedTemplate()?.status === 'PUBLISHED') {
-                  <button (click)="openNewVersionDraft()"
-                          title="Create a new draft version from this blueprint"
-                          class="px-2 py-0.5 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-[10px] font-mono font-semibold border border-zinc-300 transition cursor-pointer flex items-center gap-1 shadow-2xs">
-                    <span>🌱</span>
-                    <span>New Version Draft</span>
-                  </button>
-                }
               </div>
-              <p class="text-xs text-zinc-500 mt-1">
+              <p class="text-xs text-zinc-500 mt-1 line-clamp-2">
                 {{ selectedTemplate()?.description || 'Declarative state machine blueprint schema' }}
               </p>
             </div>
 
-            <!-- View Switcher Tabs -->
-            <div class="flex items-center bg-zinc-100 p-0.5 rounded border border-zinc-200 shrink-0 text-xs">
-              <button (click)="setViewMode('canvas')"
-                      class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1.5"
-                      [ngClass]="viewMode() === 'canvas' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
-                <span>◈</span>
-                <span>Visual Graph</span>
-              </button>
-              <button (click)="setViewMode('pipeline')"
-                      class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1.5"
-                      [ngClass]="viewMode() === 'pipeline' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
-                <span>≡</span>
-                <span>Pipeline List</span>
-              </button>
-              <button (click)="setViewMode('dsl')"
-                      class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1.5"
-                      [ngClass]="viewMode() === 'dsl' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
-                <span>&#123; &#125;</span>
-                <span>DSL Schema</span>
-              </button>
+            <!-- Toolbar Actions & View Switcher -->
+            <div class="flex items-center gap-2 shrink-0">
+              @if (selectedTemplate()?.status === 'PUBLISHED') {
+                <button (click)="openNewVersionDraft()"
+                        title="Create a new draft version from this blueprint"
+                        class="px-2.5 py-1 rounded bg-white hover:bg-zinc-100 text-zinc-800 text-xs font-mono font-medium border border-zinc-300 transition cursor-pointer flex items-center gap-1.5 shadow-2xs whitespace-nowrap">
+                  <span>🌱</span>
+                  <span>New Version Draft</span>
+                </button>
+              }
+
+              <!-- View Switcher Tabs -->
+              <div class="flex items-center bg-zinc-100 p-0.5 rounded border border-zinc-200 text-xs">
+                <button (click)="setViewMode('canvas')"
+                        class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1.5"
+                        [ngClass]="viewMode() === 'canvas' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
+                  <span>◈</span>
+                  <span>Visual Graph</span>
+                </button>
+                <button (click)="setViewMode('pipeline')"
+                        class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1.5"
+                        [ngClass]="viewMode() === 'pipeline' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
+                  <span>≡</span>
+                  <span>Pipeline List</span>
+                </button>
+                <button (click)="setViewMode('dsl')"
+                        class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1.5"
+                        [ngClass]="viewMode() === 'dsl' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
+                  <span>&#123; &#125;</span>
+                  <span>DSL Schema</span>
+                </button>
+              </div>
             </div>
           </div>
 

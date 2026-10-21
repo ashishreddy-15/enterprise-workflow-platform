@@ -1,0 +1,234 @@
+<div class="border border-zinc-200 rounded-lg bg-white overflow-hidden shadow-sm flex flex-col md:flex-row min-h-[640px]">
+  
+  <!-- =================================================================== -->
+  <!-- LEFT PANE: Master Task Queue (40% on Desktop)                       -->
+  <!-- =================================================================== -->
+  <aside class="w-full md:w-[380px] lg:w-[420px] border-b md:border-b-0 md:border-r border-zinc-200 flex flex-col bg-zinc-50/50">
+    
+    <!-- Queue Header & Search / Filter -->
+    <div class="p-3 border-b border-zinc-200 bg-white space-y-2">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold text-zinc-900 tracking-tight">Assigned Tasks</span>
+          <span class="px-1.5 py-0.5 rounded-full bg-zinc-100 text-zinc-700 text-[11px] font-mono font-medium">
+            {{ filteredTasks().length }}
+          </span>
+        </div>
+        <button (click)="loadInbox()" [disabled]="isLoading()"
+                class="text-[11px] font-medium text-zinc-500 hover:text-zinc-950 transition flex items-center gap-1 cursor-pointer">
+          <span [class.animate-spin]="isLoading()">↻</span> Refresh
+        </button>
+      </div>
+
+      <!-- Search Input -->
+      <div class="relative">
+        <input type="text" [value]="searchQuery()" (input)="onSearchInput($event)"
+               placeholder="Filter tasks (Ctrl+K)..."
+               class="w-full bg-zinc-50 border border-zinc-200 rounded px-2.5 py-1.5 text-xs text-zinc-900 placeholder:text-zinc-400 outline-none focus:bg-white focus:border-zinc-900 transition">
+      </div>
+    </div>
+
+    <!-- Task List Scrollable Area -->
+    <div class="flex-1 overflow-y-auto divide-y divide-zinc-100">
+      @if (isLoading()) {
+        <div class="p-8 text-center text-xs text-zinc-400">Loading inbox queue...</div>
+      } @else if (filteredTasks().length === 0) {
+        <div class="p-8 text-center space-y-2">
+          <div class="text-zinc-300 text-lg font-mono">✓</div>
+          <p class="text-xs font-medium text-zinc-700">Inbox Zero</p>
+          <p class="text-[11px] text-zinc-400">No tasks currently require action for your role.</p>
+        </div>
+      } @else {
+        @for (task of filteredTasks(); track task.workflowId) {
+          <button (click)="selectTask(task)"
+                  class="w-full text-left p-3.5 transition flex flex-col gap-1.5 cursor-pointer"
+                  [ngClass]="{
+                    'bg-white border-l-2 border-l-zinc-950 shadow-xs': selectedTask()?.workflowId === task.workflowId,
+                    'hover:bg-zinc-100/70': selectedTask()?.workflowId !== task.workflowId
+                  }">
+            
+            <!-- Row 1: Template ID & SLA Badge -->
+            <div class="flex items-center justify-between text-[11px] gap-2">
+              <span class="font-mono text-zinc-400 truncate">{{ task.templateId }}</span>
+              
+              @if (task.slaBreached) {
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-rose-50 text-rose-700 border border-rose-200">
+                  Breached
+                </span>
+              } @else if (task.currentStepDueAt) {
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                  SLA Active
+                </span>
+              }
+            </div>
+
+            <!-- Row 2: Workflow Title -->
+            <div class="text-xs font-semibold text-zinc-900 line-clamp-1">
+              {{ task.title }}
+            </div>
+
+            <!-- Row 3: Current Step & Actor Role Scope -->
+            <div class="flex items-center justify-between text-[11px] text-zinc-500 pt-0.5">
+              <span class="text-zinc-700 font-medium truncate">{{ task.currentStepName }}</span>
+              <span class="text-[10px] font-mono text-zinc-400 shrink-0">
+                {{ task.actorScope === 'REQUESTER' ? 'Requester' : (task.requiredRole || 'Role') }}
+              </span>
+            </div>
+
+          </button>
+        }
+      }
+    </div>
+
+  </aside>
+
+  <!-- =================================================================== -->
+  <!-- RIGHT PANE: Detail & Action Canvas (60% on Desktop)                 -->
+  <!-- =================================================================== -->
+  <main class="flex-1 flex flex-col bg-white overflow-y-auto">
+    @if (selectedTask(); as task) {
+      
+      <!-- Top Action Bar -->
+      <div class="p-4 border-b border-zinc-200 flex flex-wrap items-center justify-between gap-3 bg-zinc-50/40">
+        <div>
+          <div class="flex items-center gap-2 text-xs text-zinc-500">
+            <span class="font-mono text-zinc-400">ID: {{ task.workflowId.substring(0, 8) }}...</span>
+            <span>&bull;</span>
+            <span class="font-medium text-zinc-700">{{ task.templateId }}</span>
+          </div>
+          <h2 class="text-base font-semibold text-zinc-950 mt-0.5">{{ task.title }}</h2>
+        </div>
+
+        <!-- Dynamic Action Buttons -->
+        <div class="flex items-center gap-2">
+          @if (task.currentState === 'AWAITING_KYC_DOCS') {
+            <button (click)="submitKycDocs(task)" [disabled]="isSubmitting()"
+                    class="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded text-xs font-medium cursor-pointer transition">
+              Submit KYC Documents &rarr;
+            </button>
+          } @else if (task.currentState === 'PENDING_LEGAL_VERIFY') {
+            <button (click)="rejectWorkflow(task)" [disabled]="isSubmitting()"
+                    class="px-2.5 py-1.5 bg-white border border-zinc-200 hover:bg-zinc-50 text-rose-600 rounded text-xs font-medium cursor-pointer transition">
+              Reject
+            </button>
+            <button (click)="approveLegalWorkflow(task)" [disabled]="isSubmitting()"
+                    class="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded text-xs font-medium cursor-pointer transition">
+              Verify & Onboard &rarr;
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Action Status Feedback Alert -->
+      @if (actionMessage()) {
+        <div class="px-4 py-2.5 text-xs border-b"
+             [ngClass]="{
+               'bg-emerald-50 border-emerald-200 text-emerald-800': actionSuccess(),
+               'bg-rose-50 border-rose-200 text-rose-800': !actionSuccess()
+             }">
+          {{ actionMessage() }}
+        </div>
+      }
+
+      <!-- Workflow Detail Metadata Panels -->
+      <div class="p-6 space-y-6">
+        
+        <!-- Section 1: State & SLA Info -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="p-3 bg-zinc-50 rounded border border-zinc-200 text-xs">
+            <div class="text-zinc-400 font-medium">Current State</div>
+            <div class="font-mono font-semibold text-zinc-900 mt-1">{{ task.currentState }}</div>
+          </div>
+          <div class="p-3 bg-zinc-50 rounded border border-zinc-200 text-xs">
+            <div class="text-zinc-400 font-medium">Pending Step</div>
+            <div class="font-semibold text-zinc-900 mt-1">{{ task.currentStepName }}</div>
+          </div>
+          <div class="p-3 bg-zinc-50 rounded border border-zinc-200 text-xs">
+            <div class="text-zinc-400 font-medium">SLA Deadline</div>
+            <div class="font-mono font-semibold mt-1"
+                 [ngClass]="task.slaBreached ? 'text-rose-600' : 'text-zinc-900'">
+              {{ task.slaBreached ? 'BREACHED' : (task.currentStepDueAt ? (task.currentStepDueAt | date:'short') : 'None') }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Context & KYC Document Inputs -->
+        <div class="border border-zinc-200 rounded-lg p-4 space-y-4">
+          <div class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Step Context & Payload</div>
+
+          @if (task.currentState === 'AWAITING_KYC_DOCS') {
+            <div class="space-y-3">
+              <p class="text-xs text-zinc-600 leading-relaxed">
+                This workflow requires mandatory KYC verification documents before legal review can commence.
+              </p>
+              
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label class="block font-medium text-zinc-700 mb-1">PAN Card Document URL</label>
+                  <input type="text" [(ngModel)]="panCardUrl"
+                         class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1.5 font-mono text-zinc-900 outline-none focus:border-zinc-900">
+                </div>
+                <div>
+                  <label class="block font-medium text-zinc-700 mb-1">GST Certificate URL</label>
+                  <input type="text" [(ngModel)]="gstCertUrl"
+                         class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1.5 font-mono text-zinc-900 outline-none focus:border-zinc-900">
+                </div>
+              </div>
+            </div>
+          } @else if (task.currentState === 'PENDING_LEGAL_VERIFY') {
+            <div class="space-y-3 text-xs">
+              <div class="p-3 bg-zinc-50 border border-zinc-100 rounded space-y-1.5 font-mono">
+                <div class="text-zinc-400 text-[11px] font-sans font-medium uppercase">Verified Documents Payload</div>
+                <div><span class="text-zinc-500">panCardUrl:</span> https://storage.corp.internal/kyc/pan.pdf</div>
+                <div><span class="text-zinc-500">gstCertUrl:</span> https://storage.corp.internal/kyc/gst.pdf</div>
+              </div>
+
+              <div>
+                <label class="block font-medium text-zinc-700 mb-1">Legal Review Decision Comments</label>
+                <textarea [(ngModel)]="reviewComments" rows="2"
+                          placeholder="e.g., PAN and GST identity verified against government registry..."
+                          class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1.5 text-xs text-zinc-900 outline-none focus:border-zinc-900"></textarea>
+              </div>
+            </div>
+          } @else {
+            <div class="text-xs text-zinc-500">Workflow is in terminal or completed state.</div>
+          }
+        </div>
+
+        <!-- Section 3: Technical Traceability & Identifiers -->
+        <div class="border border-zinc-200 rounded-lg divide-y divide-zinc-100 text-xs">
+          <div class="px-4 py-2.5 flex justify-between">
+            <span class="text-zinc-500">Requester ID</span>
+            <span class="font-mono text-zinc-900 font-medium">{{ task.requesterId }}</span>
+          </div>
+          <div class="px-4 py-2.5 flex justify-between">
+            <span class="text-zinc-500">Actor Scope Policy</span>
+            <span class="font-mono text-zinc-900">{{ task.actorScope }}</span>
+          </div>
+          <div class="px-4 py-2.5 flex justify-between">
+            <span class="text-zinc-500">Required Role</span>
+            <span class="font-mono text-zinc-900">{{ task.requiredRole || 'None (Requester Only)' }}</span>
+          </div>
+          <div class="px-4 py-2.5 flex justify-between">
+            <span class="text-zinc-500">Last Instance Update</span>
+            <span class="font-mono text-zinc-500">{{ task.updatedAt | date:'medium' }}</span>
+          </div>
+        </div>
+
+      </div>
+
+    } @else {
+      <!-- Empty Canvas State -->
+      <div class="flex-1 flex flex-col items-center justify-center p-12 text-center">
+        <div class="w-10 h-10 rounded-full bg-zinc-100 border border-zinc-200 text-zinc-400 flex items-center justify-center text-sm font-mono mb-3">
+          &larr;
+        </div>
+        <p class="text-xs font-semibold text-zinc-800">Select a Task from the Queue</p>
+        <p class="text-[11px] text-zinc-400 max-w-xs mt-1">
+          Choose a workflow item on the left to inspect its dynamic payload, verify documents, and execute step transitions.
+        </p>
+      </div>
+    }
+  </main>
+
+</div>

@@ -1,0 +1,5 @@
+/* Clean, semantic styling for the Master-Detail Workspace */
+:host {
+  display: block;
+  height: 100%;
+}

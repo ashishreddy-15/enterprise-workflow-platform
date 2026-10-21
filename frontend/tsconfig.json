@@ -26,6 +26,12 @@
     },
     {
       "path": "./projects/shell/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/workflow-mfe/tsconfig.app.json"
+    },
+    {
+      "path": "./projects/workflow-mfe/tsconfig.spec.json"
     }
   ]
 }

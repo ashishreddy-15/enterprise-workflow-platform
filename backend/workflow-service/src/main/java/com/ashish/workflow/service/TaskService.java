@@ -2,19 +2,23 @@ package com.ashish.workflow.service;
 
 import com.ashish.workflow.contracts.dto.TemplateDefinitionResponse;
 import com.ashish.workflow.domain.entity.WorkflowInstance;
+import com.ashish.workflow.domain.entity.WorkflowTask;
 import com.ashish.workflow.repository.WorkflowRepository;
 import com.ashish.workflow.security.UserContext;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
 @Service
+@Transactional(readOnly = true)
 public class TaskService {
 
     private static final Logger log = LoggerFactory.getLogger(TaskService.class);
@@ -26,6 +30,16 @@ public class TaskService {
         this.workflowRepository = workflowRepository;
         this.objectMapper = objectMapper;
     }
+
+    public record TaskActivity(
+            UUID id,
+            int stepOrder,
+            String stepName,
+            String taskType,
+            String completedBy,
+            String status,
+            String comments,
+            OffsetDateTime actedAt) {}
 
     public record TaskInboxItem(
             UUID workflowId,
@@ -39,7 +53,8 @@ public class TaskService {
             OffsetDateTime currentStepDueAt,
             boolean slaBreached,
             OffsetDateTime updatedAt,
-            Map<String, Object> contextData) {}
+            Map<String, Object> contextData,
+            List<TaskActivity> taskHistory) {}
 
     public List<TaskInboxItem> getTasksForUser(UserContext caller) {
         log.debug("Fetching task inbox for user: '{}', roles: {}", caller.userId(), caller.roles());
@@ -97,6 +112,24 @@ public class TaskService {
                         workflow.getId(),
                         scope,
                         currentStep.requiredRole());
+
+                List<TaskActivity> history = workflow.getTasks() != null
+                        ? workflow.getTasks().stream()
+                                .filter(t ->
+                                        t.getStatus() != null && !t.getStatus().equalsIgnoreCase("PENDING"))
+                                .sorted(Comparator.comparing(WorkflowTask::getStepOrder))
+                                .map(t -> new TaskActivity(
+                                        t.getId(),
+                                        t.getStepOrder(),
+                                        t.getStepName(),
+                                        t.getTaskType(),
+                                        t.getCompletedBy(),
+                                        t.getStatus(),
+                                        t.getComments(),
+                                        t.getActedAt()))
+                                .toList()
+                        : List.of();
+
                 inbox.add(new TaskInboxItem(
                         workflow.getId(),
                         workflow.getTemplateId(),
@@ -109,7 +142,8 @@ public class TaskService {
                         workflow.getCurrentStepDueAt(),
                         workflow.isSlaBreached(),
                         workflow.getUpdatedAt(),
-                        workflow.getContextData() != null ? workflow.getContextData() : Map.of()));
+                        workflow.getContextData() != null ? workflow.getContextData() : Map.of(),
+                        history));
             }
         }
 

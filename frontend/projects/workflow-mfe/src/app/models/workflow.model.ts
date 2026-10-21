@@ -1,3 +1,14 @@
+export interface TaskActivityHistory {
+  id: string;
+  stepOrder: number;
+  stepName: string;
+  taskType: string;
+  completedBy: string;
+  status: string;
+  comments: string | null;
+  actedAt: string | null;
+}
+
 export interface TaskInboxItem {
   workflowId: string;
   templateId: string;
@@ -11,6 +22,7 @@ export interface TaskInboxItem {
   slaBreached: boolean;
   updatedAt: string;
   contextData?: Record<string, unknown>;
+  taskHistory?: TaskActivityHistory[];
 }
 
 export interface WorkflowAction {

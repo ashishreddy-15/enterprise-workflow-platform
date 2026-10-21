@@ -18,7 +18,7 @@ public interface WorkflowRepository
         extends JpaRepository<WorkflowInstance, UUID>, JpaSpecificationExecutor<WorkflowInstance> {
 
     @Query(
-            "SELECT w FROM WorkflowInstance w WHERE w.currentState NOT IN ('ONBOARDED', 'REJECTED', 'CANCELLED') ORDER BY w.updatedAt DESC")
+            "SELECT DISTINCT w FROM WorkflowInstance w LEFT JOIN FETCH w.tasks WHERE w.currentState NOT IN ('ONBOARDED', 'REJECTED', 'CANCELLED') ORDER BY w.updatedAt DESC")
     List<WorkflowInstance> findAllActiveWorkflows();
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

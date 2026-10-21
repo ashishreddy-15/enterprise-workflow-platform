@@ -258,21 +258,17 @@
                 <!-- Node State Marker -->
                 <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition shrink-0"
                      [ngClass]="{
-                       'bg-zinc-950 text-white shadow-xs': node.status === 'COMPLETED',
-                       'bg-emerald-600 text-white shadow-xs ring-4 ring-emerald-500/10': node.status === 'TERMINAL_APPROVED',
+                       'bg-emerald-600 text-white shadow-xs': node.status === 'COMPLETED' || node.status === 'TERMINAL_APPROVED',
                        'bg-rose-600 text-white shadow-xs ring-4 ring-rose-500/10': node.status === 'TERMINAL_REJECTED',
-                       'bg-white border-2 border-zinc-950 text-zinc-950 ring-4 ring-zinc-950/10 shadow-xs': node.status === 'CURRENT',
-                       'bg-zinc-100 border border-zinc-300 text-zinc-400': node.status === 'UPCOMING',
-                       'bg-zinc-50 border border-dashed border-zinc-300 text-zinc-400 opacity-60': node.status === 'SKIPPED'
+                       'bg-white border-2 border-zinc-900 text-zinc-900 ring-4 ring-zinc-900/10 shadow-xs': node.status === 'CURRENT',
+                       'bg-zinc-100 border border-zinc-300 text-zinc-500': node.status === 'UPCOMING'
                      }">
                   @if (node.status === 'COMPLETED' || node.status === 'TERMINAL_APPROVED') {
                     <span class="text-xs font-bold">&#10003;</span>
                   } @else if (node.status === 'TERMINAL_REJECTED') {
                     <span class="text-xs font-bold">&#10005;</span>
-                  } @else if (node.status === 'SKIPPED') {
-                    <span class="text-xs text-zinc-400">&minus;</span>
                   } @else {
-                    <span class="font-mono text-[11px]">{{ node.stepOrder }}</span>
+                    <span class="font-mono text-[11px]">{{ idx + 1 }}</span>
                   }
                 </div>
 
@@ -280,11 +276,10 @@
                 <div class="mt-2 space-y-0.5 w-full">
                   <div class="text-[11px] font-semibold line-clamp-1"
                        [ngClass]="{
-                         'text-zinc-950': node.status === 'CURRENT',
+                         'text-zinc-900': node.status === 'CURRENT',
                          'text-zinc-800': node.status === 'COMPLETED',
                          'text-emerald-700': node.status === 'TERMINAL_APPROVED',
                          'text-rose-700': node.status === 'TERMINAL_REJECTED',
-                         'text-zinc-400 line-through decoration-zinc-300': node.status === 'SKIPPED',
                          'text-zinc-400': node.status === 'UPCOMING'
                        }">
                     {{ node.stepName }}
@@ -303,10 +298,6 @@
                     } @else if (node.status === 'TERMINAL_REJECTED') {
                       <span class="text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200/60 inline-flex items-center gap-1">
                         <span>✕</span> Rejected
-                      </span>
-                    } @else if (node.status === 'SKIPPED') {
-                      <span class="text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200/60 inline-block">
-                        Bypassed
                       </span>
                     } @else if (node.status === 'CURRENT') {
                       <span class="text-zinc-900 font-medium bg-zinc-200/80 px-1.5 py-0.5 rounded inline-block">

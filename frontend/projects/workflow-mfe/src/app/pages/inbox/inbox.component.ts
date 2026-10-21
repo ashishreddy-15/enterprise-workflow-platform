@@ -123,7 +123,7 @@ export class InboxComponent implements OnInit, OnDestroy {
 
       const currentStepOrder = stepsMap[task.currentState]?.stepOrder ?? 1;
 
-      return stepList.map(step => {
+      const nodes: WorkflowStepperNode[] = stepList.map(step => {
         let status: 'COMPLETED' | 'CURRENT' | 'UPCOMING' | 'SKIPPED' | 'TERMINAL_REJECTED' | 'TERMINAL_APPROVED' = 'UPCOMING';
         let completedBy: string | null = null;
         let actedAt: string | null = null;
@@ -175,6 +175,18 @@ export class InboxComponent implements OnInit, OnDestroy {
           actionStatus,
           slaHours: step.slaHours
         };
+      });
+
+      // Filter out bypassed/skipped steps and unused alternate terminal branches
+      return nodes.filter(node => {
+        if (node.status === 'SKIPPED') {
+          return false;
+        }
+        // If workflow is still in progress, hide alternate terminal exit nodes (e.g. REJECTED, CANCELLED)
+        if (!isInstanceTerminal && node.isTerminal && ['REJECTED', 'CANCELLED'].includes(node.stepKey.toUpperCase())) {
+          return false;
+        }
+        return true;
       });
     }
 

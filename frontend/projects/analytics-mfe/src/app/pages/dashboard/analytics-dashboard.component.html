@@ -1,9 +1,9 @@
-<div class="space-y-4 pb-16 pr-1">
+<div class="flex-1 min-h-0 flex flex-col space-y-3.5">
 
   <!-- =================================================================== -->
   <!-- TOP HEADER & CONTROLS BAR                                           -->
   <!-- =================================================================== -->
-  <div class="bg-white border border-zinc-200 rounded-lg p-4 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+  <div class="flex-none bg-white border border-zinc-200 rounded-lg p-3.5 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-3">
     <div>
       <div class="flex items-center gap-2">
         <h1 class="text-base font-semibold text-zinc-950 tracking-tight">Audit Trail & Analytics</h1>
@@ -57,7 +57,7 @@
 
   <!-- Error Alert -->
   @if (errorMessage()) {
-    <div class="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between">
+    <div class="flex-none p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between">
       <span>{{ errorMessage() }}</span>
       <button (click)="errorMessage.set(null)" class="text-amber-700 hover:text-amber-950 font-bold">✕</button>
     </div>
@@ -66,7 +66,7 @@
   <!-- =================================================================== -->
   <!-- EXECUTIVE KPI STRIP                                                 -->
   <!-- =================================================================== -->
-  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+  <div class="flex-none grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
     <!-- Total Workflows -->
     <div class="bg-white border border-zinc-200 rounded-lg p-3 shadow-xs">
       <div class="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Total Workflows</div>
@@ -116,7 +116,7 @@
   <!-- =================================================================== -->
   <!-- TABS & VIEW SELECTION                                               -->
   <!-- =================================================================== -->
-  <div class="flex items-center gap-2 border-b border-zinc-200 pb-1">
+  <div class="flex-none flex items-center gap-2 border-b border-zinc-200 pb-1">
     <button (click)="setTab('ledger')"
             class="px-3 py-1.5 text-xs font-medium rounded-t transition cursor-pointer border-b-2 -mb-[5px] flex items-center gap-2"
             [ngClass]="activeTab() === 'ledger' 
@@ -146,24 +146,24 @@
   <!-- TAB 1: ACTIVITY LOG                                                -->
   <!-- =================================================================== -->
   @if (activeTab() === 'ledger') {
-    <div class="bg-white border border-zinc-200 rounded-lg shadow-xs overflow-hidden flex flex-col">
+    <div class="flex-1 min-h-[350px] bg-white border border-zinc-200 rounded-lg shadow-xs overflow-hidden flex flex-col">
       
-      <div class="p-3 border-b border-zinc-200 bg-zinc-50/60 flex items-center justify-between text-xs text-zinc-600">
+      <div class="flex-none p-3 border-b border-zinc-200 bg-zinc-50/60 flex items-center justify-between text-xs text-zinc-600">
         <span class="font-medium">Recent Activity</span>
         <span class="text-[11px] font-mono text-zinc-400">Live updates enabled</span>
       </div>
 
-      <div class="overflow-x-auto">
+      <div class="flex-1 min-h-0 overflow-y-auto overflow-x-auto in-component-scroll">
         <table class="w-full text-left text-xs border-collapse">
           <thead>
-            <tr class="border-b border-zinc-200 bg-zinc-50 text-[11px] font-medium text-zinc-500 uppercase tracking-wider sticky top-0 z-10">
-              <th class="py-2.5 px-3">Date & Time</th>
-              <th class="py-2.5 px-3">Workflow ID</th>
-              <th class="py-2.5 px-3">Workflow Type</th>
-              <th class="py-2.5 px-3">Status Update</th>
-              <th class="py-2.5 px-3">User</th>
-              <th class="py-2.5 px-3 font-mono">Event ID</th>
-              <th class="py-2.5 px-3 text-right">Details</th>
+            <tr class="border-b border-zinc-200 bg-zinc-50 text-[11px] font-medium text-zinc-500 uppercase tracking-wider sticky top-0 z-10 shadow-2xs">
+              <th class="py-2.5 px-3 whitespace-nowrap bg-zinc-50">Date & Time</th>
+              <th class="py-2.5 px-3 whitespace-nowrap bg-zinc-50">Workflow ID</th>
+              <th class="py-2.5 px-3 whitespace-nowrap bg-zinc-50">Workflow Type</th>
+              <th class="py-2.5 px-3 whitespace-nowrap bg-zinc-50">Status Update</th>
+              <th class="py-2.5 px-3 whitespace-nowrap bg-zinc-50">User</th>
+              <th class="py-2.5 px-3 font-mono whitespace-nowrap bg-zinc-50">Event ID</th>
+              <th class="py-2.5 px-3 text-right w-24 shrink-0 whitespace-nowrap bg-zinc-50">Details</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-zinc-100 font-mono text-[11px]">
@@ -187,22 +187,22 @@
                   </td>
 
                   <!-- Workflow ID -->
-                  <td class="py-2.5 px-3">
+                  <td class="py-2.5 px-3 whitespace-nowrap">
                     <button (click)="inspectWorkflowById(entry.workflowId)"
-                            class="text-zinc-900 hover:underline hover:text-blue-600 font-mono cursor-pointer flex items-center gap-1 font-medium">
+                            class="text-zinc-900 hover:underline hover:text-blue-600 font-mono cursor-pointer inline-flex items-center gap-1 font-medium whitespace-nowrap">
                       <span>{{ entry.workflowId.substring(0, 14) }}...</span>
                     </button>
                   </td>
 
                   <!-- Template -->
-                  <td class="py-2.5 px-3">
+                  <td class="py-2.5 px-3 whitespace-nowrap">
                     <span class="px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 text-[10px] font-sans font-medium border border-zinc-200">
                       {{ entry.templateId }}
                     </span>
                   </td>
 
                   <!-- Transition -->
-                  <td class="py-2.5 px-3">
+                  <td class="py-2.5 px-3 whitespace-nowrap">
                     <div class="flex items-center gap-1.5">
                       <span class="px-2 py-0.5 rounded bg-zinc-100 text-zinc-600 text-[10px] font-mono">
                         {{ entry.previousState || 'Started' }}
@@ -218,9 +218,9 @@
                   </td>
 
                   <!-- Actor -->
-                  <td class="py-2.5 px-3 font-sans">
-                    <span class="inline-flex items-center gap-1 text-zinc-700">
-                      <span class="w-4 h-4 rounded-full bg-zinc-200 text-[9px] font-bold flex items-center justify-center text-zinc-600 font-mono">
+                  <td class="py-2.5 px-3 font-sans whitespace-nowrap">
+                    <span class="inline-flex items-center gap-1.5 text-zinc-700">
+                      <span class="w-4 h-4 rounded-full bg-zinc-200 text-[9px] font-bold flex items-center justify-center text-zinc-600 font-mono shrink-0">
                         {{ entry.actorId.charAt(0).toUpperCase() }}
                       </span>
                       <span class="text-xs">{{ entry.actorId }}</span>
@@ -233,10 +233,11 @@
                   </td>
 
                   <!-- Inspect Action -->
-                  <td class="py-2.5 px-3 text-right font-sans">
+                  <td class="py-2.5 px-3 text-right font-sans w-24 shrink-0 whitespace-nowrap">
                     <button (click)="inspectWorkflowById(entry.workflowId)"
-                            class="px-2.5 py-1 rounded text-[11px] font-medium text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100 border border-zinc-200 transition cursor-pointer">
-                      Details →
+                            class="px-2.5 py-1 rounded text-[11px] font-medium text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100 border border-zinc-200 transition cursor-pointer whitespace-nowrap inline-flex items-center justify-center gap-1">
+                      <span>Details</span>
+                      <span>&rarr;</span>
                     </button>
                   </td>
                 </tr>
@@ -252,14 +253,16 @@
   <!-- TAB 2: WORKFLOW SUMMARY & STATUS BREAKDOWN                          -->
   <!-- =================================================================== -->
   @if (activeTab() === 'overview') {
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="flex-1 min-h-[350px] grid grid-cols-1 md:grid-cols-3 gap-4">
       
-      <!-- Left: State Distribution Breakdown -->
-      <div class="bg-white border border-zinc-200 rounded-lg p-4 shadow-xs md:col-span-1 flex flex-col">
-        <h3 class="text-xs font-semibold text-zinc-900 uppercase tracking-wider mb-1">Status Breakdown</h3>
-        <p class="text-[11px] text-zinc-400 mb-4">Current step across active workflows</p>
+      <!-- Left: Status Breakdown Card -->
+      <div class="bg-white border border-zinc-200 rounded-lg p-4 shadow-xs md:col-span-1 flex flex-col min-h-0">
+        <div class="flex-none mb-3">
+          <h3 class="text-xs font-semibold text-zinc-900 uppercase tracking-wider mb-0.5">Status Breakdown</h3>
+          <p class="text-[11px] text-zinc-400">Current step across active workflows</p>
+        </div>
 
-        <div class="space-y-3">
+        <div class="flex-1 min-h-0 overflow-y-auto pr-1 space-y-3 in-component-scroll">
           @for (item of stateDistribution(); track item.state) {
             <div class="space-y-1">
               <div class="flex items-center justify-between text-xs">
@@ -280,22 +283,22 @@
       </div>
 
       <!-- Right: Workflow Projections Table (Span 2) -->
-      <div class="bg-white border border-zinc-200 rounded-lg shadow-xs overflow-hidden md:col-span-2 flex flex-col">
-        <div class="p-3 border-b border-zinc-200 bg-zinc-50/60 flex items-center justify-between text-xs text-zinc-600">
+      <div class="bg-white border border-zinc-200 rounded-lg shadow-xs overflow-hidden md:col-span-2 flex flex-col min-h-0">
+        <div class="flex-none p-3 border-b border-zinc-200 bg-zinc-50/60 flex items-center justify-between text-xs text-zinc-600">
           <span class="font-medium">Workflow Status</span>
           <span class="text-[11px] font-mono text-zinc-400">{{ filteredWorkflows().length }} Workflows</span>
         </div>
 
-        <div class="overflow-x-auto">
+        <div class="flex-1 min-h-0 overflow-y-auto overflow-x-auto in-component-scroll">
           <table class="w-full text-left text-xs border-collapse">
             <thead>
-              <tr class="border-b border-zinc-200 bg-zinc-50 text-[11px] font-medium text-zinc-500 uppercase tracking-wider sticky top-0 z-10">
-                <th class="py-2.5 px-3">Workflow ID</th>
-                <th class="py-2.5 px-3">Workflow Type</th>
-                <th class="py-2.5 px-3">Current Step</th>
-                <th class="py-2.5 px-3 text-center">Steps Taken</th>
-                <th class="py-2.5 px-3">Last Updated</th>
-                <th class="py-2.5 px-3 text-right">Action</th>
+              <tr class="border-b border-zinc-200 bg-zinc-50 text-[11px] font-medium text-zinc-500 uppercase tracking-wider sticky top-0 z-10 shadow-2xs">
+                <th class="py-2.5 px-3 whitespace-nowrap bg-zinc-50">Workflow ID</th>
+                <th class="py-2.5 px-3 whitespace-nowrap bg-zinc-50">Workflow Type</th>
+                <th class="py-2.5 px-3 whitespace-nowrap bg-zinc-50">Current Step</th>
+                <th class="py-2.5 px-3 text-center whitespace-nowrap bg-zinc-50">Steps Taken</th>
+                <th class="py-2.5 px-3 whitespace-nowrap bg-zinc-50">Last Updated</th>
+                <th class="py-2.5 px-3 text-right w-24 shrink-0 whitespace-nowrap bg-zinc-50">Details</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-zinc-100 font-mono text-[11px]">
@@ -309,19 +312,19 @@
                 @for (wf of filteredWorkflows(); track wf.workflowId) {
                   <tr class="hover:bg-zinc-50/80 transition">
                     <!-- Workflow ID -->
-                    <td class="py-2.5 px-3 font-mono text-zinc-900 font-medium">
+                    <td class="py-2.5 px-3 font-mono text-zinc-900 font-medium whitespace-nowrap">
                       {{ wf.workflowId.substring(0, 16) }}...
                     </td>
 
                     <!-- Template -->
-                    <td class="py-2.5 px-3 font-sans">
+                    <td class="py-2.5 px-3 font-sans whitespace-nowrap">
                       <span class="px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 text-[10px] font-medium border border-zinc-200">
                         {{ wf.templateId }}
                       </span>
                     </td>
 
                     <!-- Current State -->
-                    <td class="py-2.5 px-3">
+                    <td class="py-2.5 px-3 whitespace-nowrap">
                       <span class="px-2 py-0.5 rounded text-[10px] font-medium"
                             [ngClass]="isTerminalState(wf.currentState) 
                               ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
@@ -331,20 +334,21 @@
                     </td>
 
                     <!-- Transition Count -->
-                    <td class="py-2.5 px-3 text-center font-mono font-medium text-zinc-800">
+                    <td class="py-2.5 px-3 text-center font-mono font-medium text-zinc-800 whitespace-nowrap">
                       {{ wf.transitionCount }}
                     </td>
 
                     <!-- Last Updated -->
-                    <td class="py-2.5 px-3 font-sans text-zinc-500 text-[11px]">
+                    <td class="py-2.5 px-3 font-sans text-zinc-500 text-[11px] whitespace-nowrap">
                       {{ wf.lastUpdatedAt | date:'short' }}
                     </td>
 
                     <!-- Action -->
-                    <td class="py-2.5 px-3 text-right font-sans">
+                    <td class="py-2.5 px-3 text-right font-sans w-24 shrink-0 whitespace-nowrap">
                       <button (click)="inspectWorkflow(wf)"
-                              class="px-2.5 py-1 rounded text-[11px] font-medium bg-zinc-100 hover:bg-zinc-900 hover:text-white border border-zinc-200 transition cursor-pointer">
-                        View
+                              class="px-2.5 py-1 rounded text-[11px] font-medium text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100 border border-zinc-200 transition cursor-pointer whitespace-nowrap inline-flex items-center justify-center gap-1">
+                        <span>Details</span>
+                        <span>&rarr;</span>
                       </button>
                     </td>
                   </tr>

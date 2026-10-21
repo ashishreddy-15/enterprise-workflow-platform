@@ -24,10 +24,10 @@ export class InboxComponent implements OnInit, OnDestroy {
   readonly actionSuccess = signal<boolean>(true);
   readonly templateMap = signal<Map<string, WorkflowTemplate>>(new Map());
 
-  // Dynamic Form Model State
-  panCardUrl = 'https://storage.corp.internal/kyc/pan.pdf';
-  gstCertUrl = 'https://storage.corp.internal/kyc/gst.pdf';
-  reviewComments = 'All submitted KYC certificates verified against official registry. Approved.';
+  // Dynamic Form Model State (Signals for instantaneous zoneless UI reactivity)
+  readonly panCardUrl = signal<string>('https://storage.corp.internal/kyc/pan.pdf');
+  readonly gstCertUrl = signal<string>('https://storage.corp.internal/kyc/gst.pdf');
+  readonly reviewComments = signal<string>('All submitted KYC certificates verified against official registry. Approved.');
 
   private personaChangeListener = () => {
     this.loadInbox();
@@ -82,6 +82,60 @@ export class InboxComponent implements OnInit, OnDestroy {
       { key: 'APPROVE', label: 'Approve \u2192', variant: 'primary', targetState: 'APPROVED' }
     ];
   });
+
+  fillSampleKycData(): void {
+    this.panCardUrl.set('https://storage.corp.internal/kyc/pan.pdf');
+    this.gstCertUrl.set('https://storage.corp.internal/kyc/gst.pdf');
+  }
+
+  isPayloadValid(task: TaskInboxItem): boolean {
+    const tpl = this.templateMap().get(task.templateId);
+    const step = tpl?.steps?.[task.currentState];
+    const requiredKeys = step?.requiredPayloadKeys || (task.currentState === 'AWAITING_KYC_DOCS' ? ['panCardUrl', 'gstCertUrl'] : []);
+
+    if (requiredKeys.includes('panCardUrl') && !this.panCardUrl().trim()) {
+      return false;
+    }
+    if (requiredKeys.includes('gstCertUrl') && !this.gstCertUrl().trim()) {
+      return false;
+    }
+    return true;
+  }
+
+  actionRequiresPayload(actionKey: string, task: TaskInboxItem): boolean {
+    const upper = actionKey.toUpperCase();
+    // Non-submitting actions (reject/cancel) do not require document payload
+    if (upper.includes('REJECT') || upper.includes('CANCEL') || upper.includes('DECLINE')) {
+      return false;
+    }
+    const tpl = this.templateMap().get(task.templateId);
+    const step = tpl?.steps?.[task.currentState];
+    const requiredKeys = step?.requiredPayloadKeys || (task.currentState === 'AWAITING_KYC_DOCS' ? ['panCardUrl', 'gstCertUrl'] : []);
+    return requiredKeys.length > 0;
+  }
+
+  isActionDisabled(action: WorkflowAction, task: TaskInboxItem): boolean {
+    if (this.isSubmitting()) {
+      return true;
+    }
+    if (this.actionRequiresPayload(action.key, task)) {
+      return !this.isPayloadValid(task);
+    }
+    return false;
+  }
+
+  getActionDisabledReason(action: WorkflowAction, task: TaskInboxItem): string {
+    if (this.isSubmitting()) {
+      return 'Processing request...';
+    }
+    if (this.actionRequiresPayload(action.key, task) && !this.isPayloadValid(task)) {
+      const missing: string[] = [];
+      if (!this.panCardUrl().trim()) missing.push('PAN Card URL');
+      if (!this.gstCertUrl().trim()) missing.push('GST Certificate URL');
+      return `Required fields missing: ${missing.join(', ')}`;
+    }
+    return '';
+  }
 
   ngOnInit(): void {
     this.loadInbox();
@@ -179,20 +233,24 @@ export class InboxComponent implements OnInit, OnDestroy {
   }
 
   executeAction(actionKey: string, task: TaskInboxItem): void {
+    if (this.actionRequiresPayload(actionKey, task) && !this.isPayloadValid(task)) {
+      return;
+    }
+
     this.isSubmitting.set(true);
     this.actionMessage.set(null);
 
     let payload: Record<string, unknown> | undefined = undefined;
     if (actionKey === 'SUBMIT_DOCS' || task.currentState === 'AWAITING_KYC_DOCS') {
       payload = {
-        panCardUrl: this.panCardUrl,
-        gstCertUrl: this.gstCertUrl
+        panCardUrl: this.panCardUrl().trim(),
+        gstCertUrl: this.gstCertUrl().trim()
       };
     }
 
     this.workflowService.transitionWorkflow(task.workflowId, {
       action: actionKey,
-      comments: this.reviewComments || `Action ${actionKey} executed via Workbench`,
+      comments: this.reviewComments() || `Action ${actionKey} executed via Workbench`,
       payload
     }).subscribe({
       next: (res) => {

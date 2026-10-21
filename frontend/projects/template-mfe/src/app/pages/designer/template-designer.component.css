@@ -2,3 +2,7 @@
   display: block;
   width: 100%;
 }
+
+input[type="checkbox"] {
+  accent-color: #18181b;
+}

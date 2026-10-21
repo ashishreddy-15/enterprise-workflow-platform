@@ -10,20 +10,26 @@ export class AuthService {
   private http = inject(HttpClient);
   private readonly gatewayBaseUrl = 'http://localhost:8080';
 
-  // State Signals
+  // State Signals (Rehydrated synchronously from localStorage to eliminate reload 401s)
   readonly personas = PRECONFIGURED_PERSONAS;
-  readonly activePersona = signal<UserPersona>(PRECONFIGURED_PERSONAS[0]);
-  readonly currentToken = signal<string | null>(null);
+  readonly activePersona = signal<UserPersona>(this.getInitialPersona());
+  readonly currentToken = signal<string | null>(localStorage.getItem('ewp_auth_token'));
   readonly isAuthenticating = signal<boolean>(false);
   readonly authError = signal<string | null>(null);
 
   readonly isAuthenticated = computed(() => !!this.currentToken());
 
   constructor() {
-    // Check localStorage first, otherwise fallback to default
+    // If no token exists yet, authenticate immediately
+    if (!this.currentToken()) {
+      this.switchPersona(this.activePersona());
+    }
+  }
+
+  private getInitialPersona(): UserPersona {
     const savedPersonaId = localStorage.getItem('ewp_active_persona');
     const matched = this.personas.find(p => p.id === savedPersonaId);
-    this.switchPersona(matched || this.activePersona());
+    return matched || PRECONFIGURED_PERSONAS[0];
   }
 
   switchPersona(persona: UserPersona): void {
@@ -35,6 +41,7 @@ export class AuthService {
     this.requestDevToken(persona.id, persona.roles).subscribe({
       next: (res) => {
         this.currentToken.set(res.access_token);
+        localStorage.setItem('ewp_auth_token', res.access_token);
         this.isAuthenticating.set(false);
 
         // Broadcast to all MFEs (such as workflow-mfe) that the persona & token changed
@@ -44,7 +51,9 @@ export class AuthService {
       },
       error: (err) => {
         console.error('Failed to obtain JWT from API Gateway:', err);
-        this.authError.set('Gateway offline or token generation failed');
+        if (!this.currentToken()) {
+          this.authError.set('Gateway offline or token generation failed');
+        }
         this.isAuthenticating.set(false);
       }
     });

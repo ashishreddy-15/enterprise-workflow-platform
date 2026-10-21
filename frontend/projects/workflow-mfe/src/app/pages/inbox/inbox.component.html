@@ -220,24 +220,51 @@
                 <span>Both PAN Card and GST Certificate URLs are required to submit this step.</span>
               </div>
             }
-          } @else if (task.currentState === 'PENDING_LEGAL_VERIFY') {
-            <div class="space-y-2.5 text-xs">
-              <div class="p-2.5 bg-zinc-50 border border-zinc-100 rounded space-y-1 font-mono text-[11px]">
-                <div class="text-zinc-400 text-[10px] font-sans font-medium uppercase">Verified Documents</div>
-                <div><span class="text-zinc-500">panCardUrl:</span> https://storage.corp.internal/kyc/pan.pdf</div>
-                <div><span class="text-zinc-500">gstCertUrl:</span> https://storage.corp.internal/kyc/gst.pdf</div>
-              </div>
+          } @else {
+            <div class="space-y-3 text-xs">
+              <!-- Submitted Documents / Fields from Earlier Steps -->
+              @if (task.contextData && getContextDataEntries(task).length > 0) {
+                <div class="p-3 bg-zinc-50 border border-zinc-200 rounded-lg space-y-2">
+                  <div class="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 flex items-center justify-between">
+                    <span>Submitted Step Payload & Documents</span>
+                    <span class="font-mono text-zinc-400 font-normal">{{ getContextDataEntries(task).length }} fields</span>
+                  </div>
+                  
+                  <div class="divide-y divide-zinc-200/70 font-mono text-[11px]">
+                    @for (entry of getContextDataEntries(task); track entry.key) {
+                      <div class="py-1.5 flex items-center justify-between gap-3">
+                        <span class="text-zinc-500 shrink-0 font-sans font-medium text-xs">{{ entry.key }}</span>
+                        @if (isUrl(entry.value)) {
+                          <div class="flex items-center gap-2 truncate">
+                            <span class="text-zinc-800 truncate select-all">{{ entry.value }}</span>
+                            <a [href]="entry.value" target="_blank" rel="noopener noreferrer"
+                               class="text-[10px] px-2 py-0.5 rounded bg-white border border-zinc-300 hover:border-zinc-900 text-zinc-800 font-sans font-medium shrink-0 transition">
+                              Open Link &rarr;
+                            </a>
+                          </div>
+                        } @else {
+                          <span class="text-zinc-900 font-semibold truncate">{{ entry.value }}</span>
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
+              } @else {
+                <div class="p-3 bg-zinc-50 border border-zinc-100 rounded text-xs text-zinc-400 text-center font-mono">
+                  No previous step context recorded.
+                </div>
+              }
 
+              <!-- Review / Approval Decision Comments -->
               <div>
-                <label class="block font-medium text-zinc-700 mb-1">Legal Review Decision Comments</label>
+                <label class="block font-medium text-zinc-700 mb-1">Decision / Review Comments</label>
                 <textarea [ngModel]="reviewComments()"
                           (ngModelChange)="reviewComments.set($event)"
                           rows="2"
+                          placeholder="Add optional notes for this transition..."
                           class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1 text-xs text-zinc-900 outline-none focus:border-zinc-900"></textarea>
               </div>
             </div>
-          } @else {
-            <div class="text-xs text-zinc-500">Workflow is in terminal state.</div>
           }
         </div>
 

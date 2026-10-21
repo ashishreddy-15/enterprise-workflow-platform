@@ -200,10 +200,30 @@ export class InboxComponent implements OnInit, OnDestroy {
     });
   }
 
+  getContextDataEntries(task: TaskInboxItem): Array<{ key: string; value: string }> {
+    if (!task.contextData) return [];
+    return Object.entries(task.contextData).map(([key, value]) => ({
+      key,
+      value: typeof value === 'object' ? JSON.stringify(value) : String(value ?? '')
+    }));
+  }
+
+  isUrl(value: string): boolean {
+    return typeof value === 'string' && (value.startsWith('http://') || value.startsWith('https://'));
+  }
+
   selectTask(task: TaskInboxItem): void {
     this.selectedTask.set(task);
     this.actionMessage.set(null);
     this.loadTemplate(task.templateId);
+
+    // If task contextData already contains submitted values, populate form inputs
+    if (task.contextData?.['panCardUrl']) {
+      this.panCardUrl.set(String(task.contextData['panCardUrl']));
+    }
+    if (task.contextData?.['gstCertUrl']) {
+      this.gstCertUrl.set(String(task.contextData['gstCertUrl']));
+    }
   }
 
   onSearchInput(event: Event): void {

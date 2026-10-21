@@ -10,6 +10,7 @@ export interface TaskInboxItem {
   currentStepDueAt: string | null;
   slaBreached: boolean;
   updatedAt: string;
+  contextData?: Record<string, unknown>;
 }
 
 export interface WorkflowAction {

@@ -4,7 +4,7 @@ import { AuthService } from '../services/auth.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
-  const token = authService.currentToken();
+  const token = authService.currentToken() || localStorage.getItem('ewp_auth_token');
 
   // Do not attach Authorization header to dev-token endpoint itself
   if (req.url.includes('/auth/dev-token')) {

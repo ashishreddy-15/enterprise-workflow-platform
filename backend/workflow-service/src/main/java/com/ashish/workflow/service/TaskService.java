@@ -7,6 +7,7 @@ import com.ashish.workflow.security.UserContext;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +38,8 @@ public class TaskService {
             String requiredRole,
             OffsetDateTime currentStepDueAt,
             boolean slaBreached,
-            OffsetDateTime updatedAt) {}
+            OffsetDateTime updatedAt,
+            Map<String, Object> contextData) {}
 
     public List<TaskInboxItem> getTasksForUser(UserContext caller) {
         log.debug("Fetching task inbox for user: '{}', roles: {}", caller.userId(), caller.roles());
@@ -106,7 +108,8 @@ public class TaskService {
                         currentStep.requiredRole(),
                         workflow.getCurrentStepDueAt(),
                         workflow.isSlaBreached(),
-                        workflow.getUpdatedAt()));
+                        workflow.getUpdatedAt(),
+                        workflow.getContextData() != null ? workflow.getContextData() : Map.of()));
             }
         }
 

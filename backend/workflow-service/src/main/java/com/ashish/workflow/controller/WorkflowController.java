@@ -67,6 +67,16 @@ public class WorkflowController {
         return ResponseEntity.ok(results);
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<WorkflowResponse> getWorkflowById(@PathVariable UUID id) {
+        log.debug("REST: Get workflow instance by id: {}", id);
+        return workflowRepository
+                .findById(id)
+                .map(WorkflowResponse::from)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @PostMapping("/{id}/transition")
     public ResponseEntity<WorkflowResponse> transitionWorkflow(
             @PathVariable UUID id, @RequestBody TransitionWorkflowRequest request) throws Exception {

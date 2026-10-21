@@ -46,6 +46,17 @@ public class AuditQueryController {
         return ResponseEntity.ok(analyticsRepository.findAll());
     }
 
+    // Fetch raw immutable audit logs across all workflows
+    @GetMapping("/audit-logs")
+    public ResponseEntity<List<AuditLogDocument>> getAllAuditLogs(@RequestParam(defaultValue = "100") int limit) {
+        log.debug("REST: Fetching recent audit logs across all workflows, limit: {}", limit);
+        List<AuditLogDocument> logs = auditLogRepository.findAllByOrderByOccurredAtDesc();
+        if (logs.size() > limit) {
+            return ResponseEntity.ok(logs.subList(0, limit));
+        }
+        return ResponseEntity.ok(logs);
+    }
+
     // Fetch raw immutable audit logs for a workflow
     @GetMapping("/audit-logs/{workflowId}")
     public ResponseEntity<List<AuditLogDocument>> getAuditTrail(@PathVariable UUID workflowId) {

@@ -1,3 +1,4 @@
 {
-  "workflow-mfe": "http://localhost:4201/remoteEntry.json"
+  "workflow-mfe": "http://localhost:4201/remoteEntry.json",
+  "analytics-mfe": "http://localhost:4202/remoteEntry.json"
 }

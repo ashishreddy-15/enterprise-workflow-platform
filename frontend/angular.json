@@ -201,6 +201,104 @@
 					}
 				}
 			}
+		},
+		"analytics-mfe": {
+			"projectType": "application",
+			"schematics": {},
+			"root": "projects/analytics-mfe",
+			"sourceRoot": "projects/analytics-mfe/src",
+			"prefix": "app",
+			"architect": {
+				"build": {
+					"builder": "@angular-architects/native-federation:build",
+					"options": {
+						"cacheExternalArtifacts": true,
+						"tsConfig": "projects/analytics-mfe/tsconfig.federation.json"
+					},
+					"configurations": {
+						"production": {
+							"target": "analytics-mfe:esbuild:production"
+						},
+						"development": {
+							"target": "analytics-mfe:esbuild:development",
+							"dev": true
+						}
+					},
+					"defaultConfiguration": "production"
+				},
+				"serve": {
+					"builder": "@angular-architects/native-federation:build",
+					"options": {
+						"target": "analytics-mfe:serve-original:development",
+						"tsConfig": "projects/analytics-mfe/tsconfig.federation.json",
+						"rebuildDelay": 500,
+						"cacheExternalArtifacts": true,
+						"dev": true,
+						"devServer": true,
+						"port": 0
+					}
+				},
+				"test": {
+					"builder": "@angular/build:unit-test"
+				},
+				"esbuild": {
+					"builder": "@angular/build:application",
+					"options": {
+						"browser": "projects/analytics-mfe/src/main.ts",
+						"tsConfig": "projects/analytics-mfe/tsconfig.app.json",
+						"assets": [
+							{
+								"glob": "**/*",
+								"input": "projects/analytics-mfe/public"
+							}
+						],
+						"styles": [
+							"projects/analytics-mfe/src/styles.css"
+						],
+						"polyfills": [
+							"es-module-shims"
+						]
+					},
+					"configurations": {
+						"production": {
+							"budgets": [
+								{
+									"type": "initial",
+									"maximumWarning": "500kB",
+									"maximumError": "1MB"
+								},
+								{
+									"type": "anyComponentStyle",
+									"maximumWarning": "4kB",
+									"maximumError": "8kB"
+								}
+							],
+							"outputHashing": "all"
+						},
+						"development": {
+							"optimization": false,
+							"extractLicenses": false,
+							"sourceMap": true
+						}
+					},
+					"defaultConfiguration": "production"
+				},
+				"serve-original": {
+					"builder": "@angular/build:dev-server",
+					"configurations": {
+						"production": {
+							"buildTarget": "analytics-mfe:esbuild:production"
+						},
+						"development": {
+							"buildTarget": "analytics-mfe:esbuild:development"
+						}
+					},
+					"defaultConfiguration": "development",
+					"options": {
+						"port": 4202
+					}
+				}
+			}
 		}
 	}
 }

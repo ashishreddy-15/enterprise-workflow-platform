@@ -7,4 +7,6 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 
 public interface AuditLogRepository extends MongoRepository<AuditLogDocument, String> {
     List<AuditLogDocument> findByWorkflowIdOrderByOccurredAtAsc(UUID workflowId);
+
+    List<AuditLogDocument> findAllByOrderByOccurredAtDesc();
 }

@@ -217,34 +217,25 @@
               </p>
             </div>
 
-            <!-- View Switcher Tabs & Fullscreen Action -->
-            <div class="flex items-center gap-2 shrink-0">
-              <div class="flex items-center bg-zinc-100 p-0.5 rounded border border-zinc-200 text-xs">
-                <button (click)="setViewMode('canvas')"
-                        class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1.5"
-                        [ngClass]="viewMode() === 'canvas' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
-                  <span>◈</span>
-                  <span>Visual Graph</span>
-                </button>
-                <button (click)="setViewMode('pipeline')"
-                        class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1.5"
-                        [ngClass]="viewMode() === 'pipeline' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
-                  <span>≡</span>
-                  <span>Pipeline List</span>
-                </button>
-                <button (click)="setViewMode('dsl')"
-                        class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1.5"
-                        [ngClass]="viewMode() === 'dsl' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
-                  <span>&#123; &#125;</span>
-                  <span>DSL Schema</span>
-                </button>
-              </div>
-
-              <button (click)="toggleFullscreen(true)"
-                      title="Expand View to Fullscreen"
-                      class="px-2.5 py-1 rounded border border-zinc-200 hover:border-zinc-900 hover:bg-zinc-100 bg-white text-zinc-800 text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 shadow-xs">
-                <span>⛶</span>
-                <span>Full Screen</span>
+            <!-- View Switcher Tabs -->
+            <div class="flex items-center bg-zinc-100 p-0.5 rounded border border-zinc-200 shrink-0 text-xs">
+              <button (click)="setViewMode('canvas')"
+                      class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1.5"
+                      [ngClass]="viewMode() === 'canvas' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
+                <span>◈</span>
+                <span>Visual Graph</span>
+              </button>
+              <button (click)="setViewMode('pipeline')"
+                      class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1.5"
+                      [ngClass]="viewMode() === 'pipeline' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
+                <span>≡</span>
+                <span>Pipeline List</span>
+              </button>
+              <button (click)="setViewMode('dsl')"
+                      class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1.5"
+                      [ngClass]="viewMode() === 'dsl' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
+                <span>&#123; &#125;</span>
+                <span>DSL Schema</span>
               </button>
             </div>
           </div>

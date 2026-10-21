@@ -1,29 +1,18 @@
 <div class="home-container">
-  <!-- Clean Enterprise Page Header -->
+  <!-- Clean Enterprise Page Header (No duplicate buttons) -->
   <header class="page-header">
-    <div class="header-text">
-      <h1>Command Center</h1>
-      <p>
-        Authenticated as <span class="current-user-tag">{{ auth.activePersona().name }}</span> ({{ auth.activePersona().role }}) &bull; Cryptographic JWT verification active
-      </p>
-    </div>
-
-    <div class="header-actions">
-      <a routerLink="/workflows" class="btn-action-primary">
-        Open Task Inbox &rarr;
-      </a>
-      <a routerLink="/templates" class="btn-action-secondary">
-        Template Studio
-      </a>
-    </div>
+    <h1>Command Center</h1>
+    <p>
+      Logged in as <span class="current-user-tag">{{ auth.activePersona().name }}</span> ({{ auth.activePersona().role }}) &bull; Active OAuth2/OIDC Session
+    </p>
   </header>
 
-  <!-- Micro-Frontend System Status -->
+  <!-- Single Clickable Micro-Frontend System Cards -->
   <section>
-    <div class="section-heading">Micro-Frontend Architecture</div>
+    <div class="section-heading">Micro-Frontend Applications</div>
     <div class="mfe-grid">
       <!-- Remote 1 -->
-      <article class="mfe-card">
+      <a routerLink="/workflows" class="mfe-card">
         <div class="mfe-header">
           <span class="mfe-badge badge-blue">Remote &bull; Workflow</span>
           <span class="mfe-port">:4201</span>
@@ -34,12 +23,12 @@
         </p>
         <div class="mfe-footer">
           <span class="mfe-status-label">Native Federation Standby</span>
-          <a routerLink="/workflows" class="mfe-link">Open &rarr;</a>
+          <span class="mfe-link-arrow">Open &rarr;</span>
         </div>
-      </article>
+      </a>
 
       <!-- Remote 2 -->
-      <article class="mfe-card">
+      <a routerLink="/templates" class="mfe-card">
         <div class="mfe-header">
           <span class="mfe-badge badge-purple">Remote &bull; Blueprint</span>
           <span class="mfe-port">:4202</span>
@@ -50,31 +39,31 @@
         </p>
         <div class="mfe-footer">
           <span class="mfe-status-label">Native Federation Standby</span>
-          <a routerLink="/templates" class="mfe-link">Open &rarr;</a>
+          <span class="mfe-link-arrow">Open &rarr;</span>
         </div>
-      </article>
+      </a>
 
       <!-- Remote 3 -->
-      <article class="mfe-card">
+      <a routerLink="/analytics" class="mfe-card">
         <div class="mfe-header">
           <span class="mfe-badge badge-emerald">Remote &bull; CQRS</span>
           <span class="mfe-port">:4203</span>
         </div>
         <h3 class="mfe-title">Audit & Analytics</h3>
         <p class="mfe-description">
-          CQRS read-model timeline projection, immutable actor audit logs, Kafka event streaming, and SLA breach reports.
+          CQRS read-model timeline projection, immutable actor audit logs, Kafka event streaming, and SLA reports.
         </p>
         <div class="mfe-footer">
           <span class="mfe-status-label">Native Federation Standby</span>
-          <a routerLink="/analytics" class="mfe-link">Open &rarr;</a>
+          <span class="mfe-link-arrow">Open &rarr;</span>
         </div>
-      </article>
+      </a>
     </div>
   </section>
 
-  <!-- Cryptographic JWT Session Details -->
+  <!-- Cryptographic Identity & Security Claims Panel -->
   <section>
-    <div class="section-heading">Cryptographic Identity & Security Claims</div>
+    <div class="section-heading">Cryptographic Session Claims</div>
     <div class="session-panel">
       <div class="session-grid">
         <div class="session-stat">

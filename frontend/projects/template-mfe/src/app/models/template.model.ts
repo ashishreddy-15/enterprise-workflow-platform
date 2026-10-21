@@ -64,3 +64,32 @@ export interface CanvasEdge {
   midY: number;
   isDanger: boolean;
 }
+
+export interface TransitionBuilderItem {
+  action: string;
+  targetState: string;
+}
+
+export interface StateBuilderItem {
+  id: string;
+  stateKey: string;
+  stepName: string;
+  stepType: string;
+  actorScope: string;
+  requiredRole?: string | null;
+  slaHours?: number | null;
+  isInitial: boolean;
+  isTerminal: boolean;
+  requiredPayloadKeys: string[];
+  payloadKeysInput: string;
+  transitions: TransitionBuilderItem[];
+}
+
+export interface BlueprintPreset {
+  id: string;
+  name: string;
+  badge: string;
+  description: string;
+  template: Partial<WorkflowTemplate>;
+}
+

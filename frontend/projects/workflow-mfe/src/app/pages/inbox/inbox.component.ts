@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { WorkflowService } from '../../services/workflow.service';
@@ -11,7 +11,7 @@ import { TaskInboxItem } from '../../models/workflow.model';
   templateUrl: './inbox.component.html',
   styleUrl: './inbox.component.css'
 })
-export class InboxComponent implements OnInit {
+export class InboxComponent implements OnInit, OnDestroy {
   private workflowService = inject(WorkflowService);
 
   // Reactive State Signals
@@ -27,6 +27,10 @@ export class InboxComponent implements OnInit {
   panCardUrl = 'https://storage.corp.internal/kyc/pan.pdf';
   gstCertUrl = 'https://storage.corp.internal/kyc/gst.pdf';
   reviewComments = 'All submitted KYC certificates verified against official registry. Approved.';
+
+  private personaChangeListener = () => {
+    this.loadInbox();
+  };
 
   // Filtered Tasks computed signal
   readonly filteredTasks = computed(() => {
@@ -44,6 +48,12 @@ export class InboxComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadInbox();
+    // Re-fetch inbox whenever the persona switcher in Shell changes roles
+    window.addEventListener('ewp:persona-changed', this.personaChangeListener);
+  }
+
+  ngOnDestroy(): void {
+    window.removeEventListener('ewp:persona-changed', this.personaChangeListener);
   }
 
   loadInbox(): void {
@@ -62,6 +72,8 @@ export class InboxComponent implements OnInit {
           this.selectedTask.set(updated || (items.length > 0 ? items[0] : null));
         } else if (items.length > 0) {
           this.selectedTask.set(items[0]);
+        } else {
+          this.selectedTask.set(null);
         }
       },
       error: (err) => {

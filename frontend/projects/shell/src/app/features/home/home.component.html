@@ -1,86 +1,114 @@
-<div class="space-y-8">
-  <!-- Minimalist Heading -->
-  <div>
-    <h1 class="text-xl font-semibold tracking-tight text-zinc-950">Overview</h1>
-    <p class="text-sm text-zinc-500 mt-1">
-      Signed in as <strong class="text-zinc-900 font-medium">{{ auth.activePersona().name }}</strong>
-      ({{ auth.activePersona().role }}) &bull; {{ auth.activePersona().department }}
-    </p>
-  </div>
+<div class="space-y-6">
+  
+  <!-- Section 1: Minimalist Header & Live Counter -->
+  <div class="flex items-center justify-between border-b border-zinc-200 pb-4">
+    <div>
+      <h1 class="text-base font-semibold text-zinc-950">Operational Workbench</h1>
+      <p class="text-xs text-zinc-500 mt-0.5">
+        Assigned approvals for <strong class="text-zinc-900 font-medium">{{ auth.activePersona().name }}</strong>
+        &bull; {{ auth.activePersona().role }}
+      </p>
+    </div>
 
-  <!-- Micro-Frontend Modules List -->
-  <div class="space-y-3">
-    <div class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Applications</div>
-    
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <!-- Remote 1 -->
-      <a routerLink="/workflows"
-         class="group block p-4 bg-white border border-zinc-200 rounded-lg hover:border-zinc-900 transition">
-        <div class="flex items-center justify-between text-xs text-zinc-400 font-mono">
-          <span>PORT 4201</span>
-          <span class="group-hover:translate-x-0.5 transition-transform text-zinc-900">&rarr;</span>
-        </div>
-        <div class="text-sm font-semibold text-zinc-900 mt-2">Task Inbox</div>
-        <p class="text-xs text-zinc-500 mt-1 line-clamp-2">
-          View assigned approval tasks, submit documents, and monitor SLA deadlines.
-        </p>
-      </a>
+    <!-- Quick Count Pills -->
+    <div class="flex items-center gap-2">
+      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-medium border"
+            [ngClass]="tasks().length > 0 ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-zinc-50 text-zinc-600 border-zinc-200'">
+        <span>Pending Tasks:</span>
+        <span>{{ tasks().length }}</span>
+      </span>
 
-      <!-- Remote 2 -->
-      <a routerLink="/templates"
-         class="group block p-4 bg-white border border-zinc-200 rounded-lg hover:border-zinc-900 transition">
-        <div class="flex items-center justify-between text-xs text-zinc-400 font-mono">
-          <span>PORT 4202</span>
-          <span class="group-hover:translate-x-0.5 transition-transform text-zinc-900">&rarr;</span>
-        </div>
-        <div class="text-sm font-semibold text-zinc-900 mt-2">Blueprints</div>
-        <p class="text-xs text-zinc-500 mt-1 line-clamp-2">
-          Model step transitions, configure roles, and publish immutable versions.
-        </p>
-      </a>
-
-      <!-- Remote 3 -->
-      <a routerLink="/analytics"
-         class="group block p-4 bg-white border border-zinc-200 rounded-lg hover:border-zinc-900 transition">
-        <div class="flex items-center justify-between text-xs text-zinc-400 font-mono">
-          <span>PORT 4203</span>
-          <span class="group-hover:translate-x-0.5 transition-transform text-zinc-900">&rarr;</span>
-        </div>
-        <div class="text-sm font-semibold text-zinc-900 mt-2">Audit & Analytics</div>
-        <p class="text-xs text-zinc-500 mt-1 line-clamp-2">
-          Inspect immutable CQRS audit timeline, actor logs, and SLA breach reports.
-        </p>
+      <a routerLink="/workflows" class="px-2.5 py-1 bg-white border border-zinc-200 hover:border-zinc-900 rounded-md text-xs font-medium text-zinc-900 transition">
+        Open Split-Pane Inbox &rarr;
       </a>
     </div>
   </div>
 
-  <!-- Session Token Details -->
-  <div class="space-y-3">
-    <div class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Security Context</div>
-    
-    <div class="bg-white border border-zinc-200 rounded-lg divide-y divide-zinc-100 text-xs">
-      <div class="px-4 py-3 flex justify-between items-center">
-        <span class="text-zinc-500">Subject ID (sub)</span>
-        <span class="font-mono text-zinc-900 font-medium">{{ auth.activePersona().id }}</span>
-      </div>
-      <div class="px-4 py-3 flex justify-between items-center">
-        <span class="text-zinc-500">Roles Claim</span>
-        <span class="font-mono text-zinc-900 font-medium">{{ auth.activePersona().roles.join(', ') }}</span>
-      </div>
-      <div class="px-4 py-3 flex justify-between items-center">
-        <span class="text-zinc-500">API Gateway Auth</span>
-        <span>
-          @if (auth.currentToken()) {
-            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
-              HS256 Verified
-            </span>
-          } @else {
-            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200 font-mono">
-              Pending
-            </span>
-          }
-        </span>
-      </div>
+  <!-- Section 2: Live Actionable Work Queue (No Generic Cards!) -->
+  <div class="space-y-2">
+    <div class="flex items-center justify-between text-xs">
+      <span class="font-semibold uppercase tracking-wider text-zinc-400 text-[11px]">Active Queue Stream</span>
+      <span class="text-zinc-400 font-mono text-[11px]">{{ tasks().length }} items requiring action</span>
+    </div>
+
+    <div class="border border-zinc-200 rounded-lg bg-white overflow-hidden divide-y divide-zinc-100 shadow-xs">
+      @if (isLoading()) {
+        <div class="p-6 text-center text-xs text-zinc-400">Refreshing queue stream...</div>
+      } @else if (tasks().length === 0) {
+        <div class="p-8 text-center space-y-1">
+          <div class="text-zinc-300 text-sm font-mono">✓</div>
+          <p class="text-xs font-medium text-zinc-700">Inbox Zero</p>
+          <p class="text-[11px] text-zinc-400">No active workflows currently waiting for your role.</p>
+        </div>
+      } @else {
+        <!-- Table Column Header -->
+        <div class="bg-zinc-50/70 px-4 py-2 text-[11px] font-medium text-zinc-500 grid grid-cols-12 gap-3">
+          <div class="col-span-5">Workflow Reference</div>
+          <div class="col-span-3">Stage / Step</div>
+          <div class="col-span-2">SLA Status</div>
+          <div class="col-span-2 text-right">Action</div>
+        </div>
+
+        @for (item of tasks(); track item.workflowId) {
+          <div class="px-4 py-3 grid grid-cols-12 gap-3 items-center text-xs hover:bg-zinc-50/60 transition">
+            
+            <!-- Col 1: Title, Template ID & Timestamp -->
+            <div class="col-span-5 truncate">
+              <span class="font-semibold text-zinc-950 block truncate">{{ item.title }}</span>
+              <span class="font-mono text-[10px] text-zinc-400">{{ item.templateId }} &bull; #{{ item.workflowId.substring(0, 8) }} &bull; {{ item.updatedAt | date:'MMM d, HH:mm' }}</span>
+            </div>
+
+            <!-- Col 2: Step Name -->
+            <div class="col-span-3 truncate">
+              <span class="text-zinc-700 font-medium truncate block">{{ item.currentStepName }}</span>
+              <span class="text-[10px] text-zinc-400 font-mono">{{ item.currentState }}</span>
+            </div>
+
+            <!-- Col 3: SLA Status -->
+            <div class="col-span-2">
+              @if (item.slaBreached) {
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-rose-50 text-rose-700 border border-rose-200">
+                  Breached
+                </span>
+              } @else if (item.currentStepDueAt) {
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                  SLA Active
+                </span>
+              } @else {
+                <span class="text-zinc-400 text-[11px] font-mono">No SLA</span>
+              }
+            </div>
+
+            <!-- Col 4: Action -->
+            <div class="col-span-2 text-right">
+              <a routerLink="/workflows" class="text-xs font-medium text-zinc-900 hover:underline">
+                Review &rarr;
+              </a>
+            </div>
+
+          </div>
+        }
+      }
     </div>
   </div>
+
+  <!-- Section 3: System Modules & Security Footer Bar -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+    <div class="p-4 bg-white border border-zinc-200 rounded-lg flex items-center justify-between text-xs">
+      <div>
+        <div class="font-medium text-zinc-900">Blueprint Designer</div>
+        <div class="text-[11px] text-zinc-400 mt-0.5">Author workflows & manage versions</div>
+      </div>
+      <a routerLink="/templates" class="text-zinc-900 font-medium hover:underline">Open &rarr;</a>
+    </div>
+
+    <div class="p-4 bg-white border border-zinc-200 rounded-lg flex items-center justify-between text-xs">
+      <div>
+        <div class="font-medium text-zinc-900">Audit & Analytics</div>
+        <div class="text-[11px] text-zinc-400 mt-0.5">CQRS read-model timeline & Kafka logs</div>
+      </div>
+      <a routerLink="/analytics" class="text-zinc-900 font-medium hover:underline">Open &rarr;</a>
+    </div>
+  </div>
+
 </div>

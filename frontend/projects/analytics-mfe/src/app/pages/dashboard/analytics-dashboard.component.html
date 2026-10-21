@@ -362,12 +362,14 @@
   <!-- Centered with backdrop, keeping Shell Header & Footer intact       -->
   <!-- =================================================================== -->
   @if (selectedWorkflow()) {
-    <div class="fixed inset-0 z-40 bg-zinc-950/40 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6"
-         (click)="closeInspector()">
+    <div class="fixed inset-0 z-40 bg-zinc-950/40 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 overscroll-contain select-none"
+         (click)="closeInspector()"
+         (wheel)="$event.preventDefault()">
       
       <!-- Modal Container Dialog -->
-      <div class="w-full max-w-2xl bg-white rounded-xl border border-zinc-200 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150"
-           (click)="$event.stopPropagation()">
+      <div class="w-full max-w-2xl bg-white rounded-xl border border-zinc-200 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden select-text animate-in fade-in zoom-in-95 duration-150"
+           (click)="$event.stopPropagation()"
+           (wheel)="$event.stopPropagation()">
         
         <!-- Modal Header -->
         <div class="px-5 py-3.5 border-b border-zinc-200 flex items-center justify-between bg-zinc-50/70">

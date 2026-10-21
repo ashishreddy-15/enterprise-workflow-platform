@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, inject, signal, computed } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AnalyticsService } from '../../services/analytics.service';
@@ -137,8 +137,27 @@ export class AnalyticsDashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.setScrollLock(false);
     if (this.personaListener) {
       window.removeEventListener('ewp:persona-changed', this.personaListener);
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapePress(): void {
+    if (this.selectedWorkflow()) {
+      this.closeInspector();
+    }
+  }
+
+  private setScrollLock(locked: boolean): void {
+    const mainEl = document.querySelector('main');
+    if (locked) {
+      document.body.style.overflow = 'hidden';
+      if (mainEl) (mainEl as HTMLElement).style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      if (mainEl) (mainEl as HTMLElement).style.overflow = '';
     }
   }
 
@@ -195,6 +214,7 @@ export class AnalyticsDashboardComponent implements OnInit, OnDestroy {
     this.selectedWorkflow.set(wf);
     this.isLoadingWorkflowAudit.set(true);
     this.selectedWorkflowAuditLogs.set([]);
+    this.setScrollLock(true);
 
     this.analyticsService.getWorkflowAuditLogs(wf.workflowId).subscribe({
       next: (logs) => {
@@ -230,6 +250,7 @@ export class AnalyticsDashboardComponent implements OnInit, OnDestroy {
   closeInspector(): void {
     this.selectedWorkflow.set(null);
     this.selectedWorkflowAuditLogs.set([]);
+    this.setScrollLock(false);
   }
 
   isTerminalState(state: string): boolean {

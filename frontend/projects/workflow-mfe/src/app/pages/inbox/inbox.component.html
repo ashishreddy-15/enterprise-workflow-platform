@@ -475,136 +475,16 @@
 </div>
 
 <!-- ======================================================================= -->
-<!-- INITIATE WORKFLOW MODAL DIALOG                                          -->
+<!-- INITIATE WORKFLOW MODAL DIALOG (MODULAR SUBCOMPONENT)                   -->
 <!-- ======================================================================= -->
-@if (isCreateModalOpen()) {
-  <div class="fixed inset-0 z-50 bg-zinc-950/40 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl border border-zinc-200 shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-      
-      <!-- Modal Header -->
-      <div class="px-5 py-4 border-b border-zinc-100 flex items-center justify-between">
-        <div>
-          <h2 class="text-sm font-semibold text-zinc-950">Initiate New Workflow</h2>
-          <p class="text-xs text-zinc-500 mt-0.5">Deploy an active process instance from a verified template blueprint</p>
-        </div>
-        <button (click)="closeCreateModal()"
-                aria-label="Close dialog"
-                class="text-zinc-400 hover:text-zinc-700 text-lg leading-none p-1 rounded-md hover:bg-zinc-100 transition cursor-pointer">
-          &times;
-        </button>
-      </div>
-
-      <!-- Modal Body -->
-      <div class="p-5 space-y-4 text-xs max-h-[70vh] overflow-y-auto">
-        
-        <!-- Error Banner if any -->
-        @if (createErrorMessage()) {
-          <div class="p-3 rounded-md bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between">
-            <span>{{ createErrorMessage() }}</span>
-            <button (click)="createErrorMessage.set(null)" class="text-rose-500 hover:text-rose-900 cursor-pointer">&times;</button>
-          </div>
-        }
-
-        <!-- Blueprint Selection -->
-        <div class="space-y-2">
-          <div class="flex items-center justify-between">
-            <label class="font-semibold text-zinc-900 uppercase tracking-wider text-[10px]">Select Process Blueprint</label>
-            <span class="text-[10px] font-mono text-zinc-400">{{ templateCatalog().length }} published templates</span>
-          </div>
-
-          @if (isTemplatesLoading()) {
-            <div class="p-6 text-center text-xs text-zinc-400 bg-zinc-50 border border-zinc-200 rounded-lg">
-              <span class="inline-block animate-spin mr-1">↻</span> Fetching templates from registry...
-            </div>
-          } @else if (templateCatalog().length === 0) {
-            <div class="p-4 text-center text-xs text-zinc-400 bg-zinc-50 border border-zinc-200 rounded-lg">
-              No published blueprints available.
-            </div>
-          } @else {
-            <div class="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-              @for (item of templateCatalog(); track item.key) {
-                <div (click)="selectCatalogTemplate(item.key)"
-                     class="border rounded-lg p-3 cursor-pointer transition flex items-start gap-3"
-                     [ngClass]="{
-                       'border-zinc-900 bg-zinc-50/80 shadow-xs ring-1 ring-zinc-900/10': selectedTemplateKey() === item.key,
-                       'border-zinc-200 hover:border-zinc-300 bg-white': selectedTemplateKey() !== item.key
-                     }">
-                  <!-- Radio indicator -->
-                  <div class="mt-0.5 w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0"
-                       [ngClass]="selectedTemplateKey() === item.key ? 'border-zinc-900 bg-zinc-900' : 'border-zinc-300'">
-                    @if (selectedTemplateKey() === item.key) {
-                      <div class="w-1.5 h-1.5 rounded-full bg-white"></div>
-                    }
-                  </div>
-
-                  <!-- Content -->
-                  <div class="space-y-1 flex-1">
-                    <div class="flex items-center justify-between">
-                      <span class="font-medium text-zinc-950">{{ item.name }}</span>
-                      @if (item.estimatedSla) {
-                        <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 font-medium">
-                          SLA: {{ item.estimatedSla }}
-                        </span>
-                      }
-                    </div>
-                    <p class="text-[11px] text-zinc-500 leading-relaxed">{{ item.description }}</p>
-                    <div class="flex items-center gap-2 pt-0.5 text-[10px] font-mono text-zinc-400">
-                      <span>Key: {{ item.key }}</span>
-                      <span>&bull;</span>
-                      <span>Initial Step: {{ item.initialStep }}</span>
-                    </div>
-                  </div>
-                </div>
-              }
-            </div>
-          }
-        </div>
-
-        <!-- Title Input -->
-        <div class="space-y-1.5">
-          <label for="newWorkflowTitle" class="font-semibold text-zinc-900 uppercase tracking-wider text-[10px]">
-            Workflow Reference / Subject <span class="text-rose-600">*</span>
-          </label>
-          <input id="newWorkflowTitle"
-                 type="text"
-                 [value]="newWorkflowTitle()"
-                 (input)="newWorkflowTitle.set($any($event.target).value)"
-                 placeholder="Enter workflow title or reference..."
-                 class="w-full bg-zinc-50 border border-zinc-200 rounded-md px-3 py-2 text-xs text-zinc-950 placeholder:text-zinc-400 outline-none focus:bg-white focus:border-zinc-900 transition">
-        </div>
-
-        <!-- Information notice -->
-        <div class="rounded-md bg-zinc-50 border border-zinc-200/70 p-3 text-[11px] text-zinc-500 leading-relaxed space-y-1">
-          <div class="font-medium text-zinc-700 flex items-center gap-1.5">
-            <span class="font-mono text-zinc-400">ℹ</span> Requester Context &amp; Governance
-          </div>
-          <p>
-            This workflow will be instantiated under your authenticated identity. The initial step (<code class="bg-zinc-100 px-1 py-0.5 rounded text-[10px] font-mono text-zinc-800">{{ selectedTemplate()?.initialStep || 'Initial Step' }}</code>) will be immediately routed to your inbox.
-          </p>
-        </div>
-
-      </div>
-
-      <!-- Modal Footer -->
-      <div class="px-5 py-3.5 bg-zinc-50 border-t border-zinc-100 flex items-center justify-between">
-        <button (click)="closeCreateModal()"
-                [disabled]="isCreating()"
-                class="px-3 py-1.5 rounded-md border border-zinc-200 bg-white hover:bg-zinc-100 text-zinc-700 text-xs font-medium transition cursor-pointer">
-          Cancel
-        </button>
-
-        <button (click)="createAndLaunchWorkflow()"
-                [disabled]="isCreating() || !newWorkflowTitle().trim()"
-                class="px-4 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-medium transition flex items-center gap-1.5 cursor-pointer shadow-xs">
-          @if (isCreating()) {
-            <span class="animate-spin text-xs">↻</span>
-            <span>Launching...</span>
-          } @else {
-            <span>Launch Workflow &rarr;</span>
-          }
-        </button>
-      </div>
-
-    </div>
-  </div>
-}
+<app-create-workflow-modal
+  [isOpen]="isCreateModalOpen()"
+  [templateCatalog]="templateCatalog()"
+  [isTemplatesLoading]="isTemplatesLoading()"
+  [isCreating]="isCreating()"
+  [createErrorMessage]="createErrorMessage()"
+  [(selectedTemplateKey)]="selectedTemplateKey"
+  [(newWorkflowTitle)]="newWorkflowTitle"
+  (close)="closeCreateModal()"
+  (launch)="createAndLaunchWorkflow($event)"
+  (dismissError)="createErrorMessage.set(null)" />

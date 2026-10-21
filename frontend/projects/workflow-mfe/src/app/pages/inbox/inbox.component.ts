@@ -4,11 +4,14 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { WorkflowService } from '../../services/workflow.service';
 import { TaskInboxItem, WorkflowAction, WorkflowTemplate, TemplateCatalogItem, WorkflowStepperNode } from '../../models/workflow.model';
+import { computeSlaCountdown } from '../../utils/sla.util';
+import { buildStepperNodes } from '../../utils/stepper.util';
+import { CreateWorkflowModalComponent } from '../../components/create-workflow-modal/create-workflow-modal.component';
 
 @Component({
   selector: 'app-inbox',
   standalone: true,
-  imports: [CommonModule, FormsModule, DatePipe],
+  imports: [CommonModule, FormsModule, DatePipe, CreateWorkflowModalComponent],
   templateUrl: './inbox.component.html',
   styleUrl: './inbox.component.css'
 })
@@ -57,172 +60,18 @@ export class InboxComponent implements OnInit, OnDestroy {
     this.loadTemplates();
   };
 
-  // Live SLA Countdown Computation
+  // Live SLA Countdown Computation (delegated to pure utility)
   readonly slaCountdown = computed(() => {
     this.now(); // register signal dependency for reactive tick
-    const task = this.selectedTask();
-    if (!task) {
-      return { label: 'No Active Task', isBreached: false, urgency: 'normal' as const };
-    }
-    if (task.slaBreached) {
-      return { label: 'SLA Breached', isBreached: true, urgency: 'breached' as const };
-    }
-    if (!task.currentStepDueAt) {
-      return { label: 'No SLA Attached', isBreached: false, urgency: 'normal' as const };
-    }
-
-    const due = new Date(task.currentStepDueAt).getTime();
-    const diffMs = due - Date.now();
-    if (diffMs <= 0) {
-      return { label: 'SLA Overdue', isBreached: true, urgency: 'breached' as const };
-    }
-
-    const totalHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const totalMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    const urgency: 'normal' | 'warning' | 'breached' = totalHours <= 2 ? 'warning' : 'normal';
-
-    if (totalHours >= 24) {
-      const days = Math.floor(totalHours / 24);
-      const remHours = totalHours % 24;
-      return { label: `${days}d ${remHours}h left`, isBreached: false, urgency };
-    }
-    if (totalHours > 0) {
-      return { label: `${totalHours}h ${totalMins}m left`, isBreached: false, urgency };
-    }
-    return { label: `${totalMins}m left`, isBreached: false, urgency: 'warning' as const };
+    return computeSlaCountdown(this.selectedTask());
   });
 
-  // Dynamically Derived Workflow Stepper Sequence
+  // Dynamically Derived Workflow Stepper Sequence (delegated to pure utility)
   readonly stepperNodes = computed<WorkflowStepperNode[]>(() => {
     const task = this.selectedTask();
     if (!task) return [];
-
     const tpl = this.templateMap().get(task.templateId);
-    const stepsMap = tpl?.steps;
-
-    const isInstanceTerminal = task.currentState === 'ONBOARDED' ||
-                               task.currentState === 'APPROVED' ||
-                               task.currentState === 'REJECTED' ||
-                               task.currentState === 'COMPLETED' ||
-                               task.currentState === 'CANCELLED' ||
-                               task.currentState === 'CLOSED' ||
-                               !!stepsMap?.[task.currentState]?.isTerminal;
-
-    if (stepsMap && Object.keys(stepsMap).length > 0) {
-      const stepList = Object.entries(stepsMap)
-        .map(([key, def]) => ({
-          stepKey: key,
-          stepOrder: def.stepOrder || 1,
-          stepName: def.stepName || key,
-          actorScope: def.actorScope || 'ROLE',
-          requiredRole: def.requiredRole || null,
-          isTerminal: !!def.isTerminal,
-          slaHours: def.slaHours
-        }))
-        .sort((a, b) => a.stepOrder - b.stepOrder);
-
-      const currentStepOrder = stepsMap[task.currentState]?.stepOrder ?? 1;
-
-      const nodes: WorkflowStepperNode[] = stepList.map(step => {
-        let status: 'COMPLETED' | 'CURRENT' | 'UPCOMING' | 'SKIPPED' | 'TERMINAL_REJECTED' | 'TERMINAL_APPROVED' = 'UPCOMING';
-        let completedBy: string | null = null;
-        let actedAt: string | null = null;
-        let actionStatus: string | null = null;
-
-        // Check if this step was legitimately executed in task audit history
-        const match = task.taskHistory?.find(h =>
-          (h.stepName && step.stepName && h.stepName.trim().toLowerCase() === step.stepName.trim().toLowerCase()) ||
-          (!step.isTerminal && h.stepOrder && h.stepOrder === step.stepOrder)
-        );
-
-        if (match) {
-          // Legitimately completed step by an actor
-          status = 'COMPLETED';
-          completedBy = match.completedBy;
-          actedAt = match.actedAt;
-          actionStatus = match.status;
-        } else if (step.stepKey === task.currentState) {
-          // This node is the current state of the workflow
-          if (isInstanceTerminal) {
-            status = (task.currentState === 'REJECTED' || task.currentState === 'CANCELLED')
-              ? 'TERMINAL_REJECTED'
-              : 'TERMINAL_APPROVED';
-            actedAt = task.updatedAt;
-          } else {
-            status = 'CURRENT';
-          }
-        } else if (isInstanceTerminal) {
-          // Workflow concluded and this step was never executed -> Bypassed / Skipped
-          status = 'SKIPPED';
-        } else if (step.stepOrder < currentStepOrder) {
-          // Active step is ahead, but this step was never executed -> Bypassed
-          status = 'SKIPPED';
-        } else {
-          // Future step along the blueprint
-          status = 'UPCOMING';
-        }
-
-        return {
-          stepKey: step.stepKey,
-          stepOrder: step.stepOrder,
-          stepName: step.stepName,
-          actorScope: step.actorScope,
-          requiredRole: step.requiredRole,
-          isTerminal: step.isTerminal,
-          status,
-          completedBy,
-          actedAt,
-          actionStatus,
-          slaHours: step.slaHours
-        };
-      });
-
-      // Filter out bypassed/skipped steps and unused alternate terminal branches
-      return nodes.filter(node => {
-        if (node.status === 'SKIPPED') {
-          return false;
-        }
-        // If workflow is still in progress, hide alternate terminal exit nodes (e.g. REJECTED, CANCELLED)
-        if (!isInstanceTerminal && node.isTerminal && ['REJECTED', 'CANCELLED'].includes(node.stepKey.toUpperCase())) {
-          return false;
-        }
-        return true;
-      });
-    }
-
-    // Dynamic fallback derived purely from instance state and task history
-    const historyNodes: WorkflowStepperNode[] = (task.taskHistory || []).map((h, i) => ({
-      stepKey: h.stepName,
-      stepOrder: h.stepOrder || (i + 1),
-      stepName: h.stepName,
-      actorScope: 'ROLE',
-      requiredRole: null,
-      isTerminal: false,
-      status: 'COMPLETED' as const,
-      completedBy: h.completedBy,
-      actedAt: h.actedAt,
-      actionStatus: h.status
-    }));
-
-    const isCurrentTerminal = task.currentState === 'ONBOARDED' ||
-                              task.currentState === 'APPROVED' ||
-                              task.currentState === 'REJECTED' ||
-                              task.currentState === 'CANCELLED';
-
-    const currentNode: WorkflowStepperNode = {
-      stepKey: task.currentState,
-      stepOrder: historyNodes.length + 1,
-      stepName: task.currentStepName || task.currentState,
-      actorScope: task.actorScope,
-      requiredRole: task.requiredRole,
-      isTerminal: isCurrentTerminal,
-      status: (isCurrentTerminal
-        ? (task.currentState === 'REJECTED' || task.currentState === 'CANCELLED' ? 'TERMINAL_REJECTED' : 'TERMINAL_APPROVED')
-        : 'CURRENT') as any,
-      actedAt: isCurrentTerminal ? task.updatedAt : null
-    };
-
-    return [...historyNodes, currentNode];
+    return buildStepperNodes(task, tpl);
   });
 
   readonly currentStepIndex = computed<number>(() => {
@@ -473,8 +322,9 @@ export class InboxComponent implements OnInit, OnDestroy {
     this.selectedTemplateKey.set(key);
   }
 
-  createAndLaunchWorkflow(): void {
-    const title = this.newWorkflowTitle().trim();
+  createAndLaunchWorkflow(data?: { templateKey: string; title: string }): void {
+    const templateKey = data?.templateKey || this.selectedTemplateKey();
+    const title = (data?.title || this.newWorkflowTitle()).trim();
     if (!title) {
       return;
     }
@@ -482,7 +332,7 @@ export class InboxComponent implements OnInit, OnDestroy {
     this.isCreating.set(true);
     this.createErrorMessage.set(null);
 
-    this.workflowService.createWorkflow(this.selectedTemplateKey(), title).subscribe({
+    this.workflowService.createWorkflow(templateKey, title).subscribe({
       next: (res) => {
         this.isCreating.set(false);
         this.isCreateModalOpen.set(false);

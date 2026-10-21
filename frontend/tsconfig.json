@@ -37,6 +37,9 @@
       "path": "./projects/template-mfe/tsconfig.app.json"
     },
     {
+      "path": "./projects/template-mfe/tsconfig.spec.json"
+    },
+    {
       "path": "./projects/analytics-mfe/tsconfig.app.json"
     }
   ]

@@ -3,7 +3,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { WorkflowService } from '../../services/workflow.service';
-import { TaskInboxItem, WorkflowAction, WorkflowTemplate, TemplateCatalogItem } from '../../models/workflow.model';
+import { TaskInboxItem, WorkflowAction, WorkflowTemplate, TemplateCatalogItem, WorkflowStepperNode } from '../../models/workflow.model';
 
 @Component({
   selector: 'app-inbox',
@@ -64,9 +64,148 @@ export class InboxComponent implements OnInit, OnDestroy {
   readonly gstCertUrl = signal<string>('https://storage.corp.internal/kyc/gst.pdf');
   readonly reviewComments = signal<string>('All submitted KYC certificates verified against official registry. Approved.');
 
+  // Live Clock Signal for real-time SLA countdown updating
+  readonly now = signal<number>(Date.now());
+  private clockInterval: any;
+
   private personaChangeListener = () => {
     this.loadInbox();
   };
+
+  // Live SLA Countdown Computation
+  readonly slaCountdown = computed(() => {
+    this.now(); // register signal dependency for reactive tick
+    const task = this.selectedTask();
+    if (!task) {
+      return { label: 'No Active Task', isBreached: false, urgency: 'normal' as const };
+    }
+    if (task.slaBreached) {
+      return { label: 'SLA Breached', isBreached: true, urgency: 'breached' as const };
+    }
+    if (!task.currentStepDueAt) {
+      return { label: 'No SLA Attached', isBreached: false, urgency: 'normal' as const };
+    }
+
+    const due = new Date(task.currentStepDueAt).getTime();
+    const diffMs = due - Date.now();
+    if (diffMs <= 0) {
+      return { label: 'SLA Overdue', isBreached: true, urgency: 'breached' as const };
+    }
+
+    const totalHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const totalMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    const urgency: 'normal' | 'warning' | 'breached' = totalHours <= 2 ? 'warning' : 'normal';
+
+    if (totalHours >= 24) {
+      const days = Math.floor(totalHours / 24);
+      const remHours = totalHours % 24;
+      return { label: `${days}d ${remHours}h left`, isBreached: false, urgency };
+    }
+    if (totalHours > 0) {
+      return { label: `${totalHours}h ${totalMins}m left`, isBreached: false, urgency };
+    }
+    return { label: `${totalMins}m left`, isBreached: false, urgency: 'warning' as const };
+  });
+
+  // Dynamically Derived Workflow Stepper Sequence
+  readonly stepperNodes = computed<WorkflowStepperNode[]>(() => {
+    const task = this.selectedTask();
+    if (!task) return [];
+
+    const tpl = this.templateMap().get(task.templateId);
+    const stepsMap = tpl?.steps;
+
+    if (stepsMap && Object.keys(stepsMap).length > 0) {
+      const stepList = Object.entries(stepsMap)
+        .map(([key, def]) => ({
+          stepKey: key,
+          stepOrder: def.stepOrder || 1,
+          stepName: def.stepName || key,
+          actorScope: def.actorScope || 'ROLE',
+          requiredRole: def.requiredRole || null,
+          isTerminal: !!def.isTerminal,
+          slaHours: def.slaHours
+        }))
+        .sort((a, b) => a.stepOrder - b.stepOrder);
+
+      const currentStepOrder = stepsMap[task.currentState]?.stepOrder ?? 1;
+
+      return stepList.map(step => {
+        let status: 'COMPLETED' | 'CURRENT' | 'UPCOMING' = 'UPCOMING';
+        let completedBy: string | null = null;
+        let actedAt: string | null = null;
+
+        if (step.stepKey === task.currentState) {
+          status = 'CURRENT';
+        } else if (step.stepOrder < currentStepOrder) {
+          status = 'COMPLETED';
+          const match = task.taskHistory?.find(h => h.stepOrder === step.stepOrder || h.stepName === step.stepName);
+          if (match) {
+            completedBy = match.completedBy;
+            actedAt = match.actedAt;
+          }
+        } else {
+          status = 'UPCOMING';
+        }
+
+        return {
+          stepKey: step.stepKey,
+          stepOrder: step.stepOrder,
+          stepName: step.stepName,
+          actorScope: step.actorScope,
+          requiredRole: step.requiredRole,
+          isTerminal: step.isTerminal,
+          status,
+          completedBy,
+          actedAt
+        };
+      });
+    }
+
+    // High fidelity fallback sequence if template is loading
+    const isPastKyc = task.currentState !== 'AWAITING_KYC_DOCS';
+    const isPastLegal = task.currentState === 'ONBOARDED' || task.currentState === 'REJECTED';
+
+    return [
+      {
+        stepKey: 'AWAITING_KYC_DOCS',
+        stepOrder: 1,
+        stepName: 'Upload Vendor KYC Documents',
+        actorScope: 'REQUESTER',
+        requiredRole: null,
+        isTerminal: false,
+        status: task.currentState === 'AWAITING_KYC_DOCS' ? 'CURRENT' : 'COMPLETED',
+        completedBy: isPastKyc ? (task.taskHistory?.[0]?.completedBy || task.requesterId) : null,
+        actedAt: isPastKyc ? task.taskHistory?.[0]?.actedAt : null
+      },
+      {
+        stepKey: 'PENDING_LEGAL_VERIFY',
+        stepOrder: 2,
+        stepName: 'Legal Compliance Review',
+        actorScope: 'ROLE',
+        requiredRole: 'ROLE_LEGAL_COUNSEL',
+        isTerminal: false,
+        status: task.currentState === 'PENDING_LEGAL_VERIFY' ? 'CURRENT' : (isPastLegal ? 'COMPLETED' : 'UPCOMING'),
+        completedBy: isPastLegal ? (task.taskHistory?.[1]?.completedBy || 'legal_counsel_meera') : null,
+        actedAt: isPastLegal ? task.taskHistory?.[1]?.actedAt : null
+      },
+      {
+        stepKey: 'ONBOARDED',
+        stepOrder: 3,
+        stepName: task.currentState === 'REJECTED' ? 'Vendor Rejected' : 'Vendor Active & Onboarded',
+        actorScope: 'ANY',
+        requiredRole: null,
+        isTerminal: true,
+        status: (task.currentState === 'ONBOARDED' || task.currentState === 'REJECTED') ? 'CURRENT' : 'UPCOMING'
+      }
+    ];
+  });
+
+  readonly currentStepIndex = computed<number>(() => {
+    const nodes = this.stepperNodes();
+    const idx = nodes.findIndex(n => n.status === 'CURRENT');
+    return idx >= 0 ? idx : 0;
+  });
 
   // Filtered Tasks computed signal
   readonly filteredTasks = computed(() => {
@@ -177,6 +316,11 @@ export class InboxComponent implements OnInit, OnDestroy {
     // Re-fetch inbox whenever the persona switcher in Shell changes roles
     window.addEventListener('ewp:persona-changed', this.personaChangeListener);
 
+    // Live clock ticker every 15s for dynamic SLA countdown
+    this.clockInterval = setInterval(() => {
+      this.now.set(Date.now());
+    }, 15000);
+
     // Deep link support: /workflows?action=new opens the launch modal directly
     this.route.queryParams.subscribe(params => {
       if (params['action'] === 'new') {
@@ -187,6 +331,9 @@ export class InboxComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     window.removeEventListener('ewp:persona-changed', this.personaChangeListener);
+    if (this.clockInterval) {
+      clearInterval(this.clockInterval);
+    }
   }
 
   openCreateModal(): void {

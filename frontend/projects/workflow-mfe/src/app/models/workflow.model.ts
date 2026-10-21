@@ -100,3 +100,16 @@ export interface TemplateCatalogItem {
   initialStep: string;
   estimatedSla: string;
 }
+
+export interface WorkflowStepperNode {
+  stepKey: string;
+  stepOrder: number;
+  stepName: string;
+  actorScope: string;
+  requiredRole: string | null;
+  status: 'COMPLETED' | 'CURRENT' | 'UPCOMING';
+  completedBy?: string | null;
+  actedAt?: string | null;
+  isTerminal: boolean;
+  slaHours?: number | null;
+}

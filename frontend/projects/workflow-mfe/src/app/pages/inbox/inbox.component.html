@@ -161,23 +161,103 @@
       <!-- Workflow Detail Content (Compact & Single-View) -->
       <div class="p-5 space-y-4">
         
-        <!-- Summary Strip: State & SLA Status -->
-        <div class="grid grid-cols-3 gap-3">
-          <div class="p-2.5 bg-zinc-50 rounded border border-zinc-200 text-xs">
-            <div class="text-zinc-400 text-[11px]">State</div>
-            <div class="font-mono font-medium text-zinc-900 mt-0.5 truncate">{{ task.currentState }}</div>
-          </div>
-          <div class="p-2.5 bg-zinc-50 rounded border border-zinc-200 text-xs">
-            <div class="text-zinc-400 text-[11px]">Step</div>
-            <div class="font-medium text-zinc-900 mt-0.5 truncate">{{ task.currentStepName }}</div>
-          </div>
-          <div class="p-2.5 bg-zinc-50 rounded border border-zinc-200 text-xs">
-            <div class="text-zinc-400 text-[11px]">SLA Status</div>
-            <div class="font-mono font-medium mt-0.5"
-                 [ngClass]="task.slaBreached ? 'text-rose-600' : 'text-zinc-900'">
-              {{ task.slaBreached ? 'BREACHED' : (task.currentStepDueAt ? (task.currentStepDueAt | date:'short') : 'Normal') }}
+        <!-- Workflow Lifecycle Stepper & SLA Velocity Meter -->
+        <div class="border border-zinc-200 rounded-lg p-4 bg-zinc-50/40 space-y-3.5">
+          
+          <!-- Stepper Header: Step Counter & Real-Time SLA Countdown Badge -->
+          <div class="flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Lifecycle Trajectory</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-200/70 text-zinc-800 font-medium">
+                Stage {{ currentStepIndex() + 1 }} of {{ stepperNodes().length }}
+              </span>
+            </div>
+
+            <!-- Live SLA Countdown Badge -->
+            <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-medium border"
+                 [ngClass]="{
+                   'bg-rose-50 text-rose-700 border-rose-200': slaCountdown().urgency === 'breached',
+                   'bg-amber-50 text-amber-700 border-amber-200': slaCountdown().urgency === 'warning',
+                   'bg-zinc-100 text-zinc-700 border-zinc-200': slaCountdown().urgency === 'normal'
+                 }">
+              <span class="w-1.5 h-1.5 rounded-full"
+                    [ngClass]="{
+                      'bg-rose-500 animate-ping': slaCountdown().urgency === 'breached',
+                      'bg-amber-500 animate-pulse': slaCountdown().urgency === 'warning',
+                      'bg-emerald-500': slaCountdown().urgency === 'normal'
+                    }"></span>
+              <span>SLA: {{ slaCountdown().label }}</span>
+              @if (!task.slaBreached && task.currentStepDueAt) {
+                <span class="text-zinc-400 font-normal">({{ task.currentStepDueAt | date:'shortTime' }})</span>
+              }
             </div>
           </div>
+
+          <!-- Stepper Visual Track -->
+          <div class="relative flex items-start justify-between pt-1">
+            
+            <!-- Continuous Track Line Behind Nodes -->
+            <div class="absolute top-4 left-8 right-8 h-0.5 bg-zinc-200 -z-0"></div>
+
+            @for (node of stepperNodes(); track node.stepKey; let idx = $index; let isLast = $last) {
+              <div class="relative z-10 flex flex-col items-center text-center px-1"
+                   [style.width.%]="100 / stepperNodes().length">
+                
+                <!-- Node State Marker -->
+                <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition"
+                     [ngClass]="{
+                       'bg-zinc-950 text-white shadow-xs': node.status === 'COMPLETED',
+                       'bg-white border-2 border-zinc-950 text-zinc-950 ring-4 ring-zinc-950/10 shadow-xs': node.status === 'CURRENT',
+                       'bg-zinc-100 border border-zinc-300 text-zinc-400': node.status === 'UPCOMING'
+                     }">
+                  @if (node.status === 'COMPLETED') {
+                    <span class="text-xs font-bold">&#10003;</span>
+                  } @else {
+                    <span class="font-mono text-[11px]">{{ node.stepOrder }}</span>
+                  }
+                </div>
+
+                <!-- Node Description -->
+                <div class="mt-2 space-y-0.5 w-full">
+                  <div class="text-[11px] font-semibold line-clamp-1"
+                       [ngClass]="{
+                         'text-zinc-950': node.status === 'CURRENT',
+                         'text-zinc-800': node.status === 'COMPLETED',
+                         'text-zinc-400': node.status === 'UPCOMING'
+                       }">
+                    {{ node.stepName }}
+                  </div>
+
+                  <!-- Role / Actor Scope Badge -->
+                  <div class="text-[10px] font-mono">
+                    @if (node.status === 'COMPLETED') {
+                      <span class="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60 inline-flex items-center gap-1">
+                        <span>✓</span> {{ node.completedBy || 'Completed' }}
+                      </span>
+                    } @else if (node.status === 'CURRENT') {
+                      <span class="text-zinc-900 font-medium bg-zinc-200/80 px-1.5 py-0.5 rounded inline-block">
+                        Active &bull; {{ node.actorScope === 'REQUESTER' ? 'Requester' : (node.requiredRole || 'Role') }}
+                      </span>
+                    } @else {
+                      <span class="text-zinc-400">
+                        {{ node.actorScope === 'REQUESTER' ? 'Requester' : (node.requiredRole || 'Role') }}
+                      </span>
+                    }
+                  </div>
+
+                  <!-- Timestamp if completed -->
+                  @if (node.actedAt) {
+                    <div class="text-[9px] font-mono text-zinc-400">
+                      {{ node.actedAt | date:'MMM d, HH:mm' }}
+                    </div>
+                  }
+                </div>
+
+              </div>
+            }
+
+          </div>
+
         </div>
 
         <!-- Step Context & Action Payload -->

@@ -12,6 +12,35 @@ export interface TaskInboxItem {
   updatedAt: string;
 }
 
+export interface WorkflowAction {
+  key: string;
+  label: string;
+  variant: 'primary' | 'danger' | 'secondary';
+  targetState?: string;
+}
+
+export interface TemplateStepDefinition {
+  stepOrder: number;
+  stepName: string;
+  stepType: string;
+  actorScope: string;
+  requiredRole?: string | null;
+  requiredPayloadKeys?: string[] | null;
+  isTerminal: boolean;
+  slaHours?: number | null;
+  transitions: Record<string, string>;
+}
+
+export interface WorkflowTemplate {
+  id?: string;
+  templateKey: string;
+  name: string;
+  description: string;
+  initialState: string;
+  status: string;
+  steps: Record<string, TemplateStepDefinition>;
+}
+
 export interface WorkflowTransitionRequest {
   action: string;
   comments?: string;

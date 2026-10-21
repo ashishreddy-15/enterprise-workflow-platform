@@ -1,4 +1,4 @@
-<div class="border border-zinc-200 rounded-lg bg-white overflow-hidden shadow-xs flex flex-col md:flex-row h-[calc(100vh-8.5rem)]">
+<div class="border border-zinc-200 rounded-lg bg-white overflow-hidden shadow-xs flex flex-col md:flex-row h-full">
   
   <!-- =================================================================== -->
   <!-- LEFT PANE: Task Queue (Compact Fixed Width)                         -->
@@ -85,8 +85,8 @@
   <main class="flex-1 flex flex-col bg-white overflow-y-auto">
     @if (selectedTask(); as task) {
       
-      <!-- Top Action Bar -->
-      <div class="px-5 py-3 border-b border-zinc-200 flex items-center justify-between gap-3 bg-zinc-50/40">
+      <!-- Top Action Bar (Sticky at Top of Canvas) -->
+      <div class="sticky top-0 z-10 px-5 py-3 border-b border-zinc-200 flex items-center justify-between gap-3 bg-white/95 backdrop-blur-xs">
         <div>
           <div class="flex items-center gap-2 text-xs text-zinc-500">
             <span class="font-mono text-zinc-400 text-[11px]">ID: {{ task.workflowId.substring(0, 8) }}...</span>
@@ -98,32 +98,38 @@
 
         <!-- Dynamic Action Buttons -->
         <div class="flex items-center gap-2">
-          @if (task.currentState === 'AWAITING_KYC_DOCS') {
-            <button (click)="submitKycDocs(task)" [disabled]="isSubmitting()"
-                    class="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded text-xs font-medium cursor-pointer transition">
-              Submit KYC Documents &rarr;
-            </button>
-          } @else if (task.currentState === 'PENDING_LEGAL_VERIFY') {
-            <button (click)="rejectWorkflow(task)" [disabled]="isSubmitting()"
-                    class="px-2.5 py-1.5 bg-white border border-zinc-200 hover:bg-zinc-50 text-rose-600 rounded text-xs font-medium cursor-pointer transition">
-              Reject
-            </button>
-            <button (click)="approveLegalWorkflow(task)" [disabled]="isSubmitting()"
-                    class="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded text-xs font-medium cursor-pointer transition">
-              Verify & Onboard &rarr;
-            </button>
+          @for (action of availableActions(); track action.key) {
+            @if (action.variant === 'danger') {
+              <button (click)="executeAction(action.key, task)" [disabled]="isSubmitting()"
+                      class="px-2.5 py-1.5 bg-white border border-zinc-200 hover:bg-rose-50 hover:border-rose-300 text-rose-600 rounded text-xs font-medium cursor-pointer transition">
+                {{ action.label }}
+              </button>
+            } @else if (action.variant === 'primary') {
+              <button (click)="executeAction(action.key, task)" [disabled]="isSubmitting()"
+                      class="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded text-xs font-medium cursor-pointer transition">
+                {{ action.label }}
+              </button>
+            } @else {
+              <button (click)="executeAction(action.key, task)" [disabled]="isSubmitting()"
+                      class="px-2.5 py-1.5 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-700 rounded text-xs font-medium cursor-pointer transition">
+                {{ action.label }}
+              </button>
+            }
           }
         </div>
       </div>
 
       <!-- Action Status Feedback Alert -->
       @if (actionMessage()) {
-        <div class="px-5 py-2 text-xs border-b"
+        <div class="px-5 py-2.5 text-xs border-b flex items-center justify-between gap-3"
              [ngClass]="{
                'bg-emerald-50 border-emerald-200 text-emerald-800': actionSuccess(),
                'bg-rose-50 border-rose-200 text-rose-800': !actionSuccess()
              }">
-          {{ actionMessage() }}
+          <span class="truncate font-medium">{{ actionMessage() }}</span>
+          <button (click)="dismissActionMessage()" class="text-xs font-mono font-bold opacity-60 hover:opacity-100 cursor-pointer px-1">
+            &times;
+          </button>
         </div>
       }
 

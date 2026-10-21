@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { WorkflowService } from '../../services/workflow.service';
-import { TaskInboxItem } from '../../models/workflow.model';
+import { TaskInboxItem, WorkflowAction, WorkflowTemplate } from '../../models/workflow.model';
 
 @Component({
   selector: 'app-inbox',
@@ -22,6 +22,7 @@ export class InboxComponent implements OnInit, OnDestroy {
   readonly isSubmitting = signal<boolean>(false);
   readonly actionMessage = signal<string | null>(null);
   readonly actionSuccess = signal<boolean>(true);
+  readonly templateMap = signal<Map<string, WorkflowTemplate>>(new Map());
 
   // Dynamic Form Model State
   panCardUrl = 'https://storage.corp.internal/kyc/pan.pdf';
@@ -46,6 +47,42 @@ export class InboxComponent implements OnInit, OnDestroy {
     );
   });
 
+  // Dynamically derived actions for the currently selected task
+  readonly availableActions = computed<WorkflowAction[]>(() => {
+    const task = this.selectedTask();
+    if (!task) return [];
+
+    const tpl = this.templateMap().get(task.templateId);
+    const step = tpl?.steps?.[task.currentState];
+    if (step && step.transitions && Object.keys(step.transitions).length > 0) {
+      return Object.entries(step.transitions).map(([key, targetState]) => ({
+        key,
+        label: this.formatActionLabel(key),
+        variant: this.getActionVariant(key),
+        targetState
+      }));
+    }
+
+    // Intelligent default actions based on known workflow blueprint states
+    if (task.currentState === 'PENDING_LEGAL_VERIFY') {
+      return [
+        { key: 'REJECT_VENDOR', label: 'Reject', variant: 'danger', targetState: 'REJECTED' },
+        { key: 'VERIFY_AND_ONBOARD', label: 'Verify & Onboard \u2192', variant: 'primary', targetState: 'ONBOARDED' }
+      ];
+    }
+    if (task.currentState === 'AWAITING_KYC_DOCS') {
+      return [
+        { key: 'SUBMIT_DOCS', label: 'Submit KYC Documents \u2192', variant: 'primary', targetState: 'PENDING_LEGAL_VERIFY' },
+        { key: 'CANCEL', label: 'Cancel', variant: 'secondary', targetState: 'CANCELLED' }
+      ];
+    }
+
+    return [
+      { key: 'REJECT', label: 'Reject', variant: 'danger', targetState: 'REJECTED' },
+      { key: 'APPROVE', label: 'Approve \u2192', variant: 'primary', targetState: 'APPROVED' }
+    ];
+  });
+
   ngOnInit(): void {
     this.loadInbox();
     // Re-fetch inbox whenever the persona switcher in Shell changes roles
@@ -65,13 +102,23 @@ export class InboxComponent implements OnInit, OnDestroy {
         this.tasks.set(items);
         this.isLoading.set(false);
 
+        // Pre-fetch template definitions for tasks in the inbox
+        for (const item of items) {
+          this.loadTemplate(item.templateId);
+        }
+
         // Keep current selected item if present, else auto-select first
         const currentSelected = this.selectedTask();
         if (currentSelected) {
           const updated = items.find(i => i.workflowId === currentSelected.workflowId);
-          this.selectedTask.set(updated || (items.length > 0 ? items[0] : null));
+          const taskToSet = updated || (items.length > 0 ? items[0] : null);
+          this.selectedTask.set(taskToSet);
+          if (taskToSet) {
+            this.loadTemplate(taskToSet.templateId);
+          }
         } else if (items.length > 0) {
           this.selectedTask.set(items[0]);
+          this.loadTemplate(items[0].templateId);
         } else {
           this.selectedTask.set(null);
         }
@@ -83,9 +130,26 @@ export class InboxComponent implements OnInit, OnDestroy {
     });
   }
 
+  private loadTemplate(templateKey: string): void {
+    if (this.templateMap().has(templateKey)) {
+      return;
+    }
+    this.workflowService.getTemplate(templateKey).subscribe({
+      next: (tpl) => {
+        const nextMap = new Map(this.templateMap());
+        nextMap.set(templateKey, tpl);
+        this.templateMap.set(nextMap);
+      },
+      error: (err) => {
+        console.warn(`Could not load template definition for ${templateKey}:`, err);
+      }
+    });
+  }
+
   selectTask(task: TaskInboxItem): void {
     this.selectedTask.set(task);
     this.actionMessage.set(null);
+    this.loadTemplate(task.templateId);
   }
 
   onSearchInput(event: Event): void {
@@ -93,72 +157,55 @@ export class InboxComponent implements OnInit, OnDestroy {
     this.searchQuery.set(input.value);
   }
 
-  submitKycDocs(task: TaskInboxItem): void {
+  dismissActionMessage(): void {
+    this.actionMessage.set(null);
+  }
+
+  formatActionLabel(key: string): string {
+    if (key === 'REJECT_VENDOR') return 'Reject';
+    if (key === 'VERIFY_AND_ONBOARD') return 'Verify & Onboard \u2192';
+    if (key === 'SUBMIT_DOCS') return 'Submit KYC Documents \u2192';
+    return key
+      .split('_')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+  }
+
+  getActionVariant(key: string): 'primary' | 'danger' | 'secondary' {
+    const upper = key.toUpperCase();
+    if (upper.includes('REJECT') || upper.includes('DECLINE')) return 'danger';
+    if (upper.includes('VERIFY') || upper.includes('APPROVE') || upper.includes('SUBMIT') || upper.includes('ONBOARD')) return 'primary';
+    return 'secondary';
+  }
+
+  executeAction(actionKey: string, task: TaskInboxItem): void {
     this.isSubmitting.set(true);
     this.actionMessage.set(null);
 
-    this.workflowService.transitionWorkflow(task.workflowId, {
-      action: 'SUBMIT_DOCS',
-      comments: 'KYC documents submitted via Workflow MFE Workbench',
-      payload: {
+    let payload: Record<string, unknown> | undefined = undefined;
+    if (actionKey === 'SUBMIT_DOCS' || task.currentState === 'AWAITING_KYC_DOCS') {
+      payload = {
         panCardUrl: this.panCardUrl,
         gstCertUrl: this.gstCertUrl
-      }
-    }).subscribe({
-      next: (res) => {
-        this.isSubmitting.set(false);
-        this.actionSuccess.set(true);
-        this.actionMessage.set(`Successfully transitioned workflow to ${res.currentState}`);
-        this.loadInbox();
-      },
-      error: (err) => {
-        this.isSubmitting.set(false);
-        this.actionSuccess.set(false);
-        this.actionMessage.set(err.error?.detail || 'Transition rejected by workflow engine.');
-      }
-    });
-  }
-
-  approveLegalWorkflow(task: TaskInboxItem): void {
-    this.isSubmitting.set(true);
-    this.actionMessage.set(null);
+      };
+    }
 
     this.workflowService.transitionWorkflow(task.workflowId, {
-      action: 'VERIFY_AND_ONBOARD',
-      comments: this.reviewComments
+      action: actionKey,
+      comments: this.reviewComments || `Action ${actionKey} executed via Workbench`,
+      payload
     }).subscribe({
       next: (res) => {
         this.isSubmitting.set(false);
         this.actionSuccess.set(true);
-        this.actionMessage.set(`Workflow approved and completed: ${res.currentState}`);
+        this.actionMessage.set(`Action '${this.formatActionLabel(actionKey)}' completed successfully. Current state: ${res.currentState}`);
         this.loadInbox();
       },
       error: (err) => {
         this.isSubmitting.set(false);
         this.actionSuccess.set(false);
-        this.actionMessage.set(err.error?.detail || 'Approval rejected by workflow engine.');
-      }
-    });
-  }
-
-  rejectWorkflow(task: TaskInboxItem): void {
-    this.isSubmitting.set(true);
-    this.actionMessage.set(null);
-
-    this.workflowService.transitionWorkflow(task.workflowId, {
-      action: 'REJECT',
-      comments: 'Rejected during legal review'
-    }).subscribe({
-      next: (res) => {
-        this.isSubmitting.set(false);
-        this.actionSuccess.set(true);
-        this.actionMessage.set(`Workflow rejected: ${res.currentState}`);
-        this.loadInbox();
-      },
-      error: (err) => {
-        this.isSubmitting.set(false);
-        this.actionSuccess.set(false);
-        this.actionMessage.set(err.error?.detail || 'Rejection failed.');
+        const detail = err.error?.detail || err.error?.message || 'Transition rejected by workflow engine.';
+        this.actionMessage.set(detail);
       }
     });
   }

@@ -240,13 +240,23 @@ export class InboxComponent implements OnInit, OnDestroy {
   }
 
   formatFieldLabel(key: string): string {
-    if (key === 'panCardUrl') return 'PAN Card Document URL';
-    if (key === 'gstCertUrl') return 'GST Certificate URL';
-    return key
-      .replace(/([A-Z])/g, ' $1')
-      .replace(/_/g, ' ')
-      .replace(/^./, str => str.toUpperCase())
-      .trim();
+    const acronyms = new Set(['id', 'url', 'uri', 'pan', 'gst', 'kyc', 'sla', 'vat', 'ssn', 'ein']);
+    // Split camelCase, snake_case, and kebab-case words
+    const words = key
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+      .replace(/[_-]+/g, ' ')
+      .trim()
+      .split(/\s+/);
+
+    return words
+      .map(w => {
+        const lower = w.toLowerCase();
+        if (acronyms.has(lower)) {
+          return lower.toUpperCase();
+        }
+        return lower.charAt(0).toUpperCase() + lower.slice(1);
+      })
+      .join(' ');
   }
 
   isPayloadValid(task: TaskInboxItem): boolean {
@@ -502,13 +512,16 @@ export class InboxComponent implements OnInit, OnDestroy {
   }
 
   formatActionLabel(key: string): string {
-    if (key === 'REJECT_VENDOR') return 'Reject';
-    if (key === 'VERIFY_AND_ONBOARD') return 'Verify & Onboard \u2192';
-    if (key === 'SUBMIT_DOCS') return 'Submit Documents \u2192';
-    return key
+    const cleaned = key
       .split('_')
       .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
       .join(' ');
+
+    const upper = key.toUpperCase();
+    if (upper.includes('SUBMIT') || upper.includes('VERIFY') || upper.includes('APPROVE') || upper.includes('ONBOARD') || upper.includes('COMPLETE')) {
+      return `${cleaned} \u2192`;
+    }
+    return cleaned;
   }
 
   getActionVariant(key: string): 'primary' | 'danger' | 'secondary' {

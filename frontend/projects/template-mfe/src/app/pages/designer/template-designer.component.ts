@@ -629,6 +629,7 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     'ROLE_LEGAL_COUNSEL',
     'ROLE_FINANCE_MANAGER',
     'ROLE_IT_ADMIN',
+    'ROLE_PROCUREMENT',
     'ROLE_HR_ADMIN',
     'ROLE_WORKFLOW_ARCHITECT',
     'ROLE_AUDITOR',
@@ -766,6 +767,9 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     }
 
     for (const s of states) {
+      if (s.actorScope === 'ROLE' && (!s.requiredRole || !s.requiredRole.trim())) {
+        errors.push(`State "${s.stateKey}" has actor scope ROLE but no Required Authority role is specified.`);
+      }
       if (!s.isTerminal) {
         if (s.transitions.length === 0) {
           errors.push(`State "${s.stateKey}" is not terminal but has no outgoing transitions.`);
@@ -1179,6 +1183,28 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
       }
     }
     this.builderStates.set(states);
+  }
+
+  isCustomRole(role: string | null | undefined): boolean {
+    if (!role) return false;
+    return !this.availableRoles.includes(role);
+  }
+
+  onRoleSelectChange(state: StateBuilderItem, selectedValue: string): void {
+    if (selectedValue === '__CUSTOM__') {
+      state.requiredRole = state.requiredRole && !this.availableRoles.includes(state.requiredRole)
+        ? state.requiredRole
+        : 'ROLE_CUSTOM';
+    } else {
+      state.requiredRole = selectedValue;
+    }
+    this.builderStates.update(s => [...s]);
+  }
+
+  onCustomRoleInput(state: StateBuilderItem, rawValue: string): void {
+    const sanitized = (rawValue || '').toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+    state.requiredRole = sanitized;
+    this.builderStates.update(s => [...s]);
   }
 
   addTransition(stateIndex: number): void {

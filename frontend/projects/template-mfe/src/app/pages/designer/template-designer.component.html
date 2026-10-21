@@ -947,14 +947,37 @@
                           </div>
 
                           <div>
-                            <label class="block text-zinc-500 text-[11px] font-mono mb-1">Required Authority</label>
+                            <div class="flex items-center justify-between mb-1">
+                              <label class="block text-zinc-500 text-[11px] font-mono">Required Authority</label>
+                              @if (state.actorScope === 'ROLE' && isCustomRole(state.requiredRole)) {
+                                <span class="text-[9px] font-mono text-purple-700 bg-purple-100 px-1 rounded font-semibold">Custom</span>
+                              }
+                            </div>
+
                             @if (state.actorScope === 'ROLE') {
-                              <select [(ngModel)]="state.requiredRole"
-                                      class="w-full px-2 py-1.5 font-mono text-[11px] bg-purple-50 text-purple-900 border border-purple-200 rounded-md outline-none focus:bg-white focus:border-purple-600 transition cursor-pointer">
-                                @for (role of availableRoles; track role) {
-                                  <option [value]="role">{{ role.replace('ROLE_', '') }}</option>
+                              <div class="space-y-1.5">
+                                <select [ngModel]="isCustomRole(state.requiredRole) ? '__CUSTOM__' : state.requiredRole"
+                                        (ngModelChange)="onRoleSelectChange(state, $event)"
+                                        class="w-full px-2 py-1.5 font-mono text-[11px] bg-purple-50 text-purple-900 border border-purple-200 rounded-md outline-none focus:bg-white focus:border-purple-600 transition cursor-pointer">
+                                  @for (role of availableRoles; track role) {
+                                    <option [value]="role">{{ role.replace('ROLE_', '') }}</option>
+                                  }
+                                  <option value="__CUSTOM__">➕ Other (Specify Custom Role...)</option>
+                                </select>
+
+                                @if (isCustomRole(state.requiredRole)) {
+                                  <div class="animate-in fade-in duration-150">
+                                    <input type="text"
+                                           [ngModel]="state.requiredRole"
+                                           (ngModelChange)="onCustomRoleInput(state, $event)"
+                                           placeholder="e.g. ROLE_COMPLIANCE_OFFICER"
+                                           class="w-full px-2 py-1 font-mono text-[11px] bg-white border border-purple-300 rounded outline-none focus:border-purple-700 focus:ring-1 focus:ring-purple-700 text-purple-900 font-semibold shadow-2xs">
+                                    <span class="text-[9px] text-zinc-400 font-mono mt-0.5 block leading-tight">
+                                      Specify exact role identifier
+                                    </span>
+                                  </div>
                                 }
-                              </select>
+                              </div>
                             } @else {
                               <input type="text"
                                      disabled

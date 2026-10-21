@@ -314,8 +314,10 @@ export class InboxComponent implements OnInit, OnDestroy {
         }
         this.templateMap.set(nextMap);
 
-        // Map to catalog items for the modal picker
-        const catalogItems: TemplateCatalogItem[] = templates.map(tpl => {
+        // Map to catalog items for the modal picker (only published templates can be initiated)
+        const catalogItems: TemplateCatalogItem[] = templates
+          .filter(tpl => !tpl.status || tpl.status === 'PUBLISHED')
+          .map(tpl => {
           const initialStepDef = tpl.steps?.[tpl.initialState];
           const initialStepName = initialStepDef?.stepName || tpl.initialState || 'Initial Step';
           const sla = initialStepDef?.slaHours ? `${initialStepDef.slaHours}h` : null;

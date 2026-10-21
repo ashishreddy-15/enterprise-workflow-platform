@@ -63,12 +63,31 @@ public class TemplateService {
         return templateRepository.findFirstByTemplateKeyAndStatusOrderByVersionDesc(templateKey, "PUBLISHED");
     }
 
+    public Optional<WorkflowTemplateDocument> getLatestTemplate(String templateKey) {
+        log.debug("Fetching latest template (any status) for key: '{}'", templateKey);
+        return templateRepository.findByTemplateKeyOrderByVersionDesc(templateKey).stream()
+                .findFirst();
+    }
+
     public List<WorkflowTemplateDocument> getAllActivePublishedTemplates() {
-        log.debug("Fetching all active published templates");
-        List<WorkflowTemplateDocument> published =
-                templateRepository.findByStatusOrderByTemplateKeyAscVersionDesc("PUBLISHED");
+        return getAllLatestTemplates("PUBLISHED");
+    }
+
+    public List<WorkflowTemplateDocument> getAllLatestTemplates(String statusFilter) {
+        log.debug("Fetching latest templates with status filter: '{}'", statusFilter);
+        List<WorkflowTemplateDocument> all;
+        if (statusFilter != null && !statusFilter.isBlank() && !"ALL".equalsIgnoreCase(statusFilter)) {
+            all = templateRepository.findByStatusOrderByTemplateKeyAscVersionDesc(statusFilter.toUpperCase());
+        } else {
+            all = templateRepository.findAll();
+            all.sort((a, b) -> {
+                int keyCmp = a.getTemplateKey().compareTo(b.getTemplateKey());
+                if (keyCmp != 0) return keyCmp;
+                return Integer.compare(b.getVersion(), a.getVersion());
+            });
+        }
         Map<String, WorkflowTemplateDocument> latestByKey = new LinkedHashMap<>();
-        for (WorkflowTemplateDocument doc : published) {
+        for (WorkflowTemplateDocument doc : all) {
             latestByKey.putIfAbsent(doc.getTemplateKey(), doc);
         }
         return new ArrayList<>(latestByKey.values());

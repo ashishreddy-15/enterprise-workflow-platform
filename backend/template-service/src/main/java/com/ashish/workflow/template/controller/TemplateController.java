@@ -3,6 +3,7 @@ package com.ashish.workflow.template.controller;
 import com.ashish.workflow.template.document.WorkflowTemplateDocument;
 import com.ashish.workflow.template.service.TemplateService;
 import java.util.List;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -35,18 +36,21 @@ public class TemplateController {
     }
 
     @GetMapping
-    public ResponseEntity<List<WorkflowTemplateDocument>> getAllPublished() {
-        log.debug("REST: Get all active published templates");
-        return ResponseEntity.ok(templateService.getAllActivePublishedTemplates());
+    public ResponseEntity<List<WorkflowTemplateDocument>> getAll(
+            @RequestParam(required = false, defaultValue = "ALL") String status) {
+        log.debug("REST: Get templates with status filter: '{}'", status);
+        return ResponseEntity.ok(templateService.getAllLatestTemplates(status));
     }
 
     @GetMapping("/{templateKey}")
-    public ResponseEntity<WorkflowTemplateDocument> getActivePublished(@PathVariable String templateKey) {
-        log.debug("REST: Get active published template - key: '{}'", templateKey);
-        return templateService
-                .getActivePublishedTemplate(templateKey)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<WorkflowTemplateDocument> getTemplate(
+            @PathVariable String templateKey,
+            @RequestParam(required = false, defaultValue = "false") boolean publishedOnly) {
+        log.debug("REST: Get template - key: '{}', publishedOnly: {}", templateKey, publishedOnly);
+        Optional<WorkflowTemplateDocument> doc = publishedOnly
+                ? templateService.getActivePublishedTemplate(templateKey)
+                : templateService.getLatestTemplate(templateKey);
+        return doc.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/{templateKey}/versions")

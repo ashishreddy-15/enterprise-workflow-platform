@@ -19,8 +19,13 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
   readonly selectedNode = signal<DAGNode | null>(null);
   readonly isLoading = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
+  readonly successMessage = signal<string | null>(null);
   readonly searchQuery = signal<string>('');
+  readonly statusFilter = signal<'ALL' | 'PUBLISHED' | 'DRAFT'>('ALL');
   readonly viewMode = signal<'graph' | 'dsl'>('graph');
+
+  // Publishing State
+  readonly isPublishing = signal<boolean>(false);
 
   // New Blueprint Modal
   readonly isCreateModalOpen = signal<boolean>(false);
@@ -30,15 +35,31 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
 
   private personaListener?: (event: Event) => void;
 
+  readonly publishedCount = computed(() =>
+    this.templates().filter(t => t.status === 'PUBLISHED').length
+  );
+
+  readonly draftCount = computed(() =>
+    this.templates().filter(t => t.status === 'DRAFT').length
+  );
+
   readonly filteredTemplates = computed<WorkflowTemplate[]>(() => {
     const q = this.searchQuery().trim().toLowerCase();
-    if (!q) return this.templates();
+    const sf = this.statusFilter();
 
-    return this.templates().filter(t =>
-      t.templateKey.toLowerCase().includes(q) ||
-      t.name.toLowerCase().includes(q) ||
-      (t.description && t.description.toLowerCase().includes(q))
-    );
+    return this.templates().filter(t => {
+      // Status filter
+      if (sf !== 'ALL' && t.status !== sf) {
+        return false;
+      }
+      // Search filter
+      if (!q) return true;
+      return (
+        t.templateKey.toLowerCase().includes(q) ||
+        t.name.toLowerCase().includes(q) ||
+        (t.description && t.description.toLowerCase().includes(q))
+      );
+    });
   });
 
   // Convert selected template's steps map into sorted DAG Nodes
@@ -131,22 +152,17 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     }
   }
 
-  loadTemplates(): void {
+  loadTemplates(selectKey?: string): void {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
-    this.templateService.getTemplates().subscribe({
+    this.templateService.getTemplates('ALL').subscribe({
       next: (list) => {
         this.templates.set(list || []);
         if (list && list.length > 0) {
-          // If no template is currently selected, select the first one
-          if (!this.selectedTemplate()) {
-            this.selectTemplate(list[0]);
-          } else {
-            // Re-select fresh instance
-            const matched = list.find(t => t.templateKey === this.selectedTemplate()?.templateKey);
-            if (matched) this.selectTemplate(matched);
-          }
+          const keyToSelect = selectKey || this.selectedTemplate()?.templateKey;
+          const matched = list.find(t => t.templateKey === keyToSelect);
+          this.selectTemplate(matched || list[0]);
         }
         this.isLoading.set(false);
       },
@@ -167,63 +183,88 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     this.selectedNode.set(node);
   }
 
+  setStatusFilter(filter: 'ALL' | 'PUBLISHED' | 'DRAFT'): void {
+    this.statusFilter.set(filter);
+  }
+
   setViewMode(mode: 'graph' | 'dsl'): void {
     this.viewMode.set(mode);
   }
 
+  publishSelectedTemplate(): void {
+    const tpl = this.selectedTemplate();
+    if (!tpl || tpl.status === 'PUBLISHED') return;
+
+    this.isPublishing.set(true);
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+
+    this.templateService.publishTemplate(tpl.templateKey, tpl.version).subscribe({
+      next: (published) => {
+        this.isPublishing.set(false);
+        this.successMessage.set(`Successfully published "${published.name}" (v${published.version})! It is now active.`);
+        this.loadTemplates(published.templateKey);
+      },
+      error: (err) => {
+        console.error('Failed to publish template:', err);
+        this.errorMessage.set('Failed to publish template: ' + (err?.error?.message || err?.message));
+        this.isPublishing.set(false);
+      }
+    });
+  }
+
   openCreateModal(): void {
     const sampleTemplate: Partial<WorkflowTemplate> = {
-      templateKey: 'EXPENSE_REPORT_V1',
+      templateKey: 'EQUIPMENT_PROCUREMENT_V1',
       version: 1,
-      name: 'Standard Corporate Expense Reimbursement',
-      description: 'Employee expense report submission with manager & finance approval gates',
+      name: 'IT Equipment & Hardware Procurement',
+      description: 'Employee hardware request with IT approval and procurement fulfillment',
       status: 'DRAFT',
-      initialState: 'DRAFT_SUBMISSION',
+      initialState: 'REQUEST_SUBMISSION',
       steps: {
-        DRAFT_SUBMISSION: {
+        REQUEST_SUBMISSION: {
           stepOrder: 1,
-          stepName: 'Submit Expense Details & Receipts',
+          stepName: 'Submit Equipment Request',
           stepType: 'DOCUMENT_SUBMISSION',
           actorScope: 'REQUESTER',
           requiredRole: null,
-          requiredPayloadKeys: ['expenseAmount', 'receiptUrl'],
-          isTerminal: false,
-          slaHours: 48,
-          transitions: {
-            SUBMIT_REPORT: 'PENDING_MANAGER_APPROVAL'
-          }
-        },
-        PENDING_MANAGER_APPROVAL: {
-          stepOrder: 2,
-          stepName: 'Line Manager Review',
-          stepType: 'APPROVAL',
-          actorScope: 'ROLE',
-          requiredRole: 'ROLE_MANAGER',
-          requiredPayloadKeys: [],
+          requiredPayloadKeys: ['deviceModel', 'businessJustification'],
           isTerminal: false,
           slaHours: 24,
           transitions: {
-            APPROVE: 'PENDING_FINANCE_DISBURSEMENT',
-            REJECT: 'REJECTED'
+            SUBMIT_REQUEST: 'PENDING_IT_APPROVAL'
           }
         },
-        PENDING_FINANCE_DISBURSEMENT: {
-          stepOrder: 3,
-          stepName: 'Finance Reimbursement Processing',
+        PENDING_IT_APPROVAL: {
+          stepOrder: 2,
+          stepName: 'IT Operations Approval',
           stepType: 'APPROVAL',
           actorScope: 'ROLE',
-          requiredRole: 'ROLE_FINANCE',
+          requiredRole: 'ROLE_IT_ADMIN',
           requiredPayloadKeys: [],
           isTerminal: false,
           slaHours: 48,
           transitions: {
-            DISBURSE_FUNDS: 'COMPLETED',
-            REJECT: 'REJECTED'
+            APPROVE_REQUEST: 'PENDING_PROCUREMENT',
+            REJECT_REQUEST: 'REJECTED'
+          }
+        },
+        PENDING_PROCUREMENT: {
+          stepOrder: 3,
+          stepName: 'Procurement & Dispatch',
+          stepType: 'MANUAL_TASK',
+          actorScope: 'ROLE',
+          requiredRole: 'ROLE_PROCUREMENT',
+          requiredPayloadKeys: ['trackingNumber'],
+          isTerminal: false,
+          slaHours: 72,
+          transitions: {
+            DISPATCH_ITEM: 'COMPLETED'
           }
         },
         COMPLETED: {
           stepOrder: 4,
-          stepName: 'Reimbursement Completed',
+          stepName: 'Device Delivered',
           stepType: 'TERMINAL',
           actorScope: 'ANY',
           requiredRole: null,
@@ -233,7 +274,7 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
         },
         REJECTED: {
           stepOrder: 5,
-          stepName: 'Expense Claim Rejected',
+          stepName: 'Request Rejected',
           stepType: 'TERMINAL',
           actorScope: 'ANY',
           requiredRole: null,
@@ -255,7 +296,7 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     this.setScrollLock(false);
   }
 
-  submitNewTemplate(): void {
+  submitNewTemplate(publishImmediately: boolean): void {
     try {
       const parsed = JSON.parse(this.newTemplateJson()) as WorkflowTemplate;
       if (!parsed.templateKey || !parsed.name || !parsed.initialState || !parsed.steps) {
@@ -268,9 +309,29 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
 
       this.templateService.createDraft(parsed).subscribe({
         next: (created) => {
-          this.isSubmitting.set(false);
-          this.closeCreateModal();
-          this.loadTemplates();
+          if (publishImmediately) {
+            // Immediately publish after drafting
+            this.templateService.publishTemplate(created.templateKey, created.version).subscribe({
+              next: (published) => {
+                this.isSubmitting.set(false);
+                this.closeCreateModal();
+                this.successMessage.set(`Successfully created & published "${published.name}"!`);
+                this.loadTemplates(published.templateKey);
+              },
+              error: (err) => {
+                this.isSubmitting.set(false);
+                this.closeCreateModal();
+                this.successMessage.set(`Saved as draft "${created.name}". Publish manually when ready.`);
+                this.loadTemplates(created.templateKey);
+              }
+            });
+          } else {
+            // Saved as draft
+            this.isSubmitting.set(false);
+            this.closeCreateModal();
+            this.successMessage.set(`Saved "${created.name}" as DRAFT (v${created.version}). You can publish it anytime.`);
+            this.loadTemplates(created.templateKey);
+          }
         },
         error: (err) => {
           console.error('Failed to create template draft:', err);
@@ -287,6 +348,8 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     const dsl = this.selectedTemplateDsl();
     if (dsl && navigator.clipboard) {
       navigator.clipboard.writeText(dsl);
+      this.successMessage.set('Blueprint JSON copied to clipboard!');
+      setTimeout(() => this.successMessage.set(null), 3000);
     }
   }
 }

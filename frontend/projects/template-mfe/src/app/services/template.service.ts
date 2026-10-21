@@ -15,14 +15,14 @@ export class TemplateService {
     return token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : new HttpHeaders();
   }
 
-  getTemplates(): Observable<WorkflowTemplate[]> {
-    return this.http.get<WorkflowTemplate[]>(this.baseUrl, {
+  getTemplates(status: string = 'ALL'): Observable<WorkflowTemplate[]> {
+    return this.http.get<WorkflowTemplate[]>(`${this.baseUrl}?status=${status}`, {
       headers: this.getAuthHeaders()
     });
   }
 
-  getTemplate(key: string): Observable<WorkflowTemplate> {
-    return this.http.get<WorkflowTemplate>(`${this.baseUrl}/${key}`, {
+  getTemplate(key: string, publishedOnly: boolean = false): Observable<WorkflowTemplate> {
+    return this.http.get<WorkflowTemplate>(`${this.baseUrl}/${key}?publishedOnly=${publishedOnly}`, {
       headers: this.getAuthHeaders()
     });
   }

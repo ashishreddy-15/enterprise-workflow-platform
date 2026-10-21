@@ -1,4 +1,4 @@
-<div class="h-full flex flex-col space-y-4">
+<div class="space-y-4 pb-8 pr-1">
 
   <!-- =================================================================== -->
   <!-- TOP HEADER & CONTROLS BAR                                           -->
@@ -146,14 +146,14 @@
   <!-- TAB 1: IMMUTABLE AUDIT LEDGER                                      -->
   <!-- =================================================================== -->
   @if (activeTab() === 'ledger') {
-    <div class="flex-1 bg-white border border-zinc-200 rounded-lg shadow-xs overflow-hidden flex flex-col min-h-0">
+    <div class="bg-white border border-zinc-200 rounded-lg shadow-xs overflow-hidden flex flex-col">
       
       <div class="p-3 border-b border-zinc-200 bg-zinc-50/60 flex items-center justify-between text-xs text-zinc-600">
         <span class="font-medium">Cryptographic Audit Trail (Chronological Stream)</span>
         <span class="text-[11px] font-mono text-zinc-400">Kafka Topic: workflow-events</span>
       </div>
 
-      <div class="flex-1 overflow-auto">
+      <div class="overflow-x-auto">
         <table class="w-full text-left text-xs border-collapse">
           <thead>
             <tr class="border-b border-zinc-200 bg-zinc-50 text-[11px] font-medium text-zinc-500 uppercase tracking-wider sticky top-0 z-10">
@@ -182,33 +182,33 @@
                 <tr class="hover:bg-zinc-50/80 transition group">
                   
                   <!-- Timestamp -->
-                  <td class="py-2 px-3 text-zinc-600 whitespace-nowrap font-sans">
+                  <td class="py-2.5 px-3 text-zinc-600 whitespace-nowrap font-sans">
                     <span class="font-mono text-zinc-800">{{ entry.occurredAt | date:'medium' }}</span>
                   </td>
 
                   <!-- Workflow ID -->
-                  <td class="py-2 px-3">
+                  <td class="py-2.5 px-3">
                     <button (click)="inspectWorkflowById(entry.workflowId)"
-                            class="text-zinc-900 hover:underline hover:text-blue-600 font-mono cursor-pointer flex items-center gap-1">
-                      <span>{{ entry.workflowId.substring(0, 13) }}...</span>
+                            class="text-zinc-900 hover:underline hover:text-blue-600 font-mono cursor-pointer flex items-center gap-1 font-medium">
+                      <span>{{ entry.workflowId.substring(0, 14) }}...</span>
                     </button>
                   </td>
 
                   <!-- Template -->
-                  <td class="py-2 px-3">
-                    <span class="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 text-[10px] font-sans font-medium border border-zinc-200">
+                  <td class="py-2.5 px-3">
+                    <span class="px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 text-[10px] font-sans font-medium border border-zinc-200">
                       {{ entry.templateId }}
                     </span>
                   </td>
 
                   <!-- Transition -->
-                  <td class="py-2 px-3">
+                  <td class="py-2.5 px-3">
                     <div class="flex items-center gap-1.5">
-                      <span class="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600 text-[10px]">
+                      <span class="px-2 py-0.5 rounded bg-zinc-100 text-zinc-600 text-[10px] font-mono">
                         {{ entry.previousState || 'INITIAL' }}
                       </span>
                       <span class="text-zinc-400 text-xs font-sans">→</span>
-                      <span class="px-1.5 py-0.5 rounded text-[10px] font-medium"
+                      <span class="px-2 py-0.5 rounded text-[10px] font-medium font-mono"
                             [ngClass]="isTerminalState(entry.newState) 
                               ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
                               : 'bg-zinc-900 text-white'">
@@ -218,7 +218,7 @@
                   </td>
 
                   <!-- Actor -->
-                  <td class="py-2 px-3 font-sans">
+                  <td class="py-2.5 px-3 font-sans">
                     <span class="inline-flex items-center gap-1 text-zinc-700">
                       <span class="w-4 h-4 rounded-full bg-zinc-200 text-[9px] font-bold flex items-center justify-center text-zinc-600 font-mono">
                         {{ entry.actorId.charAt(0).toUpperCase() }}
@@ -228,14 +228,14 @@
                   </td>
 
                   <!-- Event ID -->
-                  <td class="py-2 px-3 text-zinc-400 text-[10px] whitespace-nowrap">
+                  <td class="py-2.5 px-3 text-zinc-400 text-[10px] whitespace-nowrap font-mono select-all">
                     {{ entry.eventId.substring(0, 16) }}...
                   </td>
 
                   <!-- Inspect Action -->
-                  <td class="py-2 px-3 text-right font-sans">
+                  <td class="py-2.5 px-3 text-right font-sans">
                     <button (click)="inspectWorkflowById(entry.workflowId)"
-                            class="px-2 py-0.5 rounded text-[11px] font-medium text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100 transition cursor-pointer">
+                            class="px-2.5 py-1 rounded text-[11px] font-medium text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100 border border-zinc-200 transition cursor-pointer">
                       History →
                     </button>
                   </td>
@@ -252,21 +252,21 @@
   <!-- TAB 2: CQRS WORKFLOW AGGREGATES & STATE DISTRIBUTION                -->
   <!-- =================================================================== -->
   @if (activeTab() === 'overview') {
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       
       <!-- Left: State Distribution Breakdown -->
-      <div class="bg-white border border-zinc-200 rounded-lg p-4 shadow-xs flex flex-col">
+      <div class="bg-white border border-zinc-200 rounded-lg p-4 shadow-xs md:col-span-1 flex flex-col">
         <h3 class="text-xs font-semibold text-zinc-900 uppercase tracking-wider mb-1">State Distribution</h3>
         <p class="text-[11px] text-zinc-400 mb-4">Breakdown of current process execution phases</p>
 
-        <div class="space-y-3 flex-1 overflow-y-auto pr-1">
+        <div class="space-y-3">
           @for (item of stateDistribution(); track item.state) {
             <div class="space-y-1">
               <div class="flex items-center justify-between text-xs">
                 <span class="font-mono text-zinc-800 font-medium">{{ item.state }}</span>
-                <div class="flex items-center gap-2">
-                  <span class="font-mono text-zinc-500">{{ item.count }} instances</span>
-                  <span class="text-[11px] font-mono text-zinc-400">({{ item.percentage }}%)</span>
+                <div class="flex items-center gap-1.5">
+                  <span class="font-mono text-zinc-500 text-[11px]">{{ item.count }} instances</span>
+                  <span class="text-[10px] font-mono text-zinc-400">({{ item.percentage }}%)</span>
                 </div>
               </div>
               <!-- Distribution Bar -->
@@ -280,13 +280,13 @@
       </div>
 
       <!-- Right: Workflow Projections Table (Span 2) -->
-      <div class="lg:col-span-2 bg-white border border-zinc-200 rounded-lg shadow-xs overflow-hidden flex flex-col min-h-0">
+      <div class="bg-white border border-zinc-200 rounded-lg shadow-xs overflow-hidden md:col-span-2 flex flex-col">
         <div class="p-3 border-b border-zinc-200 bg-zinc-50/60 flex items-center justify-between text-xs text-zinc-600">
           <span class="font-medium">Active Workflow CQRS Projections</span>
           <span class="text-[11px] font-mono text-zinc-400">{{ filteredWorkflows().length }} Projections</span>
         </div>
 
-        <div class="flex-1 overflow-auto">
+        <div class="overflow-x-auto">
           <table class="w-full text-left text-xs border-collapse">
             <thead>
               <tr class="border-b border-zinc-200 bg-zinc-50 text-[11px] font-medium text-zinc-500 uppercase tracking-wider sticky top-0 z-10">
@@ -315,7 +315,7 @@
 
                     <!-- Template -->
                     <td class="py-2.5 px-3 font-sans">
-                      <span class="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 text-[10px] font-medium border border-zinc-200">
+                      <span class="px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 text-[10px] font-medium border border-zinc-200">
                         {{ wf.templateId }}
                       </span>
                     </td>
@@ -343,7 +343,7 @@
                     <!-- Action -->
                     <td class="py-2.5 px-3 text-right font-sans">
                       <button (click)="inspectWorkflow(wf)"
-                              class="px-2 py-0.5 rounded text-[11px] font-medium bg-zinc-100 hover:bg-zinc-900 hover:text-white transition cursor-pointer">
+                              class="px-2.5 py-1 rounded text-[11px] font-medium bg-zinc-100 hover:bg-zinc-900 hover:text-white border border-zinc-200 transition cursor-pointer">
                         Inspect
                       </button>
                     </td>
@@ -358,82 +358,88 @@
   }
 
   <!-- =================================================================== -->
-  <!-- WORKFLOW LIFECYCLE INSPECTOR SLIDE-OVER MODAL                      -->
+  <!-- WORKFLOW LIFECYCLE INSPECTOR MODAL DIALOG                          -->
+  <!-- Centered with backdrop, keeping Shell Header & Footer intact       -->
   <!-- =================================================================== -->
   @if (selectedWorkflow()) {
-    <div class="fixed inset-0 z-50 bg-zinc-950/40 backdrop-blur-xs flex justify-end">
+    <div class="fixed inset-0 z-40 bg-zinc-950/40 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6"
+         (click)="closeInspector()">
       
-      <!-- Slide-over Drawer Pane -->
-      <div class="w-full max-w-xl bg-white h-full shadow-2xl flex flex-col border-l border-zinc-200 animate-in slide-in-from-right duration-200">
+      <!-- Modal Container Dialog -->
+      <div class="w-full max-w-2xl bg-white rounded-xl border border-zinc-200 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+           (click)="$event.stopPropagation()">
         
-        <!-- Drawer Header -->
-        <div class="p-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50">
+        <!-- Modal Header -->
+        <div class="px-5 py-3.5 border-b border-zinc-200 flex items-center justify-between bg-zinc-50/70">
           <div>
             <div class="flex items-center gap-2">
-              <span class="text-xs font-semibold text-zinc-900 uppercase tracking-wider">Workflow Event Ledger</span>
-              <span class="px-1.5 py-0.5 rounded bg-zinc-200 text-zinc-800 text-[10px] font-mono">
+              <span class="text-xs font-semibold text-zinc-950 tracking-tight uppercase">Workflow Event Ledger</span>
+              <span class="px-2 py-0.5 rounded bg-zinc-200/80 text-zinc-800 text-[10px] font-mono font-medium">
                 {{ selectedWorkflow()?.templateId }}
               </span>
             </div>
-            <p class="font-mono text-xs text-zinc-500 mt-0.5 break-all">
+            <p class="font-mono text-xs text-zinc-500 mt-0.5 select-all">
               {{ selectedWorkflow()?.workflowId }}
             </p>
           </div>
 
           <button (click)="closeInspector()"
-                  class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-900 hover:bg-zinc-200 transition cursor-pointer">
+                  aria-label="Close dialog"
+                  class="text-zinc-400 hover:text-zinc-950 text-base leading-none p-1.5 rounded-md hover:bg-zinc-100 transition cursor-pointer">
             ✕
           </button>
         </div>
 
         <!-- Meta Summary Bar -->
-        <div class="px-4 py-2.5 bg-zinc-100/60 border-b border-zinc-200 grid grid-cols-3 gap-2 text-xs">
+        <div class="px-5 py-2.5 bg-zinc-100/60 border-b border-zinc-200 grid grid-cols-3 gap-4 text-xs">
           <div>
-            <span class="text-[10px] text-zinc-400 uppercase tracking-wider block">Current State</span>
-            <span class="font-mono font-medium text-zinc-900">{{ selectedWorkflow()?.currentState }}</span>
+            <span class="text-[10px] font-medium text-zinc-400 uppercase tracking-wider block">Current State</span>
+            <span class="font-mono font-semibold text-zinc-900">{{ selectedWorkflow()?.currentState }}</span>
           </div>
           <div>
-            <span class="text-[10px] text-zinc-400 uppercase tracking-wider block">Transitions</span>
-            <span class="font-mono font-medium text-zinc-900">{{ selectedWorkflow()?.transitionCount }} recorded</span>
+            <span class="text-[10px] font-medium text-zinc-400 uppercase tracking-wider block">Transitions</span>
+            <span class="font-mono font-semibold text-zinc-900">{{ selectedWorkflow()?.transitionCount }} recorded</span>
           </div>
           <div>
-            <span class="text-[10px] text-zinc-400 uppercase tracking-wider block">Last Actor</span>
-            <span class="font-mono font-medium text-zinc-900">{{ selectedWorkflow()?.lastActorId || 'N/A' }}</span>
+            <span class="text-[10px] font-medium text-zinc-400 uppercase tracking-wider block">Last Actor</span>
+            <span class="font-mono font-semibold text-zinc-900">{{ selectedWorkflow()?.lastActorId || 'N/A' }}</span>
           </div>
         </div>
 
         <!-- Chronological Timeline Stream -->
-        <div class="flex-1 overflow-y-auto p-4 space-y-4">
+        <div class="flex-1 overflow-y-auto p-5 space-y-4">
           <div class="text-xs font-medium text-zinc-900 flex items-center justify-between">
             <span>Cryptographic Step Provenance</span>
             @if (isLoadingWorkflowAudit()) {
               <span class="text-zinc-400 animate-spin text-[11px]">↻ Loading audit...</span>
             } @else {
-              <span class="text-[11px] font-mono text-zinc-400">{{ selectedWorkflowAuditLogs().length }} Events</span>
+              <span class="text-[11px] font-mono text-zinc-500">{{ selectedWorkflowAuditLogs().length }} Events</span>
             }
           </div>
 
           @if (selectedWorkflowAuditLogs().length === 0 && !isLoadingWorkflowAudit()) {
-            <!-- If audit logs query is empty, fallback to projection history -->
             @if (selectedWorkflow()?.history && selectedWorkflow()!.history.length > 0) {
               <div class="space-y-3">
                 @for (h of selectedWorkflow()!.history; track h.eventId; let idx = $index) {
-                  <div class="relative pl-6 pb-3 border-l-2 border-zinc-200 last:border-l-0">
-                    <!-- Dot Marker -->
-                    <div class="absolute -left-[5px] top-1 w-2 h-2 rounded-full bg-zinc-900 ring-2 ring-white"></div>
+                  <div class="relative pl-6 pb-2 border-l-2 border-zinc-200 last:border-l-0">
+                    <div class="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full bg-zinc-950 ring-4 ring-white"></div>
                     
-                    <div class="bg-zinc-50 border border-zinc-200 rounded p-3 space-y-1.5">
-                      <div class="flex items-center justify-between text-[11px]">
-                        <span class="font-mono font-medium text-zinc-700">Step {{ idx + 1 }}</span>
-                        <span class="text-zinc-400 font-mono text-[10px]">{{ h.occurredAt | date:'medium' }}</span>
+                    <div class="bg-zinc-50 border border-zinc-200 rounded-lg p-3 space-y-1.5">
+                      <div class="flex items-center justify-between text-xs">
+                        <span class="font-semibold text-zinc-900">Step {{ idx + 1 }} Transition</span>
+                        <span class="text-zinc-400 font-mono text-[11px]">{{ h.occurredAt | date:'medium' }}</span>
                       </div>
                       <div class="flex items-center gap-2 text-xs">
-                        <span class="font-mono px-1.5 py-0.5 rounded bg-zinc-200 text-zinc-700 text-[10px]">{{ h.fromState }}</span>
-                        <span class="text-zinc-400">→</span>
-                        <span class="font-mono px-1.5 py-0.5 rounded bg-zinc-900 text-white text-[10px]">{{ h.toState }}</span>
+                        <span class="font-mono px-2 py-0.5 rounded bg-zinc-200 text-zinc-800 text-[10px]">{{ h.fromState }}</span>
+                        <span class="text-zinc-400 font-bold">→</span>
+                        <span class="font-mono px-2 py-0.5 rounded text-[10px] font-medium"
+                              [ngClass]="isTerminalState(h.toState) ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-zinc-900 text-white'">
+                          {{ h.toState }}
+                        </span>
                       </div>
-                      <div class="text-[10px] text-zinc-500 font-mono">
-                        Actor: <span class="text-zinc-800">{{ h.actorId }}</span> | Event: <span class="text-zinc-400">{{ h.eventId.substring(0, 16) }}...</span>
+                      <div class="pt-1.5 border-t border-zinc-200/60 flex items-center justify-between text-[10px] font-mono text-zinc-500">
+                        <span>Actor: <strong class="text-zinc-800">{{ h.actorId }}</strong></span>
+                        <span>UUID: <span class="text-zinc-600 select-all">{{ h.eventId.substring(0, 16) }}...</span></span>
                       </div>
                     </div>
                   </div>
@@ -445,35 +451,31 @@
               </div>
             }
           } @else {
-            <!-- Render full audit log list -->
             <div class="space-y-3">
               @for (entry of selectedWorkflowAuditLogs(); track entry.eventId; let idx = $index) {
-                <div class="relative pl-6 pb-3 border-l-2 border-zinc-200 last:border-l-0">
-                  <!-- Timeline Node Marker -->
-                  <div class="absolute -left-[5px] top-1 w-2.5 h-2.5 rounded-full bg-zinc-950 ring-4 ring-white"></div>
+                <div class="relative pl-6 pb-2 border-l-2 border-zinc-200 last:border-l-0">
+                  <div class="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full bg-zinc-950 ring-4 ring-white"></div>
 
                   <div class="bg-zinc-50 border border-zinc-200 rounded-lg p-3 space-y-2">
                     <div class="flex items-center justify-between text-xs">
                       <span class="font-semibold text-zinc-900">Step {{ idx + 1 }} Transition</span>
-                      <span class="text-[10px] font-mono text-zinc-400">{{ entry.occurredAt | date:'medium' }}</span>
+                      <span class="text-[10px] font-mono text-zinc-500">{{ entry.occurredAt | date:'medium' }}</span>
                     </div>
 
-                    <!-- State Shift -->
                     <div class="flex items-center gap-2 text-xs">
                       <span class="px-2 py-0.5 rounded bg-zinc-200 text-zinc-800 font-mono text-[11px]">
                         {{ entry.previousState || 'INITIAL' }}
                       </span>
                       <span class="text-zinc-400 font-bold">→</span>
-                      <span class="px-2 py-0.5 rounded font-mono text-[11px]"
+                      <span class="px-2 py-0.5 rounded font-mono text-[11px] font-medium"
                             [ngClass]="isTerminalState(entry.newState) ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-zinc-900 text-white'">
                         {{ entry.newState }}
                       </span>
                     </div>
 
-                    <!-- Attribution & Cryptographic Hashes -->
-                    <div class="pt-1.5 border-t border-zinc-200/60 flex flex-col gap-1 text-[10px] font-mono text-zinc-500">
-                      <div>Actor: <span class="text-zinc-900 font-medium">{{ entry.actorId }}</span></div>
-                      <div>Event UUID: <span class="text-zinc-700 select-all">{{ entry.eventId }}</span></div>
+                    <div class="pt-1.5 border-t border-zinc-200/60 flex items-center justify-between text-[10px] font-mono text-zinc-500">
+                      <span>Actor: <strong class="text-zinc-900">{{ entry.actorId }}</strong></span>
+                      <span>UUID: <span class="text-zinc-700 select-all">{{ entry.eventId }}</span></span>
                     </div>
                   </div>
                 </div>
@@ -482,13 +484,14 @@
           }
         </div>
 
-        <!-- Drawer Footer -->
-        <div class="p-3 border-t border-zinc-200 bg-zinc-50 flex justify-end">
+        <!-- Modal Footer -->
+        <div class="px-5 py-3 border-t border-zinc-200 bg-zinc-50 flex justify-end">
           <button (click)="closeInspector()"
-                  class="px-3 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium transition cursor-pointer">
+                  class="px-3.5 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium transition cursor-pointer">
             Close Inspector
           </button>
         </div>
+
       </div>
     </div>
   }

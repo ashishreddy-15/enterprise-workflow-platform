@@ -179,8 +179,8 @@ export class AnalyticsDashboardComponent implements OnInit, OnDestroy {
         checkDone();
       },
       error: (err) => {
-        console.error('Failed to load workflow analytics projections:', err);
-        this.errorMessage.set('Could not fetch CQRS projections from audit-analytics-service.');
+        console.error('Failed to load workflow analytics:', err);
+        this.errorMessage.set('Could not load workflow analytics data. Please check connection.');
         checkDone();
       }
     });

@@ -98,7 +98,7 @@ export interface TemplateCatalogItem {
   category: string;
   description: string;
   initialStep: string;
-  estimatedSla: string;
+  estimatedSla: string | null;
 }
 
 export interface WorkflowStepperNode {

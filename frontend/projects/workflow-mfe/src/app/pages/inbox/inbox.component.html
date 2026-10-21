@@ -463,9 +463,11 @@
                   <div class="space-y-1 flex-1">
                     <div class="flex items-center justify-between">
                       <span class="font-medium text-zinc-950">{{ item.name }}</span>
-                      <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 font-medium">
-                        SLA: {{ item.estimatedSla }}
-                      </span>
+                      @if (item.estimatedSla) {
+                        <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 font-medium">
+                          SLA: {{ item.estimatedSla }}
+                        </span>
+                      }
                     </div>
                     <p class="text-[11px] text-zinc-500 leading-relaxed">{{ item.description }}</p>
                     <div class="flex items-center gap-2 pt-0.5 text-[10px] font-mono text-zinc-400">

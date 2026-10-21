@@ -318,12 +318,12 @@ export class InboxComponent implements OnInit, OnDestroy {
         const catalogItems: TemplateCatalogItem[] = templates.map(tpl => {
           const initialStepDef = tpl.steps?.[tpl.initialState];
           const initialStepName = initialStepDef?.stepName || tpl.initialState || 'Initial Step';
-          const sla = initialStepDef?.slaHours ? `${initialStepDef.slaHours}h` : '24h';
+          const sla = initialStepDef?.slaHours ? `${initialStepDef.slaHours}h` : null;
           return {
             key: tpl.templateKey,
             name: tpl.name || tpl.templateKey,
             category: 'Enterprise Governance',
-            description: tpl.description || 'Active published workflow template registered in template registry.',
+            description: tpl.description || '',
             initialStep: initialStepName,
             estimatedSla: sla
           };

@@ -6,10 +6,12 @@
   <aside class="w-full md:w-[320px] lg:w-[350px] border-b md:border-b-0 md:border-r border-zinc-200 flex flex-col bg-zinc-50/50 shrink-0">
     
     <!-- Queue Header & Search Filter -->
-    <div class="p-3 border-b border-zinc-200 bg-white space-y-2">
+    <div class="p-3 border-b border-zinc-200 bg-white space-y-2.5">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <span class="text-xs font-semibold text-zinc-900 tracking-tight">Assigned Tasks</span>
+          <span class="text-xs font-semibold text-zinc-900 tracking-tight">
+            {{ activeScope() === 'inbox' ? 'Assigned to Me' : (activeScope() === 'participated' ? 'Participated Tasks' : 'My Initiated Requests') }}
+          </span>
           <span class="px-1.5 py-0.5 rounded-full bg-zinc-100 text-zinc-700 text-[11px] font-mono font-medium">
             {{ filteredTasks().length }}
           </span>
@@ -20,11 +22,30 @@
             <span>+</span> New
           </button>
           <button (click)="loadInbox()" [disabled]="isLoading()"
-                  title="Refresh inbox"
+                  title="Refresh tasks"
                   class="p-1 rounded text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100 transition cursor-pointer">
             <span class="text-xs block" [class.animate-spin]="isLoading()">↻</span>
           </button>
         </div>
+      </div>
+
+      <!-- Scope Filter Tabs: Inbox vs Participated vs Created -->
+      <div class="grid grid-cols-3 bg-zinc-100 p-0.5 rounded border border-zinc-200 text-[11px] font-medium text-center">
+        <button (click)="setScope('inbox')"
+                class="py-1 px-1 rounded transition cursor-pointer"
+                [ngClass]="activeScope() === 'inbox' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-500 hover:text-zinc-900'">
+          Pending
+        </button>
+        <button (click)="setScope('participated')"
+                class="py-1 px-1 rounded transition cursor-pointer"
+                [ngClass]="activeScope() === 'participated' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-500 hover:text-zinc-900'">
+          Involved
+        </button>
+        <button (click)="setScope('initiated')"
+                class="py-1 px-1 rounded transition cursor-pointer"
+                [ngClass]="activeScope() === 'initiated' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-500 hover:text-zinc-900'">
+          Created
+        </button>
       </div>
 
       <!-- Search Input -->
@@ -57,7 +78,15 @@
             <div class="flex items-center justify-between text-[11px] gap-2">
               <span class="font-mono text-zinc-400 truncate text-[10px]">{{ task.templateId }}</span>
               
-              @if (task.slaBreached) {
+              @if (task.currentState === 'ONBOARDED') {
+                <span class="px-1.5 py-0.2 rounded text-[10px] font-mono font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  ✓ Approved
+                </span>
+              } @else if (task.currentState === 'REJECTED') {
+                <span class="px-1.5 py-0.2 rounded text-[10px] font-mono font-medium bg-rose-50 text-rose-700 border border-rose-200">
+                  ✕ Rejected
+                </span>
+              } @else if (task.slaBreached) {
                 <span class="px-1.5 py-0.2 rounded text-[10px] font-mono font-medium bg-rose-50 text-rose-700 border border-rose-200">
                   Breached
                 </span>
@@ -103,42 +132,58 @@
           <h2 class="text-sm font-semibold text-zinc-950">{{ task.title }}</h2>
         </div>
 
-        <!-- Dynamic Action Buttons (Disabled when required payload fields are missing) -->
+        <!-- Dynamic Action Buttons or Read-Only Status Indicator -->
         <div class="flex items-center gap-2">
-          @for (action of availableActions(); track action.key) {
-            @if (action.variant === 'danger') {
-              <button (click)="executeAction(action.key, task)"
-                      [disabled]="isActionDisabled(action, task)"
-                      [title]="getActionDisabledReason(action, task)"
-                      class="px-2.5 py-1.5 bg-white border border-zinc-200 text-rose-600 rounded text-xs font-medium transition"
-                      [ngClass]="{
-                        'opacity-40 cursor-not-allowed border-zinc-200': isActionDisabled(action, task),
-                        'hover:bg-rose-50 hover:border-rose-300 cursor-pointer': !isActionDisabled(action, task)
-                      }">
-                {{ action.label }}
-              </button>
-            } @else if (action.variant === 'primary') {
-              <button (click)="executeAction(action.key, task)"
-                      [disabled]="isActionDisabled(action, task)"
-                      [title]="getActionDisabledReason(action, task)"
-                      class="px-3 py-1.5 bg-zinc-900 text-white rounded text-xs font-medium transition"
-                      [ngClass]="{
-                        'opacity-40 cursor-not-allowed': isActionDisabled(action, task),
-                        'hover:bg-zinc-800 cursor-pointer': !isActionDisabled(action, task)
-                      }">
-                {{ action.label }}
-              </button>
+          @if (canActionCurrentStep()) {
+            @for (action of availableActions(); track action.key) {
+              @if (action.variant === 'danger') {
+                <button (click)="executeAction(action.key, task)"
+                        [disabled]="isActionDisabled(action, task)"
+                        [title]="getActionDisabledReason(action, task)"
+                        class="px-2.5 py-1.5 bg-white border border-zinc-200 text-rose-600 rounded text-xs font-medium transition"
+                        [ngClass]="{
+                          'opacity-40 cursor-not-allowed border-zinc-200': isActionDisabled(action, task),
+                          'hover:bg-rose-50 hover:border-rose-300 cursor-pointer': !isActionDisabled(action, task)
+                        }">
+                  {{ action.label }}
+                </button>
+              } @else if (action.variant === 'primary') {
+                <button (click)="executeAction(action.key, task)"
+                        [disabled]="isActionDisabled(action, task)"
+                        [title]="getActionDisabledReason(action, task)"
+                        class="px-3 py-1.5 bg-zinc-900 text-white rounded text-xs font-medium transition"
+                        [ngClass]="{
+                          'opacity-40 cursor-not-allowed': isActionDisabled(action, task),
+                          'hover:bg-zinc-800 cursor-pointer': !isActionDisabled(action, task)
+                        }">
+                  {{ action.label }}
+                </button>
+              } @else {
+                <button (click)="executeAction(action.key, task)"
+                        [disabled]="isActionDisabled(action, task)"
+                        [title]="getActionDisabledReason(action, task)"
+                        class="px-2.5 py-1.5 bg-white border border-zinc-200 text-zinc-700 rounded text-xs font-medium transition"
+                        [ngClass]="{
+                          'opacity-40 cursor-not-allowed': isActionDisabled(action, task),
+                          'hover:bg-zinc-50 cursor-pointer': !isActionDisabled(action, task)
+                        }">
+                  {{ action.label }}
+                </button>
+              }
+            }
+          } @else {
+            @if (isTerminal()) {
+              <span class="px-2.5 py-1 rounded text-xs font-medium border"
+                    [ngClass]="task.currentState === 'REJECTED' 
+                      ? 'bg-rose-50 text-rose-700 border-rose-200' 
+                      : 'bg-emerald-50 text-emerald-800 border-emerald-200'">
+                {{ task.currentState === 'REJECTED' ? '✕ Workflow Rejected' : '✓ Process Completed' }}
+              </span>
             } @else {
-              <button (click)="executeAction(action.key, task)"
-                      [disabled]="isActionDisabled(action, task)"
-                      [title]="getActionDisabledReason(action, task)"
-                      class="px-2.5 py-1.5 bg-white border border-zinc-200 text-zinc-700 rounded text-xs font-medium transition"
-                      [ngClass]="{
-                        'opacity-40 cursor-not-allowed': isActionDisabled(action, task),
-                        'hover:bg-zinc-50 cursor-pointer': !isActionDisabled(action, task)
-                      }">
-                {{ action.label }}
-              </button>
+              <span class="px-2.5 py-1 rounded text-xs font-mono text-zinc-600 bg-zinc-100 border border-zinc-200 flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                In Progress: Waiting on {{ task.actorScope === 'REQUESTER' ? 'Requester' : (task.requiredRole || 'Next Role') }}
+              </span>
             }
           }
         </div>
@@ -264,30 +309,41 @@
         <div class="border border-zinc-200 rounded-lg p-3.5 space-y-3">
           <div class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Step Context & Payload</div>
 
-          @if (currentStepRequiredKeys().length > 0) {
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              @for (fieldKey of currentStepRequiredKeys(); track fieldKey) {
-                <div>
-                  <label class="block font-medium text-zinc-700 mb-1">
-                    {{ formatFieldLabel(fieldKey) }}
-                    <span class="text-rose-500 font-bold ml-0.5">*</span>
-                  </label>
-                  <input type="text"
-                         [value]="payloadForm()[fieldKey] || ''"
-                         (input)="setPayloadValue(fieldKey, $any($event.target).value)"
-                         placeholder="https://..."
-                         [ngClass]="{'border-amber-300 focus:border-amber-500': !(payloadForm()[fieldKey]?.trim())}"
-                         class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1 text-xs font-mono text-zinc-900 outline-none focus:border-zinc-900 transition">
+          @if (canActionCurrentStep()) {
+            @if (currentStepRequiredKeys().length > 0) {
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                @for (fieldKey of currentStepRequiredKeys(); track fieldKey) {
+                  <div>
+                    <label class="block font-medium text-zinc-700 mb-1">
+                      {{ formatFieldLabel(fieldKey) }}
+                      <span class="text-rose-500 font-bold ml-0.5">*</span>
+                    </label>
+                    <input type="text"
+                           [value]="payloadForm()[fieldKey] || ''"
+                           (input)="setPayloadValue(fieldKey, $any($event.target).value)"
+                           placeholder="https://..."
+                           [ngClass]="{'border-amber-300 focus:border-amber-500': !(payloadForm()[fieldKey]?.trim())}"
+                           class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1 text-xs font-mono text-zinc-900 outline-none focus:border-zinc-900 transition">
+                  </div>
+                }
+              </div>
+
+              @if (!isPayloadValid(task)) {
+                <div class="text-[11px] text-amber-700 bg-amber-50/80 border border-amber-200/80 rounded px-2.5 py-1 flex items-center gap-1.5">
+                  <span class="font-mono text-amber-500">&bull;</span>
+                  <span>Please provide all required fields to submit this step.</span>
                 </div>
               }
-            </div>
-
-            @if (!isPayloadValid(task)) {
-              <div class="text-[11px] text-amber-700 bg-amber-50/80 border border-amber-200/80 rounded px-2.5 py-1 flex items-center gap-1.5">
-                <span class="font-mono text-amber-500">&bull;</span>
-                <span>Please provide all required fields to submit this step.</span>
-              </div>
             }
+          } @else {
+            <div class="p-3 bg-zinc-50 border border-zinc-200 rounded-lg text-xs text-zinc-600 flex items-center gap-2">
+              <span class="text-zinc-400 font-serif font-bold">ℹ</span>
+              <span>
+                {{ isTerminal() 
+                    ? 'This workflow instance has reached its terminal state. All inputs are archived.' 
+                    : 'View-Only Mode: You are viewing this workflow as an involved participant. Action is not required from your role at this stage.' }}
+              </span>
+            </div>
           }
 
           <!-- Submitted Documents / Fields from Earlier Steps -->
@@ -356,17 +412,19 @@
             </div>
           }
 
-          <!-- Decision / Submission Comments (Available for all steps) -->
-          <div class="pt-1">
-            <label class="block font-medium text-zinc-700 mb-1 text-xs">
-              {{ currentStepRequiredKeys().length > 0 ? 'Submission Notes / Remarks' : 'Decision / Review Comments' }}
-            </label>
-            <textarea [ngModel]="reviewComments()"
-                      (ngModelChange)="reviewComments.set($event)"
-                      rows="2"
-                      [placeholder]="currentStepRequiredKeys().length > 0 ? 'Add optional submission notes...' : 'Add decision notes or comments...'"
-                      class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1 text-xs text-zinc-900 outline-none focus:border-zinc-900 transition"></textarea>
-          </div>
+          <!-- Decision / Submission Comments (Only when actionable) -->
+          @if (canActionCurrentStep()) {
+            <div class="pt-1">
+              <label class="block font-medium text-zinc-700 mb-1 text-xs">
+                {{ currentStepRequiredKeys().length > 0 ? 'Submission Notes / Remarks' : 'Decision / Review Comments' }}
+              </label>
+              <textarea [ngModel]="reviewComments()"
+                        (ngModelChange)="reviewComments.set($event)"
+                        rows="2"
+                        [placeholder]="currentStepRequiredKeys().length > 0 ? 'Add optional submission notes...' : 'Add decision notes or comments...'"
+                        class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1 text-xs text-zinc-900 outline-none focus:border-zinc-900 transition"></textarea>
+            </div>
+          }
         </div>
 
         <!-- Technical Traceability (Compact 2-Column Table) -->

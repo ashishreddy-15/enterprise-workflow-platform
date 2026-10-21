@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -24,11 +25,30 @@ public class TaskController {
     }
 
     @GetMapping("/inbox")
-    public ResponseEntity<List<TaskService.TaskInboxItem>> getInbox() throws Exception {
+    public ResponseEntity<List<TaskService.TaskInboxItem>> getInbox(
+            @RequestParam(required = false, defaultValue = "inbox") String filter) throws Exception {
         UserContext caller = UserContextHolder.getRequiredContext();
-        log.info("REST: Fetching task inbox for user: '{}', roles: {}", caller.userId(), caller.roles());
-        List<TaskService.TaskInboxItem> tasks = taskService.getTasksForUser(caller);
-        log.debug("REST: Returned {} tasks for user: '{}'", tasks.size(), caller.userId());
+        log.info("REST: Fetching tasks for user: '{}', filter: '{}'", caller.userId(), filter);
+
+        List<TaskService.TaskInboxItem> tasks;
+        switch (filter.toLowerCase()) {
+            case "participated":
+                tasks = taskService.getParticipatedTasks(caller);
+                break;
+            case "initiated":
+            case "my-requests":
+                tasks = taskService.getInitiatedTasks(caller);
+                break;
+            case "all":
+                tasks = taskService.getAllTasks();
+                break;
+            case "inbox":
+            default:
+                tasks = taskService.getTasksForUser(caller);
+                break;
+        }
+
+        log.debug("REST: Returned {} tasks for user: '{}' (filter: '{}')", tasks.size(), caller.userId(), filter);
         return ResponseEntity.ok(tasks);
     }
 }

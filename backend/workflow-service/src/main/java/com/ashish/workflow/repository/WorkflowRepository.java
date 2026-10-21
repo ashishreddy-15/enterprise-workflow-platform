@@ -21,6 +21,17 @@ public interface WorkflowRepository
             "SELECT DISTINCT w FROM WorkflowInstance w LEFT JOIN FETCH w.tasks WHERE w.currentState NOT IN ('ONBOARDED', 'REJECTED', 'CANCELLED') ORDER BY w.updatedAt DESC")
     List<WorkflowInstance> findAllActiveWorkflows();
 
+    @Query(
+            "SELECT DISTINCT w FROM WorkflowInstance w LEFT JOIN FETCH w.tasks WHERE LOWER(w.requesterId) = LOWER(:userId) ORDER BY w.updatedAt DESC")
+    List<WorkflowInstance> findByRequesterIdOrderByUpdatedAtDesc(@Param("userId") String userId);
+
+    @Query(
+            "SELECT DISTINCT w FROM WorkflowInstance w LEFT JOIN FETCH w.tasks t WHERE LOWER(w.requesterId) = LOWER(:userId) OR LOWER(t.completedBy) = LOWER(:userId) ORDER BY w.updatedAt DESC")
+    List<WorkflowInstance> findParticipatedByUser(@Param("userId") String userId);
+
+    @Query("SELECT DISTINCT w FROM WorkflowInstance w LEFT JOIN FETCH w.tasks ORDER BY w.updatedAt DESC")
+    List<WorkflowInstance> findAllWithTasks();
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query(
             """

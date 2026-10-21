@@ -21,6 +21,7 @@ export class InboxComponent implements OnInit, OnDestroy {
   readonly tasks = signal<TaskInboxItem[]>([]);
   readonly selectedTask = signal<TaskInboxItem | null>(null);
   readonly searchQuery = signal<string>('');
+  readonly activeScope = signal<'inbox' | 'participated' | 'initiated'>('inbox');
   readonly isLoading = signal<boolean>(false);
   readonly isSubmitting = signal<boolean>(false);
   readonly actionMessage = signal<string | null>(null);
@@ -239,6 +240,53 @@ export class InboxComponent implements OnInit, OnDestroy {
     });
   }
 
+  setScope(scope: 'inbox' | 'participated' | 'initiated'): void {
+    this.activeScope.set(scope);
+    this.selectedTask.set(null);
+    this.loadInbox();
+  }
+
+  getActiveUser(): { id: string; roles: string[] } {
+    try {
+      const saved = localStorage.getItem('ewp_active_persona');
+      if (saved) {
+        if (saved.startsWith('{')) {
+          const parsed = JSON.parse(saved);
+          return { id: parsed.id || '', roles: parsed.roles || [] };
+        }
+        return { id: saved, roles: [] };
+      }
+    } catch (e) {}
+    return { id: '', roles: [] };
+  }
+
+  readonly isTerminal = computed<boolean>(() => {
+    const task = this.selectedTask();
+    if (!task) return false;
+    const s = task.currentState?.toUpperCase();
+    return ['ONBOARDED', 'REJECTED', 'COMPLETED', 'CANCELLED', 'CLOSED'].includes(s);
+  });
+
+  readonly canActionCurrentStep = computed<boolean>(() => {
+    const task = this.selectedTask();
+    if (!task || this.isTerminal()) return false;
+
+    const user = this.getActiveUser();
+    const scope = task.actorScope?.toUpperCase() || 'ANY';
+
+    if (scope === 'REQUESTER') {
+      return user.id.toLowerCase() === task.requesterId?.toLowerCase();
+    } else if (scope === 'ROLE') {
+      // Must not be requester (Separation of Duties)
+      if (user.id.toLowerCase() === task.requesterId?.toLowerCase()) {
+        return false;
+      }
+      if (!task.requiredRole) return true;
+      return user.roles.some(r => r.toUpperCase() === task.requiredRole?.toUpperCase());
+    }
+    return true;
+  });
+
   formatFieldLabel(key: string): string {
     return key;
   }
@@ -400,7 +448,7 @@ export class InboxComponent implements OnInit, OnDestroy {
       this.actionMessage.set(null);
     }
 
-    this.workflowService.getInbox().subscribe({
+    this.workflowService.getInbox(this.activeScope()).subscribe({
       next: (items) => {
         this.tasks.set(items);
         this.isLoading.set(false);

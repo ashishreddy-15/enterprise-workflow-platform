@@ -11,8 +11,8 @@ export class WorkflowService {
   private readonly gatewayBaseUrl = 'http://localhost:8080/workflows/api/v1';
   private readonly templateBaseUrl = 'http://localhost:8080/templates/api/v1';
 
-  getInbox(): Observable<TaskInboxItem[]> {
-    return this.http.get<TaskInboxItem[]>(`${this.gatewayBaseUrl}/tasks/inbox`);
+  getInbox(filter: 'inbox' | 'participated' | 'initiated' = 'inbox'): Observable<TaskInboxItem[]> {
+    return this.http.get<TaskInboxItem[]>(`${this.gatewayBaseUrl}/tasks/inbox?filter=${filter}`);
   }
 
   getTemplates(): Observable<WorkflowTemplate[]> {

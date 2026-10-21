@@ -38,3 +38,29 @@ export interface DAGNode {
   incomingTransitions: { action: string; sourceState: string }[];
   rawStep?: StepDefinition;
 }
+
+export interface CanvasNode extends DAGNode {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rank: number;
+  row: number;
+  isRejectTerminal: boolean;
+  roleDisplay: string;
+}
+
+export interface CanvasEdge {
+  id: string;
+  sourceKey: string;
+  targetKey: string;
+  action: string;
+  pathD: string;
+  sourceX: number;
+  sourceY: number;
+  targetX: number;
+  targetY: number;
+  midX: number;
+  midY: number;
+  isDanger: boolean;
+}

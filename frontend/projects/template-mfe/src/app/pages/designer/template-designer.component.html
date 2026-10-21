@@ -217,25 +217,34 @@
               </p>
             </div>
 
-            <!-- View Switcher Tabs -->
-            <div class="flex items-center bg-zinc-100 p-0.5 rounded border border-zinc-200 shrink-0 text-xs">
-              <button (click)="setViewMode('canvas')"
-                      class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1.5"
-                      [ngClass]="viewMode() === 'canvas' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
-                <span>◈</span>
-                <span>Visual Graph</span>
-              </button>
-              <button (click)="setViewMode('pipeline')"
-                      class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1.5"
-                      [ngClass]="viewMode() === 'pipeline' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
-                <span>≡</span>
-                <span>Pipeline List</span>
-              </button>
-              <button (click)="setViewMode('dsl')"
-                      class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1.5"
-                      [ngClass]="viewMode() === 'dsl' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
-                <span>&#123; &#125;</span>
-                <span>DSL Schema</span>
+            <!-- View Switcher Tabs & Fullscreen Action -->
+            <div class="flex items-center gap-2 shrink-0">
+              <div class="flex items-center bg-zinc-100 p-0.5 rounded border border-zinc-200 text-xs">
+                <button (click)="setViewMode('canvas')"
+                        class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1.5"
+                        [ngClass]="viewMode() === 'canvas' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
+                  <span>◈</span>
+                  <span>Visual Graph</span>
+                </button>
+                <button (click)="setViewMode('pipeline')"
+                        class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1.5"
+                        [ngClass]="viewMode() === 'pipeline' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
+                  <span>≡</span>
+                  <span>Pipeline List</span>
+                </button>
+                <button (click)="setViewMode('dsl')"
+                        class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1.5"
+                        [ngClass]="viewMode() === 'dsl' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
+                  <span>&#123; &#125;</span>
+                  <span>DSL Schema</span>
+                </button>
+              </div>
+
+              <button (click)="toggleFullscreen(true)"
+                      title="Expand View to Fullscreen"
+                      class="px-2.5 py-1 rounded border border-zinc-200 hover:border-zinc-900 hover:bg-zinc-100 bg-white text-zinc-800 text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 shadow-xs">
+                <span>⛶</span>
+                <span>Full Screen</span>
               </button>
             </div>
           </div>
@@ -503,9 +512,25 @@
         @if (viewMode() === 'pipeline') {
           <div class="space-y-3">
             
-            <div class="text-xs font-semibold text-zinc-500 uppercase tracking-wider px-1 flex items-center justify-between">
-              <span>State Machine Execution Pipeline</span>
-              <span class="text-[11px] font-mono text-zinc-400">Click node for deep inspection</span>
+            <div class="px-1 py-1 flex items-center justify-between gap-3 text-xs border-b border-zinc-100 pb-2">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="font-bold text-zinc-800 uppercase tracking-wider text-[11px] whitespace-nowrap">Execution Pipeline</span>
+                <span class="font-mono text-[10px] font-semibold text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200/80 whitespace-nowrap shrink-0">
+                  {{ dagNodes().length }} Sequential Steps
+                </span>
+              </div>
+
+              <div class="flex items-center gap-2.5 shrink-0">
+                <span class="text-[10px] font-mono text-zinc-400 whitespace-nowrap hidden lg:inline">
+                  Click step to inspect
+                </span>
+                <button (click)="toggleFullscreen(true)"
+                        title="Expand to Fullscreen Pipeline View"
+                        class="px-2.5 py-1 rounded border border-zinc-200 hover:border-zinc-900 hover:bg-zinc-100 bg-white text-zinc-800 text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 shadow-xs">
+                  <span>⛶</span>
+                  <span>Full Screen</span>
+                </button>
+              </div>
             </div>
 
             <!-- Sequential DAG Pipeline -->
@@ -628,16 +653,24 @@
         }
 
         <!-- ============================================================= -->
-        <!-- VIEW 2: RAW BLUEPRINT DSL (JSON)                              -->
+        <!-- VIEW 3: RAW BLUEPRINT DSL (JSON)                              -->
         <!-- ============================================================= -->
         @if (viewMode() === 'dsl') {
           <div class="bg-zinc-950 text-zinc-100 rounded-lg p-4 font-mono text-xs shadow-xs relative overflow-hidden">
             <div class="flex items-center justify-between pb-3 mb-3 border-b border-zinc-800">
               <span class="text-[11px] text-zinc-400">schema-definition.json</span>
-              <button (click)="copyDsl()"
-                      class="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-white text-[11px] transition cursor-pointer">
-                Copy JSON DSL
-              </button>
+              <div class="flex items-center gap-2">
+                <button (click)="toggleFullscreen(true)"
+                        title="Expand to Fullscreen DSL View"
+                        class="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-white text-[11px] transition cursor-pointer flex items-center gap-1 border border-zinc-700">
+                  <span>⛶</span>
+                  <span>Full Screen</span>
+                </button>
+                <button (click)="copyDsl()"
+                        class="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-white text-[11px] transition cursor-pointer border border-zinc-700">
+                  Copy JSON DSL
+                </button>
+              </div>
             </div>
             <pre class="overflow-x-auto text-[11px] leading-relaxed text-emerald-400 font-mono">{{ selectedTemplateDsl() }}</pre>
           </div>
@@ -747,17 +780,27 @@
         <!-- Fullscreen Top Bar Header -->
         <div class="px-5 py-3 border-b border-zinc-200 bg-zinc-50 flex items-center justify-between gap-4 shrink-0">
           <div class="flex items-center gap-3 min-w-0">
-            <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold bg-zinc-900 text-white shrink-0">
-              BIG CANVAS
+            <span class="px-2.5 py-1 rounded font-mono text-[10px] font-bold bg-zinc-900 text-white shrink-0 tracking-wider">
+              {{ viewMode() === 'canvas' ? 'GRAPH CANVAS' : (viewMode() === 'pipeline' ? 'PIPELINE FLOW' : 'JSON DSL') }}
             </span>
             <div class="min-w-0 flex items-center gap-2">
               <h3 class="text-sm font-bold text-zinc-950 truncate">{{ selectedTemplate()?.name }}</h3>
               <span class="px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-700 text-[10px] font-mono font-medium border border-zinc-200 shrink-0">
                 {{ selectedTemplate()?.templateKey }} (v{{ selectedTemplate()?.version }})
               </span>
-              <span class="font-mono text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 shrink-0">
-                {{ canvasLayout().nodes.length }} States &bull; {{ canvasLayout().edges.length }} Transitions
-              </span>
+              @if (viewMode() === 'canvas') {
+                <span class="font-mono text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/80 shrink-0">
+                  {{ canvasLayout().nodes.length }} States &bull; {{ canvasLayout().edges.length }} Transitions
+                </span>
+              } @else if (viewMode() === 'pipeline') {
+                <span class="font-mono text-[10px] font-semibold text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200/80 shrink-0">
+                  {{ dagNodes().length }} Sequential Stages
+                </span>
+              } @else {
+                <span class="font-mono text-[10px] font-semibold text-zinc-700 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200 shrink-0">
+                  Schema DSL Definition
+                </span>
+              }
             </div>
           </div>
 
@@ -793,187 +836,337 @@
           </div>
         </div>
 
-        <!-- Fullscreen Canvas Body Viewport -->
-        <div class="flex-1 relative overflow-hidden bg-zinc-50 select-none cursor-grab active:cursor-grabbing"
-             (mousedown)="startPan($event)"
-             (mousemove)="pan($event)"
-             (mouseup)="endPan()"
-             style="background-image: radial-gradient(#d4d4d8 1.2px, transparent 1.2px); background-size: 20px 20px; background-color: #fafafa;">
+        <!-- ============================================================= -->
+        <!-- VIEW 1: FULLSCREEN 2D GRAPH CANVAS                            -->
+        <!-- ============================================================= -->
+        @if (viewMode() === 'canvas') {
+          <div class="flex-1 relative overflow-hidden bg-zinc-50 select-none cursor-grab active:cursor-grabbing"
+               (mousedown)="startPan($event)"
+               (mousemove)="pan($event)"
+               (mouseup)="endPan()"
+               style="background-image: radial-gradient(#d4d4d8 1.2px, transparent 1.2px); background-size: 20px 20px; background-color: #fafafa;">
 
-          <!-- Floating Canvas Controls Dock (Fullscreen) -->
-          <div class="canvas-controls absolute bottom-4 right-4 z-30 flex items-center gap-1 bg-white/95 backdrop-blur-xs border border-zinc-200 rounded-lg p-1.5 shadow-lg text-xs font-mono">
-            <button (click)="zoomIn()"
-                    title="Zoom In"
-                    class="w-8 h-8 flex items-center justify-center rounded hover:bg-zinc-100 text-zinc-700 font-bold transition cursor-pointer text-sm">
-              +
-            </button>
-            <button (click)="zoomOut()"
-                    title="Zoom Out"
-                    class="w-8 h-8 flex items-center justify-center rounded hover:bg-zinc-100 text-zinc-700 font-bold transition cursor-pointer text-sm">
-              &minus;
-            </button>
-            <div class="w-px h-5 bg-zinc-200 mx-1"></div>
-            <button (click)="resetZoom()"
-                    title="Reset View"
-                    class="px-2.5 h-8 flex items-center justify-center rounded hover:bg-zinc-100 text-zinc-700 text-xs font-medium transition cursor-pointer">
-              {{ (zoomLevel() * 100).toFixed(0) }}%
-            </button>
-            <button (click)="resetZoom()"
-                    title="Fit to Center"
-                    class="px-3 h-8 flex items-center justify-center rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold transition cursor-pointer shadow-xs">
-              Fit View
-            </button>
-          </div>
-
-          <!-- Floating Canvas Legend (Fullscreen) -->
-          <div class="canvas-controls absolute top-4 left-4 z-20 flex flex-wrap items-center gap-3 bg-white/90 backdrop-blur-xs border border-zinc-200 rounded-lg px-3 py-2 shadow-xs text-xs font-mono text-zinc-600 pointer-events-none">
-            <div class="flex items-center gap-1.5">
-              <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-              <span>Entry State</span>
+            <!-- Floating Canvas Controls Dock (Fullscreen) -->
+            <div class="canvas-controls absolute bottom-4 right-4 z-30 flex items-center gap-1 bg-white/95 backdrop-blur-xs border border-zinc-200 rounded-lg p-1.5 shadow-lg text-xs font-mono">
+              <button (click)="zoomIn()"
+                      title="Zoom In"
+                      class="w-8 h-8 flex items-center justify-center rounded hover:bg-zinc-100 text-zinc-700 font-bold transition cursor-pointer text-sm">
+                +
+              </button>
+              <button (click)="zoomOut()"
+                      title="Zoom Out"
+                      class="w-8 h-8 flex items-center justify-center rounded hover:bg-zinc-100 text-zinc-700 font-bold transition cursor-pointer text-sm">
+                &minus;
+              </button>
+              <div class="w-px h-5 bg-zinc-200 mx-1"></div>
+              <button (click)="resetZoom()"
+                      title="Reset View"
+                      class="px-2.5 h-8 flex items-center justify-center rounded hover:bg-zinc-100 text-zinc-700 text-xs font-medium transition cursor-pointer">
+                {{ (zoomLevel() * 100).toFixed(0) }}%
+              </button>
+              <button (click)="resetZoom()"
+                      title="Fit to Center"
+                      class="px-3 h-8 flex items-center justify-center rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold transition cursor-pointer shadow-xs">
+                Fit View
+              </button>
             </div>
-            <div class="flex items-center gap-1.5">
-              <span class="w-2.5 h-2.5 rounded-full bg-zinc-900"></span>
-              <span>Step</span>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-              <span>Approved (Terminal)</span>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-              <span>Rejected (Terminal)</span>
-            </div>
-          </div>
 
-          <!-- Transform Container (Panning & Zooming) -->
-          <div class="absolute inset-0 origin-top-left transition-transform duration-75 will-change-transform"
-               [style.transform]="'translate(' + panOffset().x + 'px, ' + panOffset().y + 'px) scale(' + zoomLevel() + ')'"
-               [style.width.px]="canvasLayout().canvasWidth"
-               [style.height.px]="canvasLayout().canvasHeight">
-
-            <!-- SVG Bezier Curves Layer -->
-            <svg class="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-visible">
-              <defs>
-                <marker id="canvas-fs-arrow-default" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                  <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#71717a" />
-                </marker>
-                <marker id="canvas-fs-arrow-danger" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                  <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#e11d48" />
-                </marker>
-                <marker id="canvas-fs-arrow-highlight" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                  <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#18181b" />
-                </marker>
-              </defs>
-
-              @for (edge of canvasLayout().edges; track edge.id) {
-                <g>
-                  <path [attr.d]="edge.pathD"
-                        fill="none"
-                        [attr.stroke]="hoveredEdgeId() === edge.id ? (edge.isDanger ? '#fecdd3' : '#e4e4e7') : 'transparent'"
-                        stroke-width="8"
-                        stroke-linecap="round" />
-                  <path [attr.d]="edge.pathD"
-                        fill="none"
-                        [attr.stroke]="edge.isDanger ? '#e11d48' : (hoveredEdgeId() === edge.id ? '#18181b' : '#71717a')"
-                        [attr.stroke-width]="edge.isDanger || hoveredEdgeId() === edge.id ? 2 : 1.75"
-                        [attr.stroke-dasharray]="edge.isDanger ? '4 2' : 'none'"
-                        [attr.marker-end]="edge.isDanger ? 'url(#canvas-fs-arrow-danger)' : (hoveredEdgeId() === edge.id ? 'url(#canvas-fs-arrow-highlight)' : 'url(#canvas-fs-arrow-default)')" />
-                </g>
-              }
-            </svg>
-
-            <!-- Action Pill Badges -->
-            @for (edge of canvasLayout().edges; track edge.id) {
-              <div class="canvas-action-pill absolute z-10 -translate-x-1/2 -translate-y-1/2 cursor-pointer transition select-none"
-                   [style.left.px]="edge.midX"
-                   [style.top.px]="edge.midY"
-                   (mouseenter)="hoveredEdgeId.set(edge.id)"
-                   (mouseleave)="hoveredEdgeId.set(null)">
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold tracking-tight border shadow-xs transition inline-flex items-center gap-1"
-                      [ngClass]="{
-                        'bg-rose-50 text-rose-700 border-rose-300 ring-2 ring-rose-500/20': edge.isDanger,
-                        'bg-white text-zinc-800 border-zinc-300 hover:border-zinc-900': !edge.isDanger && hoveredEdgeId() !== edge.id,
-                        'bg-zinc-900 text-white border-zinc-900 shadow-md': hoveredEdgeId() === edge.id && !edge.isDanger
-                      }">
-                  <span>{{ edge.isDanger ? '✕' : '➔' }}</span>
-                  <span>{{ edge.action }}</span>
-                </span>
+            <!-- Floating Canvas Legend (Fullscreen) -->
+            <div class="canvas-controls absolute top-4 left-4 z-20 flex flex-wrap items-center gap-3 bg-white/90 backdrop-blur-xs border border-zinc-200 rounded-lg px-3 py-2 shadow-xs text-xs font-mono text-zinc-600 pointer-events-none">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                <span>Entry State</span>
               </div>
-            }
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-zinc-900"></span>
+                <span>Step</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                <span>Approved (Terminal)</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                <span>Rejected (Terminal)</span>
+              </div>
+            </div>
 
-            <!-- Node Cards -->
-            @for (node of canvasLayout().nodes; track node.stateKey) {
-              <div (click)="selectNode(node)"
-                   (mouseenter)="hoveredNodeKey.set(node.stateKey)"
-                   (mouseleave)="hoveredNodeKey.set(null)"
-                   class="canvas-node-card absolute z-10 bg-white rounded-xl border p-3.5 shadow-xs hover:shadow-md transition cursor-pointer select-none group"
-                   [style.left.px]="node.x"
-                   [style.top.px]="node.y"
-                   [style.width.px]="node.width"
-                   [style.height.px]="node.height"
-                   [ngClass]="{
-                     'border-zinc-950 ring-2 ring-zinc-950 shadow-md bg-zinc-50/60': selectedNode()?.stateKey === node.stateKey,
-                     'border-emerald-300 bg-emerald-50/20': node.isTerminal && !node.isRejectTerminal && selectedNode()?.stateKey !== node.stateKey,
-                     'border-rose-300 bg-rose-50/20': node.isTerminal && node.isRejectTerminal && selectedNode()?.stateKey !== node.stateKey,
-                     'border-amber-300 bg-amber-50/10': node.isInitial && selectedNode()?.stateKey !== node.stateKey,
-                     'border-zinc-200 hover:border-zinc-400': !node.isTerminal && !node.isInitial && selectedNode()?.stateKey !== node.stateKey
-                   }">
+            <!-- Transform Container (Panning & Zooming) -->
+            <div class="absolute inset-0 origin-top-left transition-transform duration-75 will-change-transform"
+                 [style.transform]="'translate(' + panOffset().x + 'px, ' + panOffset().y + 'px) scale(' + zoomLevel() + ')'"
+                 [style.width.px]="canvasLayout().canvasWidth"
+                 [style.height.px]="canvasLayout().canvasHeight">
 
-                <div class="flex items-center justify-between gap-1.5 mb-1.5">
-                  <div class="flex items-center gap-1.5">
-                    <span class="px-1.5 py-0.2 rounded font-mono text-[9px] font-bold"
-                          [ngClass]="{
-                            'bg-emerald-600 text-white': node.isTerminal && !node.isRejectTerminal,
-                            'bg-rose-600 text-white': node.isTerminal && node.isRejectTerminal,
-                            'bg-amber-600 text-white': node.isInitial,
-                            'bg-zinc-800 text-white': !node.isTerminal && !node.isInitial
-                          }">
-                      {{ node.isTerminal ? 'TERM' : (node.isInitial ? 'START' : 'STAGE ' + node.order) }}
+              <!-- SVG Bezier Curves Layer -->
+              <svg class="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-visible">
+                <defs>
+                  <marker id="canvas-fs-arrow-default" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#71717a" />
+                  </marker>
+                  <marker id="canvas-fs-arrow-danger" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#e11d48" />
+                  </marker>
+                  <marker id="canvas-fs-arrow-highlight" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#18181b" />
+                  </marker>
+                </defs>
+
+                @for (edge of canvasLayout().edges; track edge.id) {
+                  <g>
+                    <path [attr.d]="edge.pathD"
+                          fill="none"
+                          [attr.stroke]="hoveredEdgeId() === edge.id ? (edge.isDanger ? '#fecdd3' : '#e4e4e7') : 'transparent'"
+                          stroke-width="8"
+                          stroke-linecap="round" />
+                    <path [attr.d]="edge.pathD"
+                          fill="none"
+                          [attr.stroke]="edge.isDanger ? '#e11d48' : (hoveredEdgeId() === edge.id ? '#18181b' : '#71717a')"
+                          [attr.stroke-width]="edge.isDanger || hoveredEdgeId() === edge.id ? 2 : 1.75"
+                          [attr.stroke-dasharray]="edge.isDanger ? '4 2' : 'none'"
+                          [attr.marker-end]="edge.isDanger ? 'url(#canvas-fs-arrow-danger)' : (hoveredEdgeId() === edge.id ? 'url(#canvas-fs-arrow-highlight)' : 'url(#canvas-fs-arrow-default)')" />
+                  </g>
+                }
+              </svg>
+
+              <!-- Action Pill Badges -->
+              @for (edge of canvasLayout().edges; track edge.id) {
+                <div class="canvas-action-pill absolute z-10 -translate-x-1/2 -translate-y-1/2 cursor-pointer transition select-none"
+                     [style.left.px]="edge.midX"
+                     [style.top.px]="edge.midY"
+                     (mouseenter)="hoveredEdgeId.set(edge.id)"
+                     (mouseleave)="hoveredEdgeId.set(null)">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold tracking-tight border shadow-xs transition inline-flex items-center gap-1"
+                        [ngClass]="{
+                          'bg-rose-50 text-rose-700 border-rose-300 ring-2 ring-rose-500/20': edge.isDanger,
+                          'bg-white text-zinc-800 border-zinc-300 hover:border-zinc-900': !edge.isDanger && hoveredEdgeId() !== edge.id,
+                          'bg-zinc-900 text-white border-zinc-900 shadow-md': hoveredEdgeId() === edge.id && !edge.isDanger
+                        }">
+                    <span>{{ edge.isDanger ? '✕' : '➔' }}</span>
+                    <span>{{ edge.action }}</span>
+                  </span>
+                </div>
+              }
+
+              <!-- Node Cards -->
+              @for (node of canvasLayout().nodes; track node.stateKey) {
+                <div (click)="selectNode(node)"
+                     (mouseenter)="hoveredNodeKey.set(node.stateKey)"
+                     (mouseleave)="hoveredNodeKey.set(null)"
+                     class="canvas-node-card absolute z-10 bg-white rounded-xl border p-3.5 shadow-xs hover:shadow-md transition cursor-pointer select-none group"
+                     [style.left.px]="node.x"
+                     [style.top.px]="node.y"
+                     [style.width.px]="node.width"
+                     [style.height.px]="node.height"
+                     [ngClass]="{
+                       'border-zinc-950 ring-2 ring-zinc-950 shadow-md bg-zinc-50/60': selectedNode()?.stateKey === node.stateKey,
+                       'border-emerald-300 bg-emerald-50/20': node.isTerminal && !node.isRejectTerminal && selectedNode()?.stateKey !== node.stateKey,
+                       'border-rose-300 bg-rose-50/20': node.isTerminal && node.isRejectTerminal && selectedNode()?.stateKey !== node.stateKey,
+                       'border-amber-300 bg-amber-50/10': node.isInitial && selectedNode()?.stateKey !== node.stateKey,
+                       'border-zinc-200 hover:border-zinc-400': !node.isTerminal && !node.isInitial && selectedNode()?.stateKey !== node.stateKey
+                     }">
+
+                  <div class="flex items-center justify-between gap-1.5 mb-1.5">
+                    <div class="flex items-center gap-1.5">
+                      <span class="px-1.5 py-0.2 rounded font-mono text-[9px] font-bold"
+                            [ngClass]="{
+                              'bg-emerald-600 text-white': node.isTerminal && !node.isRejectTerminal,
+                              'bg-rose-600 text-white': node.isTerminal && node.isRejectTerminal,
+                              'bg-amber-600 text-white': node.isInitial,
+                              'bg-zinc-800 text-white': !node.isTerminal && !node.isInitial
+                            }">
+                        {{ node.isTerminal ? 'TERM' : (node.isInitial ? 'START' : 'STAGE ' + node.order) }}
+                      </span>
+                      <span class="font-mono text-[10px] text-zinc-400 truncate max-w-[95px]">{{ node.stateKey }}</span>
+                    </div>
+
+                    <span class="text-[9px] font-mono text-zinc-400 group-hover:text-zinc-900 transition">
+                      Inspect &rarr;
                     </span>
-                    <span class="font-mono text-[10px] text-zinc-400 truncate max-w-[95px]">{{ node.stateKey }}</span>
                   </div>
 
-                  <span class="text-[9px] font-mono text-zinc-400 group-hover:text-zinc-900 transition">
-                    Inspect &rarr;
-                  </span>
+                  <h4 class="text-xs font-bold text-zinc-950 truncate tracking-tight mb-2">
+                    {{ node.name }}
+                  </h4>
+
+                  <div class="flex flex-wrap items-center gap-1.5 text-[10px]">
+                    <span class="px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-700 font-medium border border-zinc-200/80">
+                      {{ node.type === 'DOCUMENT_SUBMISSION' ? 'Doc Upload' : (node.type === 'APPROVAL' ? 'Approval' : node.type) }}
+                    </span>
+
+                    @if (node.requiredRole) {
+                      <span class="px-1.5 py-0.2 rounded font-mono text-[9px] bg-purple-50 text-purple-700 border border-purple-200 truncate max-w-[105px]"
+                            [title]="node.requiredRole">
+                        {{ node.roleDisplay }}
+                      </span>
+                    } @else {
+                      <span class="px-1.5 py-0.2 rounded font-mono text-[9px] bg-zinc-100 text-zinc-600 border border-zinc-200">
+                        {{ node.actorScope }}
+                      </span>
+                    }
+
+                    @if (node.slaHours) {
+                      <span class="px-1.5 py-0.2 rounded font-mono text-[9px] bg-blue-50 text-blue-700 border border-blue-200">
+                        ⏱ {{ node.slaHours }}h
+                      </span>
+                    }
+                  </div>
+
+                  <div class="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white border border-zinc-400"></div>
+                  <div class="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white border border-zinc-400"></div>
+
                 </div>
+              }
 
-                <h4 class="text-xs font-bold text-zinc-950 truncate tracking-tight mb-2">
-                  {{ node.name }}
-                </h4>
-
-                <div class="flex flex-wrap items-center gap-1.5 text-[10px]">
-                  <span class="px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-700 font-medium border border-zinc-200/80">
-                    {{ node.type === 'DOCUMENT_SUBMISSION' ? 'Doc Upload' : (node.type === 'APPROVAL' ? 'Approval' : node.type) }}
-                  </span>
-
-                  @if (node.requiredRole) {
-                    <span class="px-1.5 py-0.2 rounded font-mono text-[9px] bg-purple-50 text-purple-700 border border-purple-200 truncate max-w-[105px]"
-                          [title]="node.requiredRole">
-                      {{ node.roleDisplay }}
-                    </span>
-                  } @else {
-                    <span class="px-1.5 py-0.2 rounded font-mono text-[9px] bg-zinc-100 text-zinc-600 border border-zinc-200">
-                      {{ node.actorScope }}
-                    </span>
-                  }
-
-                  @if (node.slaHours) {
-                    <span class="px-1.5 py-0.2 rounded font-mono text-[9px] bg-blue-50 text-blue-700 border border-blue-200">
-                      ⏱ {{ node.slaHours }}h
-                    </span>
-                  }
-                </div>
-
-                <div class="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white border border-zinc-400"></div>
-                <div class="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white border border-zinc-400"></div>
-
-              </div>
-            }
+            </div>
 
           </div>
+        }
 
-        </div>
+        <!-- ============================================================= -->
+        <!-- VIEW 2: FULLSCREEN SEQUENTIAL PIPELINE                        -->
+        <!-- ============================================================= -->
+        @else if (viewMode() === 'pipeline') {
+          <div class="flex-1 overflow-y-auto bg-zinc-50/70 p-6 sm:p-8 select-text">
+            <div class="max-w-4xl mx-auto space-y-4">
+              
+              <div class="flex items-center justify-between pb-3 border-b border-zinc-200">
+                <div>
+                  <h4 class="text-xs font-bold text-zinc-900 uppercase tracking-wider">Sequential Execution Pipeline</h4>
+                  <p class="text-xs text-zinc-500 mt-0.5">Linear state lifecycle ordered by topological execution order</p>
+                </div>
+                <span class="text-[11px] font-mono text-zinc-400">Click any card for deep inspection</span>
+              </div>
+
+              <!-- Pipeline Cards -->
+              <div class="space-y-3 pb-8">
+                @for (node of dagNodes(); track node.stateKey; let idx = $index; let isLast = $last) {
+                  
+                  <div (click)="selectNode(node)"
+                       class="bg-white border rounded-xl p-5 shadow-xs transition cursor-pointer hover:border-zinc-400 hover:shadow-md relative group"
+                       [ngClass]="{
+                         'border-zinc-950 ring-2 ring-zinc-950 bg-zinc-50/20': selectedNode()?.stateKey === node.stateKey,
+                         'border-zinc-200': selectedNode()?.stateKey !== node.stateKey
+                       }">
+                    
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="flex items-center gap-2.5">
+                        <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold"
+                              [ngClass]="node.isTerminal ? 'bg-zinc-800 text-white' : (node.isInitial ? 'bg-amber-600 text-white' : 'bg-zinc-200 text-zinc-800')">
+                          {{ node.isTerminal ? 'TERM' : (node.isInitial ? 'START' : 'STEP ' + node.order) }}
+                        </span>
+                        <h4 class="text-sm font-bold text-zinc-950">{{ node.name }}</h4>
+                        @if (node.isInitial) {
+                          <span class="px-1.5 py-0.2 rounded bg-amber-50 text-amber-800 text-[10px] font-mono font-semibold border border-amber-200">
+                            ENTRY STATE
+                          </span>
+                        }
+                      </div>
+
+                      <div class="flex items-center gap-2 shrink-0">
+                        <span class="font-mono text-xs text-zinc-400 font-medium">{{ node.stateKey }}</span>
+                        <span class="text-xs font-mono px-2 py-0.5 rounded bg-zinc-100 group-hover:bg-zinc-900 group-hover:text-white text-zinc-600 border border-zinc-200 transition">
+                          Inspect &rarr;
+                        </span>
+                      </div>
+                    </div>
+
+                    <div class="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                      <span class="px-2.5 py-0.5 rounded bg-zinc-100 text-zinc-700 font-medium border border-zinc-200">
+                        {{ node.type }}
+                      </span>
+                      <span class="px-2.5 py-0.5 rounded font-mono text-xs"
+                            [ngClass]="node.requiredRole ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-zinc-100 text-zinc-600 border border-zinc-200'">
+                        {{ node.requiredRole ? 'Authority: ' + node.requiredRole : 'Scope: ' + node.actorScope }}
+                      </span>
+                      @if (node.slaHours) {
+                        <span class="px-2.5 py-0.5 rounded bg-blue-50 text-blue-700 font-mono text-xs border border-blue-200">
+                          ⏱ {{ node.slaHours }}h SLA
+                        </span>
+                      }
+                      @if (node.isTerminal) {
+                        <span class="px-2.5 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono text-xs border border-emerald-200">
+                          ✓ Terminal State
+                        </span>
+                      }
+                    </div>
+
+                    @if (node.requiredPayloadKeys && node.requiredPayloadKeys.length > 0) {
+                      <div class="mt-3 pt-2.5 border-t border-zinc-100 flex items-center gap-2 text-xs">
+                        <span class="text-zinc-400 text-xs font-mono">Payload Requirements:</span>
+                        <div class="flex flex-wrap gap-1">
+                          @for (key of node.requiredPayloadKeys; track key) {
+                            <span class="px-2 py-0.5 rounded bg-zinc-100 font-mono text-zinc-700 text-xs border border-zinc-200">
+                              {{ key }}
+                            </span>
+                          }
+                        </div>
+                      </div>
+                    }
+
+                    @if (node.outgoingTransitions.length > 0) {
+                      <div class="mt-3 pt-2.5 border-t border-zinc-100 space-y-1.5">
+                        <span class="text-[10px] font-medium text-zinc-400 uppercase tracking-wider block">
+                          Permitted Outgoing Transitions
+                        </span>
+                        <div class="flex flex-wrap gap-2">
+                          @for (trans of node.outgoingTransitions; track trans.action) {
+                            <div class="flex items-center gap-1.5 bg-zinc-50 border border-zinc-200 rounded-md px-2.5 py-1 text-xs font-mono">
+                              <span class="text-zinc-900 font-semibold">[{{ trans.action }}]</span>
+                              <span class="text-zinc-400 font-bold">➔</span>
+                              <span class="px-2 py-0.5 rounded bg-zinc-900 text-white text-xs font-medium">
+                                {{ trans.targetState }}
+                              </span>
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+
+                  @if (!isLast) {
+                    <div class="flex items-center justify-center py-1">
+                      <div class="flex flex-col items-center">
+                        <div class="w-0.5 h-4 bg-zinc-300"></div>
+                        <span class="text-zinc-400 text-xs leading-none">▼</span>
+                      </div>
+                    </div>
+                  }
+                }
+              </div>
+
+            </div>
+          </div>
+        }
+
+        <!-- ============================================================= -->
+        <!-- VIEW 3: FULLSCREEN RAW BLUEPRINT DSL (JSON)                   -->
+        <!-- ============================================================= -->
+        @else if (viewMode() === 'dsl') {
+          <div class="flex-1 flex flex-col bg-zinc-950 p-6 sm:p-8 select-text overflow-hidden">
+            <div class="flex items-center justify-between pb-3 mb-3 border-b border-zinc-800 shrink-0">
+              <div class="flex items-center gap-3">
+                <span class="text-xs font-mono text-zinc-300 flex items-center gap-1.5">
+                  <span class="text-zinc-500">&#123; &#125;</span>
+                  <span>{{ selectedTemplate()?.templateKey }}.json</span>
+                </span>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/60">
+                  Declarative State Machine Specification
+                </span>
+                <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-blue-950 text-blue-300 border border-blue-800/80">
+                  v{{ selectedTemplate()?.version }}
+                </span>
+              </div>
+              <button (click)="copyDsl()"
+                      class="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-mono transition cursor-pointer flex items-center gap-1.5 border border-zinc-700 shadow-xs">
+                <span>📋</span>
+                <span>Copy JSON DSL</span>
+              </button>
+            </div>
+            <div class="flex-1 overflow-auto rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 font-mono text-xs leading-relaxed text-emerald-400">
+              <pre class="select-text whitespace-pre">{{ selectedTemplateDsl() }}</pre>
+            </div>
+          </div>
+        }
 
       </div>
 

@@ -100,6 +100,14 @@ export class InboxComponent implements OnInit, OnDestroy {
     const tpl = this.templateMap().get(task.templateId);
     const stepsMap = tpl?.steps;
 
+    const isInstanceTerminal = task.currentState === 'ONBOARDED' ||
+                               task.currentState === 'APPROVED' ||
+                               task.currentState === 'REJECTED' ||
+                               task.currentState === 'COMPLETED' ||
+                               task.currentState === 'CANCELLED' ||
+                               task.currentState === 'CLOSED' ||
+                               !!stepsMap?.[task.currentState]?.isTerminal;
+
     if (stepsMap && Object.keys(stepsMap).length > 0) {
       const stepList = Object.entries(stepsMap)
         .map(([key, def]) => ({
@@ -116,20 +124,41 @@ export class InboxComponent implements OnInit, OnDestroy {
       const currentStepOrder = stepsMap[task.currentState]?.stepOrder ?? 1;
 
       return stepList.map(step => {
-        let status: 'COMPLETED' | 'CURRENT' | 'UPCOMING' = 'UPCOMING';
+        let status: 'COMPLETED' | 'CURRENT' | 'UPCOMING' | 'SKIPPED' | 'TERMINAL_REJECTED' | 'TERMINAL_APPROVED' = 'UPCOMING';
         let completedBy: string | null = null;
         let actedAt: string | null = null;
+        let actionStatus: string | null = null;
 
-        if (step.stepKey === task.currentState) {
-          status = 'CURRENT';
-        } else if (step.stepOrder < currentStepOrder) {
+        // Check if this step was legitimately executed in task audit history
+        const match = task.taskHistory?.find(h =>
+          (h.stepName && step.stepName && h.stepName.trim().toLowerCase() === step.stepName.trim().toLowerCase()) ||
+          (!step.isTerminal && h.stepOrder && h.stepOrder === step.stepOrder)
+        );
+
+        if (match) {
+          // Legitimately completed step by an actor
           status = 'COMPLETED';
-          const match = task.taskHistory?.find(h => h.stepOrder === step.stepOrder || h.stepName === step.stepName);
-          if (match) {
-            completedBy = match.completedBy;
-            actedAt = match.actedAt;
+          completedBy = match.completedBy;
+          actedAt = match.actedAt;
+          actionStatus = match.status;
+        } else if (step.stepKey === task.currentState) {
+          // This node is the current state of the workflow
+          if (isInstanceTerminal) {
+            status = (task.currentState === 'REJECTED' || task.currentState === 'CANCELLED')
+              ? 'TERMINAL_REJECTED'
+              : 'TERMINAL_APPROVED';
+            actedAt = task.updatedAt;
+          } else {
+            status = 'CURRENT';
           }
+        } else if (isInstanceTerminal) {
+          // Workflow concluded and this step was never executed -> Bypassed / Skipped
+          status = 'SKIPPED';
+        } else if (step.stepOrder < currentStepOrder) {
+          // Active step is ahead, but this step was never executed -> Bypassed
+          status = 'SKIPPED';
         } else {
+          // Future step along the blueprint
           status = 'UPCOMING';
         }
 
@@ -142,7 +171,9 @@ export class InboxComponent implements OnInit, OnDestroy {
           isTerminal: step.isTerminal,
           status,
           completedBy,
-          actedAt
+          actedAt,
+          actionStatus,
+          slaHours: step.slaHours
         };
       });
     }
@@ -157,7 +188,8 @@ export class InboxComponent implements OnInit, OnDestroy {
       isTerminal: false,
       status: 'COMPLETED' as const,
       completedBy: h.completedBy,
-      actedAt: h.actedAt
+      actedAt: h.actedAt,
+      actionStatus: h.status
     }));
 
     const isCurrentTerminal = task.currentState === 'ONBOARDED' ||
@@ -172,7 +204,10 @@ export class InboxComponent implements OnInit, OnDestroy {
       actorScope: task.actorScope,
       requiredRole: task.requiredRole,
       isTerminal: isCurrentTerminal,
-      status: 'CURRENT' as const
+      status: (isCurrentTerminal
+        ? (task.currentState === 'REJECTED' || task.currentState === 'CANCELLED' ? 'TERMINAL_REJECTED' : 'TERMINAL_APPROVED')
+        : 'CURRENT') as any,
+      actedAt: isCurrentTerminal ? task.updatedAt : null
     };
 
     return [...historyNodes, currentNode];
@@ -181,7 +216,10 @@ export class InboxComponent implements OnInit, OnDestroy {
   readonly currentStepIndex = computed<number>(() => {
     const nodes = this.stepperNodes();
     const idx = nodes.findIndex(n => n.status === 'CURRENT');
-    return idx >= 0 ? idx : 0;
+    if (idx >= 0) return idx;
+    const termIdx = nodes.findIndex(n => n.status === 'TERMINAL_APPROVED' || n.status === 'TERMINAL_REJECTED');
+    if (termIdx >= 0) return termIdx;
+    return nodes.length - 1;
   });
 
   // Filtered Tasks computed signal
@@ -264,7 +302,14 @@ export class InboxComponent implements OnInit, OnDestroy {
     const task = this.selectedTask();
     if (!task) return false;
     const s = task.currentState?.toUpperCase();
-    return ['ONBOARDED', 'REJECTED', 'COMPLETED', 'CANCELLED', 'CLOSED'].includes(s);
+    return ['ONBOARDED', 'APPROVED', 'REJECTED', 'COMPLETED', 'CANCELLED', 'CLOSED'].includes(s);
+  });
+
+  readonly isTerminalRejected = computed<boolean>(() => {
+    const task = this.selectedTask();
+    if (!task) return false;
+    const s = task.currentState?.toUpperCase();
+    return ['REJECTED', 'CANCELLED'].includes(s);
   });
 
   readonly canActionCurrentStep = computed<boolean>(() => {

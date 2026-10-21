@@ -107,9 +107,10 @@ export interface WorkflowStepperNode {
   stepName: string;
   actorScope: string;
   requiredRole: string | null;
-  status: 'COMPLETED' | 'CURRENT' | 'UPCOMING';
+  status: 'COMPLETED' | 'CURRENT' | 'UPCOMING' | 'SKIPPED' | 'TERMINAL_REJECTED' | 'TERMINAL_APPROVED';
   completedBy?: string | null;
   actedAt?: string | null;
+  actionStatus?: string | null;
   isTerminal: boolean;
   slaHours?: number | null;
 }

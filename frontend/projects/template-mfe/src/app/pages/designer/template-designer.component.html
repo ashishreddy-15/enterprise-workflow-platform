@@ -6,10 +6,10 @@
   <div class="bg-white border border-zinc-200 rounded-lg p-4 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-4">
     <div>
       <div class="flex items-center gap-2">
-        <h1 class="text-base font-semibold text-zinc-950 tracking-tight">Workflow Blueprints</h1>
+        <h1 class="text-base font-semibold text-zinc-950 tracking-tight">Workflows</h1>
         <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
-          {{ publishedCount() }} Published
+          {{ publishedCount() }} Live
         </span>
         @if (draftCount() > 0) {
           <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-amber-50 text-amber-700 border border-amber-200">
@@ -19,7 +19,7 @@
         }
       </div>
       <p class="text-xs text-zinc-500 mt-0.5">
-        Declarative workflow schemas & directed acyclic graph (DAG) state machine specifications
+        Design, preview, and manage your workflow processes.
       </p>
     </div>
 
@@ -30,7 +30,7 @@
         <input type="text"
                [value]="searchQuery()"
                (input)="searchQuery.set($any($event.target).value)"
-               placeholder="Filter blueprints..."
+               placeholder="Search workflows..."
                class="w-full bg-zinc-50 border border-zinc-200 rounded px-2.5 py-1.5 text-xs text-zinc-900 placeholder:text-zinc-400 outline-none focus:bg-white focus:border-zinc-950 transition">
         @if (searchQuery()) {
           <button (click)="searchQuery.set('')"
@@ -40,11 +40,11 @@
         }
       </div>
 
-      <!-- Draft Blueprint Button -->
+      <!-- New Workflow Button -->
       <button (click)="openCreateModal()"
               class="px-2.5 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium tracking-tight transition flex items-center gap-1.5 cursor-pointer shadow-xs">
         <span>+</span>
-        <span>Draft Blueprint</span>
+        <span>New Workflow</span>
       </button>
 
       <!-- Refresh Button -->
@@ -78,17 +78,17 @@
   }
 
   <!-- =================================================================== -->
-  <!-- MAIN 2-COLUMN WORKSPACE: CATALOG LIST & VISUAL DAG INSPECTOR       -->
+  <!-- MAIN 2-COLUMN WORKSPACE: TEMPLATES LIST & WORKFLOW INSPECTOR        -->
   <!-- =================================================================== -->
   <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
 
-    <!-- LEFT COLUMN: Blueprint Selection Cards (Span 4) -->
+    <!-- LEFT COLUMN: Workflow Selection Cards (Span 4) -->
     <div class="md:col-span-4 lg:col-span-4 space-y-3">
       
-      <!-- Catalog Header & Status Filter Tabs -->
+      <!-- Templates Header & Status Filter Tabs -->
       <div class="flex items-center justify-between px-1">
         <span class="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-          Catalog ({{ filteredTemplates().length }})
+          Templates ({{ filteredTemplates().length }})
         </span>
 
         <!-- Status Filter Segmented Control -->
@@ -111,15 +111,16 @@
         </div>
       </div>
 
-      <!-- Catalog Card List -->
+      <!-- Templates Card List -->
       <div class="space-y-2">
         @if (filteredTemplates().length === 0) {
           <div class="bg-white border border-zinc-200 rounded-lg p-6 text-center text-xs text-zinc-400">
-            No templates match the selected filter.
+            No workflows match the selected filter.
           </div>
         } @else {
           @for (tpl of filteredTemplates(); track tpl.templateKey) {
             <div (click)="selectTemplate(tpl)"
+                 [title]="'ID: ' + tpl.templateKey"
                  class="bg-white border rounded-lg p-3.5 transition cursor-pointer shadow-xs hover:border-zinc-400"
                  [ngClass]="selectedTemplate()?.templateKey === tpl.templateKey 
                    ? 'border-zinc-900 ring-1 ring-zinc-900 bg-zinc-50/40' 
@@ -134,12 +135,8 @@
                 </span>
               </div>
 
-              <p class="font-mono text-[11px] text-zinc-500 mt-1 truncate">
-                {{ tpl.templateKey }}
-              </p>
-
               @if (tpl.description) {
-                <p class="text-[11px] text-zinc-400 mt-1.5 line-clamp-2">
+                <p class="text-[11px] text-zinc-400 mt-1 line-clamp-2">
                   {{ tpl.description }}
                 </p>
               }
@@ -149,16 +146,16 @@
                 @if (tpl.status === 'PUBLISHED') {
                   <span class="inline-flex items-center gap-1 text-emerald-700">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                    PUBLISHED
+                    Live
                   </span>
                 } @else {
                   <div class="flex items-center gap-1.5">
                     <span class="inline-flex items-center gap-1 text-amber-700 font-semibold px-1.5 py-0.2 rounded bg-amber-50 border border-amber-200">
                       <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                      DRAFT
+                      Draft
                     </span>
                     <button (click)="$event.stopPropagation(); openEditDraft(tpl)"
-                            title="Edit this draft in Blueprint Studio"
+                            title="Edit draft"
                             class="px-1.5 py-0.5 rounded text-[10px] font-mono text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 font-semibold transition cursor-pointer flex items-center gap-1 shadow-2xs">
                       <span>✏️</span>
                       <span>Edit</span>
@@ -167,7 +164,7 @@
                 }
 
                 <span class="text-zinc-500">
-                  {{ tpl.steps ? (tpl.steps | keyvalue).length : 0 }} Steps
+                  {{ tpl.steps ? (tpl.steps | keyvalue).length : 0 }} steps
                 </span>
               </div>
             </div>
@@ -189,8 +186,8 @@
               <div class="flex items-center gap-2 text-xs text-amber-900">
                 <span class="font-bold font-mono text-sm">ⓘ</span>
                 <div>
-                  <strong class="font-medium">Draft Blueprint</strong>
-                  <p class="text-[11px] text-amber-800">This schema is in draft mode and not yet active for initiating workflow instances.</p>
+                  <strong class="font-medium">Draft Workflow</strong>
+                  <p class="text-[11px] text-amber-800">This workflow is still in draft mode. Publish it when you are ready to use it.</p>
                 </div>
               </div>
 
@@ -211,7 +208,7 @@
                     <span>Publishing...</span>
                   } @else {
                     <span>🚀</span>
-                    <span>Publish Blueprint</span>
+                    <span>Publish</span>
                   }
                 </button>
               </div>
@@ -221,16 +218,15 @@
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div class="min-w-0">
               <div class="flex flex-wrap items-center gap-2">
-                <h2 class="text-sm font-bold text-zinc-950">{{ selectedTemplate()?.name }}</h2>
-                <span class="px-2 py-0.5 rounded bg-zinc-100 text-zinc-800 text-[10px] font-mono font-medium border border-zinc-200 shrink-0">
-                  {{ selectedTemplate()?.templateKey }}
-                </span>
+                <h2 class="text-sm font-bold text-zinc-950" [title]="'ID: ' + selectedTemplate()?.templateKey">
+                  {{ selectedTemplate()?.name }}
+                </h2>
                 <span class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-mono font-medium border border-blue-200 shrink-0">
                   v{{ selectedTemplate()?.version }}
                 </span>
               </div>
               <p class="text-xs text-zinc-500 mt-1 line-clamp-2">
-                {{ selectedTemplate()?.description || 'Declarative state machine blueprint schema' }}
+                {{ selectedTemplate()?.description || 'Workflow process template' }}
               </p>
             </div>
 
@@ -238,10 +234,10 @@
             <div class="flex items-center gap-2 shrink-0">
               @if (selectedTemplate()?.status === 'PUBLISHED') {
                 <button (click)="openNewVersionDraft()"
-                        title="Create a new draft version from this blueprint"
-                        class="px-2.5 py-1 rounded bg-white hover:bg-zinc-100 text-zinc-800 text-xs font-mono font-medium border border-zinc-300 transition cursor-pointer flex items-center gap-1.5 shadow-2xs whitespace-nowrap">
+                        title="Create a new draft version from this workflow"
+                        class="px-2.5 py-1 rounded bg-white hover:bg-zinc-100 text-zinc-800 text-xs font-medium border border-zinc-300 transition cursor-pointer flex items-center gap-1.5 shadow-2xs whitespace-nowrap">
                   <span>🌱</span>
-                  <span>New Version Draft</span>
+                  <span>+ New Version</span>
                 </button>
               }
 
@@ -251,47 +247,21 @@
                         class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1.5"
                         [ngClass]="viewMode() === 'canvas' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
                   <span>◈</span>
-                  <span>Visual Graph</span>
+                  <span>Flow</span>
                 </button>
                 <button (click)="setViewMode('pipeline')"
                         class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1.5"
                         [ngClass]="viewMode() === 'pipeline' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
                   <span>≡</span>
-                  <span>Pipeline List</span>
+                  <span>Steps</span>
                 </button>
                 <button (click)="setViewMode('dsl')"
                         class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1.5"
                         [ngClass]="viewMode() === 'dsl' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
                   <span>&#123; &#125;</span>
-                  <span>DSL Schema</span>
+                  <span>JSON</span>
                 </button>
               </div>
-            </div>
-          </div>
-
-          <!-- Summary Badges -->
-          <div class="mt-3 pt-3 border-t border-zinc-100 flex flex-wrap items-center gap-4 text-xs font-mono">
-            <div>
-              <span class="text-zinc-400 text-[10px] uppercase block">Publication Status</span>
-              @if (selectedTemplate()?.status === 'PUBLISHED') {
-                <span class="font-medium text-emerald-700 flex items-center gap-1">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                  Active in Production
-                </span>
-              } @else {
-                <span class="font-medium text-amber-700 flex items-center gap-1">
-                  <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                  Draft (Unpublished)
-                </span>
-              }
-            </div>
-            <div>
-              <span class="text-zinc-400 text-[10px] uppercase block">Initial Entry State</span>
-              <span class="font-medium text-zinc-900">{{ selectedTemplate()?.initialState }}</span>
-            </div>
-            <div>
-              <span class="text-zinc-400 text-[10px] uppercase block">Total Lifecycle Nodes</span>
-              <span class="font-medium text-zinc-900">{{ dagNodes().length }} States</span>
             </div>
           </div>
         </div>
@@ -304,15 +274,15 @@
             
             <div class="px-1 py-1 flex items-center justify-between gap-3 text-xs border-b border-zinc-100 pb-2">
               <div class="flex items-center gap-2 min-w-0">
-                <span class="font-bold text-zinc-800 uppercase tracking-wider text-[11px] whitespace-nowrap">Graph Topology</span>
+                <span class="font-bold text-zinc-800 text-xs whitespace-nowrap">Workflow Flow</span>
                 <span class="font-mono text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/80 whitespace-nowrap shrink-0">
-                  {{ canvasLayout().nodes.length }} States &bull; {{ canvasLayout().edges.length }} Transitions
+                  {{ canvasLayout().nodes.length }} steps &bull; {{ canvasLayout().edges.length }} connections
                 </span>
               </div>
 
               <div class="flex items-center gap-2.5 shrink-0">
                 <span class="text-[10px] font-mono text-zinc-400 whitespace-nowrap hidden lg:inline">
-                  Click node to inspect &bull; Drag to pan
+                  Click a step for details &bull; Drag canvas to move
                 </span>
                 <button (click)="toggleFullscreen(true)"
                         title="Expand to Fullscreen Big Canvas"
@@ -366,7 +336,7 @@
               <div class="canvas-controls absolute top-3 left-3 z-20 flex flex-wrap items-center gap-2.5 bg-white/90 backdrop-blur-xs border border-zinc-200/80 rounded-lg px-2.5 py-1.5 shadow-xs text-[10px] font-mono text-zinc-600 pointer-events-none">
                 <div class="flex items-center gap-1">
                   <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                  <span>Entry</span>
+                  <span>Start</span>
                 </div>
                 <div class="flex items-center gap-1">
                   <span class="w-2 h-2 rounded-full bg-zinc-900"></span>
@@ -374,11 +344,11 @@
                 </div>
                 <div class="flex items-center gap-1">
                   <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                  <span>Approved (Term)</span>
+                  <span>Completed</span>
                 </div>
                 <div class="flex items-center gap-1">
                   <span class="w-2 h-2 rounded-full bg-rose-500"></span>
-                  <span>Rejected (Term)</span>
+                  <span>Rejected</span>
                 </div>
               </div>
 
@@ -473,13 +443,13 @@
                                 'bg-amber-600 text-white': node.isInitial,
                                 'bg-zinc-800 text-white': !node.isTerminal && !node.isInitial
                               }">
-                          {{ node.isTerminal ? 'TERM' : (node.isInitial ? 'START' : 'STAGE ' + node.order) }}
+                          {{ node.isTerminal ? 'END' : (node.isInitial ? 'START' : 'STEP ' + node.order) }}
                         </span>
                         <span class="font-mono text-[10px] text-zinc-400 truncate max-w-[95px]">{{ node.stateKey }}</span>
                       </div>
 
                       <span class="text-[9px] font-mono text-zinc-400 group-hover:text-zinc-900 transition">
-                        Inspect &rarr;
+                        Details &rarr;
                       </span>
                     </div>
 
@@ -491,7 +461,7 @@
                     <!-- Card Metadata Badges -->
                     <div class="flex flex-wrap items-center gap-1.5 text-[10px]">
                       <span class="px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-700 font-medium border border-zinc-200/80">
-                        {{ node.type === 'DOCUMENT_SUBMISSION' ? 'Doc Upload' : (node.type === 'APPROVAL' ? 'Approval' : node.type) }}
+                        {{ node.type === 'DOCUMENT_SUBMISSION' ? 'Form Upload' : (node.type === 'APPROVAL' ? 'Approval' : (node.type === 'MANUAL_TASK' ? 'Task' : (node.type === 'AUTOMATED_TASK' ? 'Auto Step' : (node.type === 'TERMINAL' ? 'End' : node.type)))) }}
                       </span>
 
                       @if (node.requiredRole) {
@@ -534,18 +504,18 @@
             
             <div class="px-1 py-1 flex items-center justify-between gap-3 text-xs border-b border-zinc-100 pb-2">
               <div class="flex items-center gap-2 min-w-0">
-                <span class="font-bold text-zinc-800 uppercase tracking-wider text-[11px] whitespace-nowrap">Execution Pipeline</span>
+                <span class="font-bold text-zinc-800 text-xs whitespace-nowrap">Workflow Steps</span>
                 <span class="font-mono text-[10px] font-semibold text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200/80 whitespace-nowrap shrink-0">
-                  {{ dagNodes().length }} Sequential Steps
+                  {{ dagNodes().length }} Steps
                 </span>
               </div>
 
               <div class="flex items-center gap-2.5 shrink-0">
                 <span class="text-[10px] font-mono text-zinc-400 whitespace-nowrap hidden lg:inline">
-                  Click step to inspect
+                  Click step for details
                 </span>
                 <button (click)="toggleFullscreen(true)"
-                        title="Expand to Fullscreen Pipeline View"
+                        title="Expand to Fullscreen Steps View"
                         class="px-2.5 py-1 rounded border border-zinc-200 hover:border-zinc-900 hover:bg-zinc-100 bg-white text-zinc-800 text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 shadow-xs">
                   <span>⛶</span>
                   <span>Full Screen</span>
@@ -553,7 +523,7 @@
               </div>
             </div>
 
-            <!-- Sequential DAG Pipeline -->
+            <!-- Sequential Pipeline -->
             <div class="space-y-3">
               @for (node of dagNodes(); track node.stateKey; let idx = $index; let isLast = $last) {
                 
@@ -570,7 +540,7 @@
                       <!-- Step Order Pill -->
                       <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold"
                             [ngClass]="node.isTerminal ? 'bg-zinc-800 text-white' : 'bg-zinc-200 text-zinc-800'">
-                        {{ node.isTerminal ? 'TERM' : 'STEP ' + node.order }}
+                        {{ node.isTerminal ? 'END' : 'STEP ' + node.order }}
                       </span>
 
                       <!-- State Name -->
@@ -590,7 +560,7 @@
                         {{ node.stateKey }}
                       </span>
                       <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600 border border-zinc-200">
-                        Inspect &rarr;
+                        Details &rarr;
                       </span>
                     </div>
                   </div>
@@ -599,26 +569,26 @@
                   <div class="mt-2.5 flex flex-wrap items-center gap-2 text-[11px]">
                     <!-- Step Type -->
                     <span class="px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 font-medium border border-zinc-200">
-                      {{ node.type }}
+                      {{ node.type === 'DOCUMENT_SUBMISSION' ? 'Form Upload' : (node.type === 'APPROVAL' ? 'Approval' : (node.type === 'MANUAL_TASK' ? 'Task' : (node.type === 'AUTOMATED_TASK' ? 'Auto Step' : (node.type === 'TERMINAL' ? 'End' : node.type)))) }}
                     </span>
 
                     <!-- Actor Scope / Authority -->
                     <span class="px-2 py-0.5 rounded font-mono text-[10px]"
                           [ngClass]="node.requiredRole ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-zinc-100 text-zinc-600 border border-zinc-200'">
-                      {{ node.requiredRole ? 'Authority: ' + node.requiredRole : 'Scope: ' + node.actorScope }}
+                      {{ node.requiredRole ? 'Role: ' + node.requiredRole.replace('ROLE_', '') : 'Assigned: ' + node.actorScope }}
                     </span>
 
                     <!-- SLA -->
                     @if (node.slaHours) {
                       <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-mono text-[10px] border border-blue-200">
-                        ⏱ {{ node.slaHours }}h SLA
+                        ⏱ {{ node.slaHours }}h limit
                       </span>
                     }
 
                     <!-- Terminal -->
                     @if (node.isTerminal) {
                       <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono text-[10px] border border-emerald-200">
-                        ✓ Terminal State
+                        ✓ End Step
                       </span>
                     }
                   </div>
@@ -626,7 +596,7 @@
                   <!-- Required Payload Attributes (if any) -->
                   @if (node.requiredPayloadKeys && node.requiredPayloadKeys.length > 0) {
                     <div class="mt-2.5 pt-2 border-t border-zinc-100 flex items-center gap-1.5 text-[11px]">
-                      <span class="text-zinc-400 text-[10px] font-mono">Payload Schema:</span>
+                      <span class="text-zinc-400 text-[10px] font-mono">Required Fields:</span>
                       <div class="flex flex-wrap gap-1">
                         @for (key of node.requiredPayloadKeys; track key) {
                           <span class="px-1.5 py-0.2 rounded bg-zinc-100 font-mono text-zinc-700 text-[10px] border border-zinc-200">
@@ -641,7 +611,7 @@
                   @if (node.outgoingTransitions.length > 0) {
                     <div class="mt-3 pt-2.5 border-t border-zinc-100 space-y-1.5">
                       <span class="text-[10px] font-medium text-zinc-400 uppercase tracking-wider block">
-                        Permitted Outgoing Transitions
+                        Next Steps
                       </span>
                       <div class="flex flex-wrap gap-2">
                         @for (trans of node.outgoingTransitions; track trans.action) {
@@ -678,17 +648,17 @@
         @if (viewMode() === 'dsl') {
           <div class="bg-zinc-950 text-zinc-100 rounded-lg p-4 font-mono text-xs shadow-xs relative overflow-hidden">
             <div class="flex items-center justify-between pb-3 mb-3 border-b border-zinc-800">
-              <span class="text-[11px] text-zinc-400">schema-definition.json</span>
+              <span class="text-[11px] text-zinc-400">workflow-definition.json</span>
               <div class="flex items-center gap-2">
                 <button (click)="toggleFullscreen(true)"
-                        title="Expand to Fullscreen DSL View"
+                        title="Expand to Fullscreen JSON View"
                         class="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-white text-[11px] transition cursor-pointer flex items-center gap-1 border border-zinc-700">
                   <span>⛶</span>
                   <span>Full Screen</span>
                 </button>
                 <button (click)="copyDsl()"
                         class="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-white text-[11px] transition cursor-pointer border border-zinc-700">
-                  Copy JSON DSL
+                  Copy JSON
                 </button>
               </div>
             </div>
@@ -698,7 +668,7 @@
 
       } @else {
         <div class="bg-white border border-zinc-200 rounded-lg p-12 text-center text-xs text-zinc-400">
-          Select a template blueprint from the left catalog to inspect its state machine directed graph.
+          Select a workflow template from the list to view its steps and flow.
         </div>
       }
     </div>
@@ -724,14 +694,14 @@
           <div class="flex items-center gap-3">
             <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold text-white shrink-0 tracking-wider"
                   [ngClass]="isEditingDraft() ? 'bg-amber-600' : 'bg-zinc-900'">
-              {{ isEditingDraft() ? 'EDIT DRAFT' : 'BLUEPRINT STUDIO' }}
+              {{ isEditingDraft() ? 'EDIT DRAFT' : 'WORKFLOW BUILDER' }}
             </span>
             <div>
               <h3 class="text-sm font-bold text-zinc-950 tracking-tight">
-                {{ builderName() || 'Draft Workflow Blueprint' }}
+                {{ builderName() || 'Untitled Workflow' }}
               </h3>
               <p class="text-[11px] text-zinc-500 font-mono">
-                Key: <span class="text-zinc-800 font-semibold">{{ builderKey() || 'UNTITLED' }}</span>
+                ID: <span class="text-zinc-800 font-semibold">{{ builderKey() || 'UNTITLED' }}</span>
                 @if (isEditingDraft()) {
                   <span> &bull; Version: <span class="text-purple-700 font-semibold">v{{ editingTemplate()?.version }}</span></span>
                 }
@@ -747,7 +717,7 @@
               <span class="text-zinc-400 text-[11px] hidden sm:inline">Presets:</span>
               <select [ngModel]="selectedPresetId()"
                       (ngModelChange)="loadPreset($event)"
-                      aria-label="Load blueprint preset template"
+                      aria-label="Load workflow preset"
                       class="px-2.5 py-1 text-xs font-mono bg-white hover:bg-zinc-100 border border-zinc-300 rounded-md text-zinc-800 transition cursor-pointer outline-none shadow-2xs">
                 @for (preset of builderPresets; track preset.id) {
                   <option [value]="preset.id">{{ preset.name }} ({{ preset.badge }})</option>
@@ -761,7 +731,7 @@
                       class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1"
                       [ngClass]="builderMode() === 'visual' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
                 <span>🎨</span>
-                <span>Visual Studio</span>
+                <span>Visual Builder</span>
               </button>
               <button (click)="switchBuilderMode('dsl')"
                       class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1"
@@ -773,7 +743,7 @@
 
             <!-- Fullscreen / Windowed Toggle Button -->
             <button (click)="toggleStudioFullscreen()"
-                    [title]="isStudioFullscreen() ? 'Switch to Windowed Modal' : 'Expand to Fullscreen Studio'"
+                    [title]="isStudioFullscreen() ? 'Switch to Windowed' : 'Expand to Full Screen'"
                     class="px-2.5 py-1 text-xs font-mono font-medium rounded border border-zinc-300 hover:border-zinc-900 bg-white hover:bg-zinc-100 text-zinc-800 transition cursor-pointer flex items-center gap-1 shadow-2xs">
               <span>{{ isStudioFullscreen() ? '▫' : '⛶' }}</span>
               <span class="hidden md:inline">{{ isStudioFullscreen() ? 'Windowed' : 'Full Screen' }}</span>
@@ -781,7 +751,7 @@
 
             <!-- Close Studio Button -->
             <button (click)="closeCreateModal()"
-                    aria-label="Close Studio"
+                    aria-label="Close Builder"
                     class="p-1.5 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-200/60 rounded-md transition cursor-pointer text-sm leading-none font-mono">
               ✕
             </button>
@@ -798,20 +768,20 @@
               <!-- Left Column: Form & Node Configuration (Scrollable) -->
               <div class="w-full lg:w-1/2 xl:w-5/12 flex flex-col border-b lg:border-b-0 lg:border-r border-zinc-200 overflow-y-auto p-4 sm:p-6 space-y-5 bg-white">
                 
-                <!-- Section 1: Blueprint Metadata Card -->
+                <!-- Section 1: Basic Details Card -->
                 <div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4 space-y-3 shadow-2xs">
                   <div class="flex items-center justify-between">
                     <span class="text-[11px] font-bold text-zinc-700 uppercase tracking-wider font-mono">
-                      1. Blueprint Identity & Entry
+                      1. Basic Info
                     </span>
-                    <span class="text-[10px] font-mono text-zinc-400">Core Metadata</span>
+                    <span class="text-[10px] font-mono text-zinc-400">General Details</span>
                   </div>
 
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div>
                       <div class="flex items-center justify-between mb-1">
                         <label class="block text-zinc-600 font-medium">
-                          Template Key <span class="text-rose-500">*</span>
+                          Workflow ID <span class="text-rose-500">*</span>
                         </label>
                         @if (isEditingDraft()) {
                           <span class="text-[9px] font-mono text-amber-700 bg-amber-100 px-1 rounded font-semibold">Locked</span>
@@ -830,7 +800,7 @@
 
                     <div>
                       <label class="block text-zinc-600 font-medium mb-1">
-                        Blueprint Title <span class="text-rose-500">*</span>
+                        Workflow Name <span class="text-rose-500">*</span>
                       </label>
                       <input type="text"
                              [(ngModel)]="builderName"
@@ -844,13 +814,13 @@
                       <label class="block text-zinc-600 font-medium mb-1">Description</label>
                       <input type="text"
                              [(ngModel)]="builderDescription"
-                             placeholder="e.g. Multi-stage onboarding with legal compliance and SLA gates"
+                             placeholder="e.g. Multi-stage onboarding with legal compliance and review steps"
                              class="w-full px-2.5 py-1.5 text-xs bg-white border border-zinc-300 rounded-md outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition">
                     </div>
 
                     <div>
                       <label class="block text-zinc-600 font-medium mb-1">
-                        Initial Entry State <span class="text-rose-500">*</span>
+                        Starting Step <span class="text-rose-500">*</span>
                       </label>
                       <select [ngModel]="builderInitialState()"
                               (ngModelChange)="setInitialState($event)"
@@ -863,22 +833,22 @@
                   </div>
                 </div>
 
-                <!-- Section 2: Lifecycle States & Transition Network -->
+                <!-- Section 2: Steps & Connections -->
                 <div class="space-y-3">
                   <div class="flex items-center justify-between pb-1 border-b border-zinc-200">
                     <div class="flex items-center gap-2">
                       <span class="text-xs font-bold text-zinc-900 uppercase tracking-wider font-mono">
-                        2. Workflow States & Transitions
+                        2. Steps & Connections
                       </span>
                       <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold bg-zinc-100 text-zinc-700 border border-zinc-200">
-                        {{ builderStates().length }} States
+                        {{ builderStates().length }} Steps
                       </span>
                     </div>
 
                     <button (click)="addState()"
                             class="px-2.5 py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium transition cursor-pointer flex items-center gap-1 shadow-xs">
                       <span>+</span>
-                      <span>Add State</span>
+                      <span>Add Step</span>
                     </button>
                   </div>
 
@@ -904,7 +874,7 @@
                                     'bg-rose-600 text-white': state.isTerminal && ['REJECTED', 'CANCELLED'].includes(state.stateKey.toUpperCase()),
                                     'bg-zinc-800 text-white': !state.isInitial && !state.isTerminal
                                   }">
-                              {{ state.isInitial ? 'START' : (state.isTerminal ? 'TERM' : 'STEP ' + (idx + 1)) }}
+                              {{ state.isInitial ? 'START' : (state.isTerminal ? 'END' : 'STEP ' + (idx + 1)) }}
                             </span>
 
                             <h4 class="text-xs font-bold text-zinc-950 truncate">{{ state.stepName }}</h4>
@@ -915,9 +885,9 @@
                           <div class="flex items-center gap-1.5 shrink-0">
                             @if (!state.isInitial) {
                               <button (click)="setInitialState(state.stateKey)"
-                                      title="Set as initial entry point"
+                                      title="Set as starting step"
                                       class="px-2 py-0.5 rounded text-[10px] font-mono text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition cursor-pointer">
-                                Set Entry
+                                Set Start
                               </button>
                             }
 
@@ -940,7 +910,7 @@
                             <!-- Delete State -->
                             <button (click)="removeState(idx)"
                                     [disabled]="builderStates().length <= 2"
-                                    title="Delete State"
+                                    title="Delete Step"
                                     class="p-1 rounded text-rose-500 hover:text-rose-700 hover:bg-rose-50 disabled:opacity-30 transition cursor-pointer text-xs leading-none font-bold">
                               ✕
                             </button>
@@ -950,7 +920,7 @@
                         <!-- Card Core Fields (State Key & Name) -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                           <div>
-                            <label class="block text-zinc-500 text-[11px] font-mono mb-1">State Key (ID)</label>
+                            <label class="block text-zinc-500 text-[11px] font-mono mb-1">Step ID</label>
                             <input type="text"
                                    [ngModel]="state.stateKey"
                                    (ngModelChange)="updateStateKey(idx, $event)"
@@ -959,7 +929,7 @@
                           </div>
 
                           <div>
-                            <label class="block text-zinc-500 text-[11px] font-mono mb-1">Display Title</label>
+                            <label class="block text-zinc-500 text-[11px] font-mono mb-1">Step Name</label>
                             <input type="text"
                                    [(ngModel)]="state.stepName"
                                    placeholder="e.g. Invoice Verification & Match"
@@ -974,14 +944,14 @@
                                    [checked]="state.isTerminal"
                                    (change)="toggleTerminal(idx, $any($event.target).checked)"
                                    class="w-4 h-4 rounded border-zinc-300 text-zinc-900 accent-zinc-900 focus:ring-zinc-900 cursor-pointer">
-                            <span>Is Terminal State (Workflow stops here)</span>
+                            <span>This is an ending step (Workflow finishes here)</span>
                           </label>
 
                           @if (state.isTerminal) {
                             <div class="flex items-center gap-2 text-[11px] font-mono text-zinc-600 bg-zinc-100 px-2.5 py-1 rounded-md border border-zinc-200">
                               <span class="w-2 h-2 rounded-full"
                                     [ngClass]="['REJECTED', 'CANCELLED'].includes(state.stateKey.toUpperCase()) ? 'bg-rose-500' : 'bg-emerald-500'"></span>
-                              <span>Terminal State &bull; Process concludes here (No SLA, actor, or payload)</span>
+                              <span>🏁 Final Step &bull; Process finishes here</span>
                             </div>
                           }
                         </div>
@@ -1003,7 +973,7 @@
                             </div>
 
                             <div>
-                              <label class="block text-zinc-500 text-[11px] font-mono mb-1">Actor Scope</label>
+                              <label class="block text-zinc-500 text-[11px] font-mono mb-1">Assigned To</label>
                               <select [(ngModel)]="state.actorScope"
                                       class="w-full px-2 py-1.5 text-xs bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:bg-white focus:border-zinc-900 transition cursor-pointer">
                                 @for (sc of availableActorScopes; track sc.value) {
@@ -1014,7 +984,7 @@
 
                             <div>
                               <div class="flex items-center justify-between mb-1">
-                                <label class="block text-zinc-500 text-[11px] font-mono">Required Authority</label>
+                                <label class="block text-zinc-500 text-[11px] font-mono">Required Role</label>
                                 @if (state.actorScope === 'ROLE' && isCustomRole(state.requiredRole)) {
                                   <span class="text-[9px] font-mono text-purple-700 bg-purple-100 px-1 rounded font-semibold">Custom</span>
                                 }
@@ -1053,7 +1023,7 @@
                             </div>
 
                             <div>
-                              <label class="block text-zinc-500 text-[11px] font-mono mb-1">SLA Target</label>
+                              <label class="block text-zinc-500 text-[11px] font-mono mb-1">Time Limit</label>
                               <div class="flex items-center">
                                 <input type="number"
                                        [(ngModel)]="state.slaHours"
@@ -1070,7 +1040,7 @@
 
                           <!-- Payload Input -->
                           <div class="pt-2 border-t border-zinc-100 flex items-center gap-2 text-xs">
-                            <span class="text-zinc-500 text-[11px] font-mono whitespace-nowrap">Payload Schema:</span>
+                            <span class="text-zinc-500 text-[11px] font-mono whitespace-nowrap">Required Fields:</span>
                             <input type="text"
                                    [(ngModel)]="state.payloadKeysInput"
                                    placeholder="e.g. invoiceNumber, amount, vendorEmail (comma-separated)"
@@ -1081,18 +1051,18 @@
                           <div class="pt-2 border-t border-zinc-100 space-y-2">
                             <div class="flex items-center justify-between">
                               <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">
-                                Outgoing Transitions ({{ state.transitions.length }})
+                                Next Steps ({{ state.transitions.length }})
                               </span>
                               <button (click)="addTransition(idx)"
                                       class="px-2.5 py-1 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1">
                                 <span>+</span>
-                                <span>Add Transition</span>
+                                <span>Add Next Step</span>
                               </button>
                             </div>
 
                             @if (state.transitions.length === 0) {
                               <div class="p-2.5 rounded bg-amber-50/70 border border-amber-200 text-amber-900 text-xs font-mono">
-                                ⚠️ Non-terminal state requires at least 1 outgoing transition. Click "+ Add Transition".
+                                ⚠️ Every intermediate step requires at least 1 next step. Click "+ Add Next Step".
                               </div>
                             } @else {
                               <div class="space-y-1.5">
@@ -1106,7 +1076,7 @@
                                            class="w-40 px-2.5 py-1.5 font-mono text-xs bg-white border border-zinc-300 rounded outline-none focus:border-zinc-900">
                                     
                                     <span class="text-zinc-400 font-bold">&rarr;</span>
-                                    <span class="text-zinc-400 text-[10px] uppercase">Target:</span>
+                                    <span class="text-zinc-400 text-[10px] uppercase">Goes to:</span>
                                     <select [(ngModel)]="trans.targetState"
                                             class="flex-1 min-w-[140px] px-2.5 py-1.5 font-mono text-xs bg-white border border-zinc-300 rounded outline-none focus:border-zinc-900 cursor-pointer">
                                       @for (targetState of builderStates(); track targetState.id) {
@@ -1117,7 +1087,7 @@
                                     </select>
 
                                     <button (click)="removeTransition(idx, tIdx)"
-                                            title="Remove Transition"
+                                            title="Remove Next Step"
                                             class="p-1.5 rounded text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer text-xs font-bold leading-none">
                                       ✕
                                     </button>
@@ -1146,18 +1116,18 @@
                             class="px-2 py-0.5 rounded font-medium transition cursor-pointer flex items-center gap-1"
                             [ngClass]="builderPreviewTab() === 'canvas' ? 'bg-white text-zinc-900 font-bold shadow-2xs' : 'text-zinc-600 hover:text-zinc-900'">
                       <span>◈</span>
-                      <span>Live Graph</span>
+                      <span>Flow Preview</span>
                     </button>
                     <button (click)="builderPreviewTab.set('dsl')"
                             class="px-2 py-0.5 rounded font-medium transition cursor-pointer flex items-center gap-1"
                             [ngClass]="builderPreviewTab() === 'dsl' ? 'bg-white text-zinc-900 font-bold shadow-2xs' : 'text-zinc-600 hover:text-zinc-900'">
                       <span>&#123; &#125;</span>
-                      <span>DSL Preview</span>
+                      <span>JSON Preview</span>
                     </button>
                   </div>
 
                   <span class="font-mono text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    {{ builderCanvasLayout().nodes.length }} States &bull; {{ builderCanvasLayout().edges.length }} Transitions
+                    {{ builderCanvasLayout().nodes.length }} Steps &bull; {{ builderCanvasLayout().edges.length }} Connections
                   </span>
                 </div>
 
@@ -1196,7 +1166,7 @@
                       <div class="canvas-controls absolute top-3 left-3 z-20 flex flex-wrap items-center gap-2 bg-white/90 backdrop-blur-xs border border-zinc-200 rounded-md px-2.5 py-1 text-[10px] font-mono text-zinc-600 pointer-events-none shadow-2xs">
                         <div class="flex items-center gap-1">
                           <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                          <span>Entry</span>
+                          <span>Start</span>
                         </div>
                         <div class="flex items-center gap-1">
                           <span class="w-2 h-2 rounded-full bg-zinc-900"></span>
@@ -1204,7 +1174,7 @@
                         </div>
                         <div class="flex items-center gap-1">
                           <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                          <span>Approved</span>
+                          <span>Completed</span>
                         </div>
                         <div class="flex items-center gap-1">
                           <span class="w-2 h-2 rounded-full bg-rose-500"></span>
@@ -1244,8 +1214,8 @@
                         <!-- Action Pills along Edges -->
                         @for (edge of builderCanvasLayout().edges; track edge.id) {
                           <div class="absolute z-10 -translate-x-1/2 -translate-y-1/2 select-none pointer-events-none"
-                               [style.left.px]="edge.midX"
-                               [style.top.px]="edge.midY">
+                                [style.left.px]="edge.midX"
+                                [style.top.px]="edge.midY">
                             <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-semibold tracking-tight border shadow-2xs inline-flex items-center gap-1"
                                   [ngClass]="edge.isDanger ? 'bg-rose-50 text-rose-700 border-rose-300' : 'bg-white text-zinc-800 border-zinc-300'">
                               <span>{{ edge.isDanger ? '✕' : '➔' }}</span>
@@ -1276,7 +1246,7 @@
                                       'bg-amber-600 text-white': node.isInitial,
                                       'bg-zinc-800 text-white': !node.isTerminal && !node.isInitial
                                     }">
-                                {{ node.isTerminal ? 'TERM' : (node.isInitial ? 'START' : 'STAGE ' + node.order) }}
+                                {{ node.isTerminal ? 'END' : (node.isInitial ? 'START' : 'STEP ' + node.order) }}
                               </span>
                               <span class="font-mono text-[10px] text-zinc-400 truncate max-w-[110px]">{{ node.stateKey }}</span>
                             </div>
@@ -1320,7 +1290,7 @@
                         <button (click)="copyBuilderDsl()"
                                 class="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-mono transition cursor-pointer flex items-center gap-1">
                           <span>📋</span>
-                          <span>Copy DSL</span>
+                          <span>Copy JSON</span>
                         </button>
                       </div>
                       <div class="flex-1 overflow-auto rounded-lg border border-zinc-800 bg-zinc-900/60 p-3 font-mono text-xs text-emerald-400">
@@ -1334,13 +1304,13 @@
                     @if (builderValidationErrors().length === 0) {
                       <div class="flex items-center gap-2 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-mono">
                         <span class="font-bold">✓</span>
-                        <span>Blueprint integrity passed. Ready to save as draft or deploy.</span>
+                        <span>All steps and connections look good! Ready to save or publish.</span>
                       </div>
                     } @else {
                       <div class="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-900 text-xs space-y-1">
                         <div class="font-bold font-mono text-[11px] flex items-center gap-1 text-rose-800">
                           <span>⚠️</span>
-                          <span>{{ builderValidationErrors().length }} Validation Warning(s):</span>
+                          <span>{{ builderValidationErrors().length }} Issue(s) to fix:</span>
                         </div>
                         <ul class="list-disc list-inside space-y-0.5 text-[11px] font-mono text-rose-700 max-h-24 overflow-y-auto">
                           @for (err of builderValidationErrors(); track err) {
@@ -1358,17 +1328,17 @@
             </div>
           }
 
-          <!-- MODE 2: RAW JSON DSL SPECIFICATION EDITOR -->
+          <!-- MODE 2: RAW JSON SPECIFICATION EDITOR -->
           @else if (builderMode() === 'dsl') {
             <div class="flex-1 flex flex-col p-5 bg-zinc-900 text-zinc-100 select-text overflow-hidden space-y-3">
               <div class="flex items-center justify-between">
                 <div>
-                  <h4 class="text-xs font-bold font-mono text-zinc-200">Raw JSON Blueprint DSL Specification</h4>
-                  <p class="text-xs text-zinc-400">Directly modify declarative JSON schema. Toggling back to Visual Studio will parse changes.</p>
+                  <h4 class="text-xs font-bold font-mono text-zinc-200">Raw Workflow JSON Specification</h4>
+                  <p class="text-xs text-zinc-400">Directly edit the workflow JSON. Toggling back to Visual Builder will update the design.</p>
                 </div>
                 <button (click)="copyBuilderDsl()"
                         class="px-3 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-mono transition cursor-pointer">
-                  Copy JSON DSL
+                  Copy JSON
                 </button>
               </div>
 
@@ -1414,7 +1384,7 @@
                     class="px-4 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 disabled:opacity-40 text-white text-xs font-medium transition flex items-center gap-1.5 cursor-pointer shadow-xs">
               @if (isSubmitting()) {
                 <span class="animate-spin text-xs">↻</span>
-                <span>{{ isEditingDraft() ? 'Updating & Publishing...' : 'Deploying...' }}</span>
+                <span>{{ isEditingDraft() ? 'Publishing...' : 'Publishing...' }}</span>
               } @else {
                 <span>🚀</span>
                 <span>{{ isEditingDraft() ? 'Update & Publish' : 'Save & Publish Now' }}</span>
@@ -1440,24 +1410,24 @@
         <div class="px-5 py-3 border-b border-zinc-200 bg-zinc-50 flex items-center justify-between gap-4 shrink-0">
           <div class="flex items-center gap-3 min-w-0">
             <span class="px-2.5 py-1 rounded font-mono text-[10px] font-bold bg-zinc-900 text-white shrink-0 tracking-wider">
-              {{ viewMode() === 'canvas' ? 'GRAPH CANVAS' : (viewMode() === 'pipeline' ? 'PIPELINE FLOW' : 'JSON DSL') }}
+              {{ viewMode() === 'canvas' ? 'FLOW VIEW' : (viewMode() === 'pipeline' ? 'STEPS' : 'RAW JSON') }}
             </span>
             <div class="min-w-0 flex items-center gap-2">
-              <h3 class="text-sm font-bold text-zinc-950 truncate">{{ selectedTemplate()?.name }}</h3>
+              <h3 class="text-sm font-bold text-zinc-950 truncate" [title]="'ID: ' + selectedTemplate()?.templateKey">{{ selectedTemplate()?.name }}</h3>
               <span class="px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-700 text-[10px] font-mono font-medium border border-zinc-200 shrink-0">
-                {{ selectedTemplate()?.templateKey }} (v{{ selectedTemplate()?.version }})
+                v{{ selectedTemplate()?.version }}
               </span>
               @if (viewMode() === 'canvas') {
                 <span class="font-mono text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/80 shrink-0">
-                  {{ canvasLayout().nodes.length }} States &bull; {{ canvasLayout().edges.length }} Transitions
+                  {{ canvasLayout().nodes.length }} Steps &bull; {{ canvasLayout().edges.length }} Connections
                 </span>
               } @else if (viewMode() === 'pipeline') {
                 <span class="font-mono text-[10px] font-semibold text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200/80 shrink-0">
-                  {{ dagNodes().length }} Sequential Stages
+                  {{ dagNodes().length }} Steps in Sequence
                 </span>
               } @else {
                 <span class="font-mono text-[10px] font-semibold text-zinc-700 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200 shrink-0">
-                  Schema DSL Definition
+                  Workflow Definition
                 </span>
               }
             </div>
@@ -1470,19 +1440,19 @@
                       class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1"
                       [ngClass]="viewMode() === 'canvas' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
                 <span>◈</span>
-                <span>Graph</span>
+                <span>Flow</span>
               </button>
               <button (click)="setViewMode('pipeline')"
                       class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1"
                       [ngClass]="viewMode() === 'pipeline' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
                 <span>≡</span>
-                <span>Pipeline</span>
+                <span>Steps</span>
               </button>
               <button (click)="setViewMode('dsl')"
                       class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1"
                       [ngClass]="viewMode() === 'dsl' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
                 <span>&#123; &#125;</span>
-                <span>DSL</span>
+                <span>JSON</span>
               </button>
             </div>
 
@@ -1534,7 +1504,7 @@
             <div class="canvas-controls absolute top-4 left-4 z-20 flex flex-wrap items-center gap-3 bg-white/90 backdrop-blur-xs border border-zinc-200 rounded-lg px-3 py-2 shadow-xs text-xs font-mono text-zinc-600 pointer-events-none">
               <div class="flex items-center gap-1.5">
                 <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                <span>Entry State</span>
+                <span>Start</span>
               </div>
               <div class="flex items-center gap-1.5">
                 <span class="w-2.5 h-2.5 rounded-full bg-zinc-900"></span>
@@ -1542,11 +1512,11 @@
               </div>
               <div class="flex items-center gap-1.5">
                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                <span>Approved (Terminal)</span>
+                <span>Completed</span>
               </div>
               <div class="flex items-center gap-1.5">
                 <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-                <span>Rejected (Terminal)</span>
+                <span>Rejected</span>
               </div>
             </div>
 
@@ -1633,13 +1603,13 @@
                               'bg-amber-600 text-white': node.isInitial,
                               'bg-zinc-800 text-white': !node.isTerminal && !node.isInitial
                             }">
-                        {{ node.isTerminal ? 'TERM' : (node.isInitial ? 'START' : 'STAGE ' + node.order) }}
+                        {{ node.isTerminal ? 'END' : (node.isInitial ? 'START' : 'STEP ' + node.order) }}
                       </span>
                       <span class="font-mono text-[10px] text-zinc-400 truncate max-w-[95px]">{{ node.stateKey }}</span>
                     </div>
 
                     <span class="text-[9px] font-mono text-zinc-400 group-hover:text-zinc-900 transition">
-                      Inspect &rarr;
+                      Details &rarr;
                     </span>
                   </div>
 
@@ -1690,10 +1660,10 @@
               
               <div class="flex items-center justify-between pb-3 border-b border-zinc-200">
                 <div>
-                  <h4 class="text-xs font-bold text-zinc-900 uppercase tracking-wider">Sequential Execution Pipeline</h4>
-                  <p class="text-xs text-zinc-500 mt-0.5">Linear state lifecycle ordered by topological execution order</p>
+                  <h4 class="text-xs font-bold text-zinc-900 uppercase tracking-wider">Workflow Steps</h4>
+                  <p class="text-xs text-zinc-500 mt-0.5">Step-by-step progression of this workflow</p>
                 </div>
-                <span class="text-[11px] font-mono text-zinc-400">Click any card for deep inspection</span>
+                <span class="text-[11px] font-mono text-zinc-400">Click any step to view details</span>
               </div>
 
               <!-- Pipeline Cards -->
@@ -1711,12 +1681,12 @@
                       <div class="flex items-center gap-2.5">
                         <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold"
                               [ngClass]="node.isTerminal ? 'bg-zinc-800 text-white' : (node.isInitial ? 'bg-amber-600 text-white' : 'bg-zinc-200 text-zinc-800')">
-                          {{ node.isTerminal ? 'TERM' : (node.isInitial ? 'START' : 'STEP ' + node.order) }}
+                          {{ node.isTerminal ? 'END' : (node.isInitial ? 'START' : 'STEP ' + node.order) }}
                         </span>
                         <h4 class="text-sm font-bold text-zinc-950">{{ node.name }}</h4>
                         @if (node.isInitial) {
                           <span class="px-1.5 py-0.2 rounded bg-amber-50 text-amber-800 text-[10px] font-mono font-semibold border border-amber-200">
-                            ENTRY STATE
+                            START
                           </span>
                         }
                       </div>
@@ -1724,7 +1694,7 @@
                       <div class="flex items-center gap-2 shrink-0">
                         <span class="font-mono text-xs text-zinc-400 font-medium">{{ node.stateKey }}</span>
                         <span class="text-xs font-mono px-2 py-0.5 rounded bg-zinc-100 group-hover:bg-zinc-900 group-hover:text-white text-zinc-600 border border-zinc-200 transition">
-                          Inspect &rarr;
+                          Details &rarr;
                         </span>
                       </div>
                     </div>
@@ -1735,23 +1705,23 @@
                       </span>
                       <span class="px-2.5 py-0.5 rounded font-mono text-xs"
                             [ngClass]="node.requiredRole ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-zinc-100 text-zinc-600 border border-zinc-200'">
-                        {{ node.requiredRole ? 'Authority: ' + node.requiredRole : 'Scope: ' + node.actorScope }}
+                        {{ node.requiredRole ? 'Role: ' + node.requiredRole.replace('ROLE_', '') : 'Assigned: ' + node.actorScope }}
                       </span>
                       @if (node.slaHours) {
                         <span class="px-2.5 py-0.5 rounded bg-blue-50 text-blue-700 font-mono text-xs border border-blue-200">
-                          ⏱ {{ node.slaHours }}h SLA
+                          ⏱ {{ node.slaHours }}h limit
                         </span>
                       }
                       @if (node.isTerminal) {
                         <span class="px-2.5 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono text-xs border border-emerald-200">
-                          ✓ Terminal State
+                          ✓ End Step
                         </span>
                       }
                     </div>
 
                     @if (node.requiredPayloadKeys && node.requiredPayloadKeys.length > 0) {
                       <div class="mt-3 pt-2.5 border-t border-zinc-100 flex items-center gap-2 text-xs">
-                        <span class="text-zinc-400 text-xs font-mono">Payload Requirements:</span>
+                        <span class="text-zinc-400 text-xs font-mono">Required Fields:</span>
                         <div class="flex flex-wrap gap-1">
                           @for (key of node.requiredPayloadKeys; track key) {
                             <span class="px-2 py-0.5 rounded bg-zinc-100 font-mono text-zinc-700 text-xs border border-zinc-200">
@@ -1765,7 +1735,7 @@
                     @if (node.outgoingTransitions.length > 0) {
                       <div class="mt-3 pt-2.5 border-t border-zinc-100 space-y-1.5">
                         <span class="text-[10px] font-medium text-zinc-400 uppercase tracking-wider block">
-                          Permitted Outgoing Transitions
+                          Next Steps
                         </span>
                         <div class="flex flex-wrap gap-2">
                           @for (trans of node.outgoingTransitions; track trans.action) {
@@ -1809,7 +1779,7 @@
                   <span>{{ selectedTemplate()?.templateKey }}.json</span>
                 </span>
                 <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/60">
-                  Declarative State Machine Specification
+                  Workflow Definition
                 </span>
                 <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-blue-950 text-blue-300 border border-blue-800/80">
                   v{{ selectedTemplate()?.version }}
@@ -1818,7 +1788,7 @@
               <button (click)="copyDsl()"
                       class="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-mono transition cursor-pointer flex items-center gap-1.5 border border-zinc-700 shadow-xs">
                 <span>📋</span>
-                <span>Copy JSON DSL</span>
+                <span>Copy JSON</span>
               </button>
             </div>
             <div class="flex-1 overflow-auto rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 font-mono text-xs leading-relaxed text-emerald-400">
@@ -1833,7 +1803,7 @@
   }
 
   <!-- =================================================================== -->
-  <!-- DEEP INSPECTION SIDE DRAWER FOR SELECTED DAG NODE                   -->
+  <!-- STEP DETAILS SIDE DRAWER                                              -->
   <!-- =================================================================== -->
   @if (selectedNode(); as node) {
     <!-- Backdrop Overlay -->
@@ -1849,11 +1819,11 @@
           <div class="flex items-center gap-2">
             <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold"
                   [ngClass]="node.isTerminal ? 'bg-zinc-800 text-white' : 'bg-zinc-900 text-white'">
-              {{ node.isTerminal ? 'TERMINAL' : 'STEP ' + node.order }}
+              {{ node.isTerminal ? 'END' : (node.isInitial ? 'START' : 'STEP ' + node.order) }}
             </span>
             @if (node.isInitial) {
               <span class="px-1.5 py-0.2 rounded bg-amber-50 text-amber-800 text-[9px] font-mono font-semibold border border-amber-200">
-                ENTRY POINT
+                STARTING STEP
               </span>
             }
             <span class="font-mono text-xs text-zinc-500 font-semibold">{{ node.stateKey }}</span>
@@ -1862,7 +1832,7 @@
         </div>
 
         <button (click)="selectedNode.set(null)"
-                aria-label="Close inspection drawer"
+                aria-label="Close details"
                 class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200/60 transition cursor-pointer text-sm font-mono leading-none">
           ✕
         </button>
@@ -1871,46 +1841,46 @@
       <!-- Drawer Scrollable Body -->
       <div class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5 text-xs">
 
-        <!-- 1. State Identity & Execution Governance -->
+        <!-- 1. Step Identity & Governance -->
         <div class="space-y-2">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Governance & Authority Specs</span>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Assignment & Rules</span>
           <div class="border border-zinc-200 rounded-lg divide-y divide-zinc-100 bg-white shadow-xs">
             <div class="p-2.5 flex items-center justify-between">
               <span class="text-zinc-500">Step Type</span>
               <span class="font-mono font-semibold text-zinc-900 px-2 py-0.5 rounded bg-zinc-100">{{ node.type }}</span>
             </div>
             <div class="p-2.5 flex items-center justify-between">
-              <span class="text-zinc-500">Actor Scope</span>
+              <span class="text-zinc-500">Assigned To</span>
               <span class="font-mono font-semibold text-zinc-900">{{ node.actorScope }}</span>
             </div>
             <div class="p-2.5 flex items-center justify-between">
-              <span class="text-zinc-500">Required Role Authority</span>
+              <span class="text-zinc-500">Required Role</span>
               @if (node.requiredRole) {
-                <span class="font-mono text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 font-medium">{{ node.requiredRole }}</span>
+                <span class="font-mono text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 font-medium">{{ node.requiredRole.replace('ROLE_', '') }}</span>
               } @else {
-                <span class="font-mono text-zinc-400">None (Open to Requester / Any)</span>
+                <span class="font-mono text-zinc-400">None (Anyone can perform)</span>
               }
             </div>
             <div class="p-2.5 flex items-center justify-between">
-              <span class="text-zinc-500">SLA Duration Window</span>
+              <span class="text-zinc-500">Time Limit</span>
               @if (node.slaHours) {
                 <span class="font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 font-medium">⏱ {{ node.slaHours }} Hours</span>
               } @else {
-                <span class="text-zinc-400">No SLA Attached</span>
+                <span class="text-zinc-400">No time limit</span>
               }
             </div>
             <div class="p-2.5 flex items-center justify-between">
-              <span class="text-zinc-500">Terminal Process State</span>
-              <span class="font-mono text-zinc-800 font-medium">{{ node.isTerminal ? 'Yes (Workflow Finishes Here)' : 'No (Workflow Continues)' }}</span>
+              <span class="text-zinc-500">Final Step</span>
+              <span class="font-mono text-zinc-800 font-medium">{{ node.isTerminal ? 'Yes (Workflow completes here)' : 'No (Workflow continues to next steps)' }}</span>
             </div>
           </div>
         </div>
 
-        <!-- 2. Permitted Outgoing Transitions -->
+        <!-- 2. Next Steps -->
         <div class="space-y-2">
           <div class="flex items-center justify-between">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Outgoing State Transitions</span>
-            <span class="font-mono text-[10px] text-zinc-400">{{ node.outgoingTransitions.length }} transition(s)</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Next Steps</span>
+            <span class="font-mono text-[10px] text-zinc-400">{{ node.outgoingTransitions.length }} option(s)</span>
           </div>
 
           @if (node.outgoingTransitions.length > 0) {
@@ -1927,16 +1897,16 @@
             </div>
           } @else {
             <div class="p-3 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-400 text-center italic text-xs">
-              No outgoing transitions (Terminal end state).
+              No next steps (Workflow finishes here).
             </div>
           }
         </div>
 
-        <!-- 3. Inbound Transitions (How execution reaches this node) -->
+        <!-- 3. Inbound Transitions (Comes From) -->
         <div class="space-y-2">
           <div class="flex items-center justify-between">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Inbound Transitions</span>
-            <span class="font-mono text-[10px] text-zinc-400">{{ node.incomingTransitions.length }} inbound</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Comes From</span>
+            <span class="font-mono text-[10px] text-zinc-400">{{ node.incomingTransitions.length }} source(s)</span>
           </div>
 
           @if (node.incomingTransitions.length > 0) {
@@ -1953,15 +1923,15 @@
             </div>
           } @else {
             <div class="p-3 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-400 text-center italic text-xs">
-              Initial entry state &mdash; triggered at workflow creation.
+              Starting step &mdash; this is where the workflow begins.
             </div>
           }
         </div>
 
-        <!-- 4. Required Payload & Form Schema -->
+        <!-- 4. Required Fields -->
         <div class="space-y-2">
           <div class="flex items-center justify-between">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Required Payload Schema</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Required Fields</span>
             <span class="font-mono text-[10px] text-zinc-400">{{ node.requiredPayloadKeys.length }} required</span>
           </div>
 
@@ -1971,15 +1941,15 @@
                 <div class="p-2.5 flex items-center justify-between gap-3 text-xs">
                   <div class="flex items-center gap-2">
                     <span class="font-mono font-semibold text-zinc-900">{{ key }}</span>
-                    <span class="text-[9px] font-mono text-rose-600 bg-rose-50 px-1 py-0.2 rounded border border-rose-200">MANDATORY</span>
+                    <span class="text-[9px] font-mono text-rose-600 bg-rose-50 px-1 py-0.2 rounded border border-rose-200">REQUIRED</span>
                   </div>
-                  <span class="font-mono text-[11px] text-zinc-400">String / URI</span>
+                  <span class="font-mono text-[11px] text-zinc-400">Text / Data</span>
                 </div>
               }
             </div>
           } @else {
             <div class="p-3 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-400 text-center italic text-xs">
-              No specific payload keys required for this step.
+              No additional fields required for this step.
             </div>
           }
         </div>
@@ -1987,7 +1957,7 @@
         <!-- 5. Step Raw JSON Specification -->
         <div class="space-y-2">
           <div class="flex items-center justify-between">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Raw Step Schema (DSL)</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Step Code (JSON)</span>
             <button (click)="copyStepDsl(node)"
                     class="text-[10px] font-mono text-zinc-600 hover:text-zinc-950 font-medium px-2 py-0.5 rounded border border-zinc-200 hover:border-zinc-400 transition cursor-pointer">
               Copy Step JSON
@@ -2002,7 +1972,7 @@
       <div class="p-3 border-t border-zinc-200 bg-zinc-50 flex items-center justify-end">
         <button (click)="selectedNode.set(null)"
                 class="px-3 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium transition cursor-pointer shadow-xs">
-          Close Inspection
+          Close
         </button>
       </div>
 

@@ -501,14 +501,14 @@ export const BLUEPRINT_PRESETS: BlueprintPreset[] = [
   },
   {
     id: 'blank',
-    name: 'Blank Blueprint',
-    badge: 'Minimal Starter',
-    description: 'Start from scratch with one initial step, one approved state, and one rejected state',
+    name: 'Blank Template',
+    badge: 'Starter',
+    description: 'Start from scratch with an initial step, an approved end, and a rejected end',
     template: {
       templateKey: 'CUSTOM_WORKFLOW_V1',
       version: 1,
-      name: 'Custom Workflow Blueprint',
-      description: 'Custom state machine workflow specification',
+      name: 'Custom Workflow Template',
+      description: 'Custom workflow process',
       status: 'DRAFT',
       initialState: 'INITIATE',
       steps: {
@@ -615,18 +615,18 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
   private builderPanStart = { x: 0, y: 0 };
 
   readonly availableStepTypes = [
-    { value: 'DOCUMENT_SUBMISSION', label: 'Document Submission' },
-    { value: 'APPROVAL', label: 'Approval Gate' },
+    { value: 'DOCUMENT_SUBMISSION', label: 'Form / Document Submission' },
+    { value: 'APPROVAL', label: 'Approval Step' },
     { value: 'MANUAL_TASK', label: 'Manual Task' },
-    { value: 'AUTOMATED_TASK', label: 'Automated System Task' },
-    { value: 'TERMINAL', label: 'Terminal State' }
+    { value: 'AUTOMATED_TASK', label: 'Automated System Step' },
+    { value: 'TERMINAL', label: 'End Step' }
   ];
 
   readonly availableActorScopes = [
-    { value: 'ROLE', label: 'Specific Role (Authority)' },
+    { value: 'ROLE', label: 'Specific Role' },
     { value: 'REQUESTER', label: 'Original Requester' },
-    { value: 'ANY', label: 'Any Authenticated User' },
-    { value: 'SYSTEM', label: 'System Service' }
+    { value: 'ANY', label: 'Anyone' },
+    { value: 'SYSTEM', label: 'Automated System' }
   ];
 
   readonly availableRoles = [
@@ -738,53 +738,53 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     const initial = this.builderInitialState();
 
     if (!key) {
-      errors.push('Template Key is required (e.g. INVOICE_V1).');
+      errors.push('Workflow ID is required (e.g. INVOICE_V1).');
     } else if (!/^[A-Z0-9_]+$/.test(key)) {
-      errors.push('Template Key must contain only uppercase letters, numbers, and underscores.');
+      errors.push('Workflow ID must contain only uppercase letters, numbers, and underscores.');
     }
 
     if (!name) {
-      errors.push('Blueprint Display Name is required.');
+      errors.push('Workflow Name is required.');
     }
 
     if (states.length < 2) {
-      errors.push('Workflow must contain at least 2 states (e.g. 1 initial step and 1 terminal state).');
+      errors.push('Workflow must contain at least 2 steps (e.g. 1 starting step and 1 ending step).');
     }
 
     const keySet = new Set<string>();
     for (const s of states) {
       if (!s.stateKey || !s.stateKey.trim()) {
-        errors.push('Every state must have a non-empty State Key.');
+        errors.push('Every step must have a non-empty Step ID.');
       } else if (keySet.has(s.stateKey)) {
-        errors.push(`Duplicate state key "${s.stateKey}". Keys must be unique.`);
+        errors.push(`Duplicate step ID "${s.stateKey}". Step IDs must be unique.`);
       } else {
         keySet.add(s.stateKey);
       }
     }
 
     if (initial && !keySet.has(initial)) {
-      errors.push(`Initial state "${initial}" does not match any defined state key.`);
+      errors.push(`Starting step "${initial}" does not match any defined step ID.`);
     }
 
     const hasTerminal = states.some(s => s.isTerminal);
     if (!hasTerminal) {
-      errors.push('Workflow must have at least one terminal state (e.g. COMPLETED or REJECTED).');
+      errors.push('Workflow must have at least one ending step (e.g. COMPLETED or REJECTED).');
     }
 
     for (const s of states) {
       if (s.actorScope === 'ROLE' && (!s.requiredRole || !s.requiredRole.trim())) {
-        errors.push(`State "${s.stateKey}" has actor scope ROLE but no Required Authority role is specified.`);
+        errors.push(`Step "${s.stateKey}" is assigned to a role, but no Required Role is specified.`);
       }
       if (!s.isTerminal) {
         if (s.transitions.length === 0) {
-          errors.push(`State "${s.stateKey}" is not terminal but has no outgoing transitions.`);
+          errors.push(`Step "${s.stateKey}" is not an ending step, but has no next step specified.`);
         }
         for (const t of s.transitions) {
           if (!t.action || !t.action.trim()) {
-            errors.push(`State "${s.stateKey}" has a transition with an empty action name.`);
+            errors.push(`Step "${s.stateKey}" has a next step with an empty action name.`);
           }
           if (!t.targetState || !keySet.has(t.targetState)) {
-            errors.push(`Transition [${t.action || '?'}] in "${s.stateKey}" targets non-existent state "${t.targetState}".`);
+            errors.push(`Action [${t.action || '?'}] in "${s.stateKey}" leads to non-existent step "${t.targetState}".`);
           }
         }
       }
@@ -883,7 +883,7 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
 
   copyStepDsl(node: DAGNode): void {
     navigator.clipboard.writeText(this.stepDsl(node));
-    this.successMessage.set(`Copied step schema for [${node.stateKey}] to clipboard!`);
+    this.successMessage.set(`Copied step code to clipboard!`);
     setTimeout(() => this.successMessage.set(null), 3000);
   }
 
@@ -1295,7 +1295,7 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     const dsl = this.builderDslPreview();
     if (dsl && navigator.clipboard) {
       navigator.clipboard.writeText(dsl);
-      this.successMessage.set('Synthesized JSON DSL copied to clipboard!');
+      this.successMessage.set('Workflow JSON copied to clipboard!');
       setTimeout(() => this.successMessage.set(null), 3000);
     }
   }
@@ -1369,7 +1369,7 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         console.error('Failed to save template draft:', err);
-        this.createError.set(err?.error?.message || 'Server rejected template. Check blueprint parameters.');
+        this.createError.set(err?.error?.message || 'Server rejected workflow. Please check your step parameters.');
         this.isSubmitting.set(false);
       }
     });
@@ -1379,7 +1379,7 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     const dsl = this.selectedTemplateDsl();
     if (dsl && navigator.clipboard) {
       navigator.clipboard.writeText(dsl);
-      this.successMessage.set('Blueprint JSON copied to clipboard!');
+      this.successMessage.set('Workflow JSON copied to clipboard!');
       setTimeout(() => this.successMessage.set(null), 3000);
     }
   }

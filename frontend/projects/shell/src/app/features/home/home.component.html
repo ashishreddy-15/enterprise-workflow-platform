@@ -1,100 +1,103 @@
 <div class="home-container">
-  <!-- Welcome Hero Banner -->
-  <section class="hero-banner">
-    <div>
-      <h1 class="hero-title">
-        Enterprise Workflow Command Center
-      </h1>
-      <p class="hero-subtitle">
-        Welcome, <span class="hero-user">{{ auth.activePersona().name }}</span> ({{ auth.activePersona().role }}).
-        Your session is cryptographically secured with OAuth2/OIDC JWT verification at the API Gateway.
+  <!-- Clean Enterprise Page Header -->
+  <header class="page-header">
+    <div class="header-text">
+      <h1>Command Center</h1>
+      <p>
+        Authenticated as <span class="current-user-tag">{{ auth.activePersona().name }}</span> ({{ auth.activePersona().role }}) &bull; Cryptographic JWT verification active
       </p>
+    </div>
 
-      <div class="hero-actions">
-        <a routerLink="/workflows" class="btn-hero-primary">
-          📋 Open Task Inbox
-        </a>
-        <a routerLink="/templates" class="btn-hero-secondary">
-          📐 Template Studio
-        </a>
-        <a routerLink="/analytics" class="btn-hero-secondary">
-          📊 CQRS Audit Analytics
-        </a>
-      </div>
+    <div class="header-actions">
+      <a routerLink="/workflows" class="btn-action-primary">
+        Open Task Inbox &rarr;
+      </a>
+      <a routerLink="/templates" class="btn-action-secondary">
+        Template Studio
+      </a>
+    </div>
+  </header>
+
+  <!-- Micro-Frontend System Status -->
+  <section>
+    <div class="section-heading">Micro-Frontend Architecture</div>
+    <div class="mfe-grid">
+      <!-- Remote 1 -->
+      <article class="mfe-card">
+        <div class="mfe-header">
+          <span class="mfe-badge badge-blue">Remote &bull; Workflow</span>
+          <span class="mfe-port">:4201</span>
+        </div>
+        <h3 class="mfe-title">Task Inbox</h3>
+        <p class="mfe-description">
+          Role-scoped inbox, dynamic JSON Schema form inputs, real-time SLA countdown badges, and step transitions.
+        </p>
+        <div class="mfe-footer">
+          <span class="mfe-status-label">Native Federation Standby</span>
+          <a routerLink="/workflows" class="mfe-link">Open &rarr;</a>
+        </div>
+      </article>
+
+      <!-- Remote 2 -->
+      <article class="mfe-card">
+        <div class="mfe-header">
+          <span class="mfe-badge badge-purple">Remote &bull; Blueprint</span>
+          <span class="mfe-port">:4202</span>
+        </div>
+        <h3 class="mfe-title">Template Studio</h3>
+        <p class="mfe-description">
+          Visual workflow step graph designer, SLA policy configuration, role governance, and blueprint publishing.
+        </p>
+        <div class="mfe-footer">
+          <span class="mfe-status-label">Native Federation Standby</span>
+          <a routerLink="/templates" class="mfe-link">Open &rarr;</a>
+        </div>
+      </article>
+
+      <!-- Remote 3 -->
+      <article class="mfe-card">
+        <div class="mfe-header">
+          <span class="mfe-badge badge-emerald">Remote &bull; CQRS</span>
+          <span class="mfe-port">:4203</span>
+        </div>
+        <h3 class="mfe-title">Audit & Analytics</h3>
+        <p class="mfe-description">
+          CQRS read-model timeline projection, immutable actor audit logs, Kafka event streaming, and SLA breach reports.
+        </p>
+        <div class="mfe-footer">
+          <span class="mfe-status-label">Native Federation Standby</span>
+          <a routerLink="/analytics" class="mfe-link">Open &rarr;</a>
+        </div>
+      </article>
     </div>
   </section>
 
-  <!-- Micro-Frontend System Status Cards -->
-  <section class="mfe-grid">
-    <!-- Remote 1 -->
-    <article class="mfe-card">
-      <div class="mfe-header">
-        <span class="mfe-badge badge-indigo">Remote MFE #1</span>
-        <span class="mfe-port">:4201</span>
-      </div>
-      <h3 class="mfe-title">Workflow Inbox</h3>
-      <p class="mfe-description">
-        Persona-driven task inbox, dynamic JSON Schema form inputs, live SLA countdown timer, and state transitions.
-      </p>
-      <div class="mfe-footer">
-        <span class="mfe-status">Status: Standalone / Federable</span>
-        <a routerLink="/workflows" class="mfe-link">Launch &rarr;</a>
-      </div>
-    </article>
-
-    <!-- Remote 2 -->
-    <article class="mfe-card">
-      <div class="mfe-header">
-        <span class="mfe-badge badge-purple">Remote MFE #2</span>
-        <span class="mfe-port">:4202</span>
-      </div>
-      <h3 class="mfe-title">Template Studio</h3>
-      <p class="mfe-description">
-        Visual workflow step graph modeling, SLA policy assignments, role-based governance, and version publishing.
-      </p>
-      <div class="mfe-footer">
-        <span class="mfe-status">Status: Standalone / Federable</span>
-        <a routerLink="/templates" class="mfe-link">Launch &rarr;</a>
-      </div>
-    </article>
-
-    <!-- Remote 3 -->
-    <article class="mfe-card">
-      <div class="mfe-header">
-        <span class="mfe-badge badge-emerald">Remote MFE #3</span>
-        <span class="mfe-port">:4203</span>
-      </div>
-      <h3 class="mfe-title">Audit & Analytics</h3>
-      <p class="mfe-description">
-        CQRS MongoDB event projection timeline, full actor audit trail, Kafka replay inspector, and SLA breach statistics.
-      </p>
-      <div class="mfe-footer">
-        <span class="mfe-status">Status: Standalone / Federable</span>
-        <a routerLink="/analytics" class="mfe-link">Launch &rarr;</a>
-      </div>
-    </article>
-  </section>
-
-  <!-- Active JWT Claims Card -->
-  <section class="session-panel">
-    <h3 class="session-title">Active Cryptographic Session Details</h3>
-    <div class="session-grid">
-      <div class="session-stat">
-        <div class="stat-label">User ID (sub)</div>
-        <div class="stat-value mono">{{ auth.activePersona().id }}</div>
-      </div>
-      <div class="session-stat">
-        <div class="stat-label">Roles Claim</div>
-        <div class="stat-value mono highlight">{{ auth.activePersona().roles.join(', ') }}</div>
-      </div>
-      <div class="session-stat">
-        <div class="stat-label">Department</div>
-        <div class="stat-value">{{ auth.activePersona().department }}</div>
-      </div>
-      <div class="session-stat">
-        <div class="stat-label">Token Length</div>
-        <div class="stat-value mono success">
-          {{ auth.currentToken() ? (auth.currentToken()!.length + ' chars (HS256)') : 'Not authenticated' }}
+  <!-- Cryptographic JWT Session Details -->
+  <section>
+    <div class="section-heading">Cryptographic Identity & Security Claims</div>
+    <div class="session-panel">
+      <div class="session-grid">
+        <div class="session-stat">
+          <div class="stat-label">Subject ID (sub)</div>
+          <div class="stat-value mono">{{ auth.activePersona().id }}</div>
+        </div>
+        <div class="session-stat">
+          <div class="stat-label">Assigned Roles Claim</div>
+          <div class="stat-value mono">{{ auth.activePersona().roles.join(', ') }}</div>
+        </div>
+        <div class="session-stat">
+          <div class="stat-label">Department / Unit</div>
+          <div class="stat-value">{{ auth.activePersona().department }}</div>
+        </div>
+        <div class="session-stat">
+          <div class="stat-label">Token Verification</div>
+          <div class="stat-value">
+            @if (auth.currentToken()) {
+              <span class="stat-badge emerald">HS256 Verified ({{ auth.currentToken()!.length }}b)</span>
+            } @else {
+              <span class="stat-badge amber">Authenticating...</span>
+            }
+          </div>
         </div>
       </div>
     </div>

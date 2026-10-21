@@ -90,7 +90,8 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
         slaHours: step.slaHours,
         requiredPayloadKeys: step.requiredPayloadKeys || [],
         outgoingTransitions: outgoing,
-        incomingTransitions: []
+        incomingTransitions: [],
+        rawStep: step
       });
     }
 
@@ -136,7 +137,9 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
-    if (this.isCreateModalOpen()) {
+    if (this.selectedNode()) {
+      this.selectedNode.set(null);
+    } else if (this.isCreateModalOpen()) {
       this.closeCreateModal();
     }
   }
@@ -181,6 +184,16 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
 
   selectNode(node: DAGNode): void {
     this.selectedNode.set(node);
+  }
+
+  stepDsl(node: DAGNode): string {
+    return JSON.stringify(node.rawStep || node, null, 2);
+  }
+
+  copyStepDsl(node: DAGNode): void {
+    navigator.clipboard.writeText(this.stepDsl(node));
+    this.successMessage.set(`Copied step schema for [${node.stateKey}] to clipboard!`);
+    setTimeout(() => this.successMessage.set(null), 3000);
   }
 
   setStatusFilter(filter: 'ALL' | 'PUBLISHED' | 'DRAFT'): void {

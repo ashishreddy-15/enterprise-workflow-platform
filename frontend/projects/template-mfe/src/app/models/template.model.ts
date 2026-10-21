@@ -36,4 +36,5 @@ export interface DAGNode {
   requiredPayloadKeys: string[];
   outgoingTransitions: { action: string; targetState: string }[];
   incomingTransitions: { action: string; sourceState: string }[];
+  rawStep?: StepDefinition;
 }

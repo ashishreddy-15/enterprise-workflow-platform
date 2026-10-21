@@ -62,7 +62,7 @@ export class InboxComponent implements OnInit, OnDestroy {
   // Dynamic Form Model State (Signals for instantaneous zoneless UI reactivity)
   readonly panCardUrl = signal<string>('https://storage.corp.internal/kyc/pan.pdf');
   readonly gstCertUrl = signal<string>('https://storage.corp.internal/kyc/gst.pdf');
-  readonly reviewComments = signal<string>('All submitted KYC certificates verified against official registry. Approved.');
+  readonly reviewComments = signal<string>('');
 
   // Live Clock Signal for real-time SLA countdown updating
   readonly now = signal<number>(Date.now());
@@ -461,6 +461,7 @@ export class InboxComponent implements OnInit, OnDestroy {
   selectTask(task: TaskInboxItem): void {
     this.selectedTask.set(task);
     this.actionMessage.set(null);
+    this.reviewComments.set('');
     this.loadTemplate(task.templateId);
 
     // If task contextData already contains submitted values, populate form inputs
@@ -514,14 +515,20 @@ export class InboxComponent implements OnInit, OnDestroy {
       };
     }
 
+    const userComments = this.reviewComments().trim();
+    const commentToSend = userComments || (task.currentState === 'AWAITING_KYC_DOCS'
+      ? 'Submitted vendor KYC documents for review'
+      : `Action ${this.formatActionLabel(actionKey)} executed via Workbench`);
+
     this.workflowService.transitionWorkflow(task.workflowId, {
       action: actionKey,
-      comments: this.reviewComments() || `Action ${actionKey} executed via Workbench`,
+      comments: commentToSend,
       payload
     }).subscribe({
       next: (res) => {
         this.isSubmitting.set(false);
         this.actionSuccess.set(true);
+        this.reviewComments.set('');
         this.actionMessage.set(`Action '${this.formatActionLabel(actionKey)}' completed successfully. Current state: ${res.currentState}`);
         this.loadInbox();
       },

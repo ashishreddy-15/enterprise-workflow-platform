@@ -378,18 +378,20 @@
                   </div>
                 </div>
               }
-
-              <!-- Review / Approval Decision Comments -->
-              <div>
-                <label class="block font-medium text-zinc-700 mb-1">Decision / Review Comments</label>
-                <textarea [ngModel]="reviewComments()"
-                          (ngModelChange)="reviewComments.set($event)"
-                          rows="2"
-                          placeholder="Add optional notes for this transition..."
-                          class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1 text-xs text-zinc-900 outline-none focus:border-zinc-900"></textarea>
-              </div>
             </div>
           }
+
+          <!-- Decision / Submission Comments (Available for all steps) -->
+          <div class="pt-1">
+            <label class="block font-medium text-zinc-700 mb-1 text-xs">
+              {{ task.currentState === 'AWAITING_KYC_DOCS' ? 'Submission Notes / Remarks' : 'Decision / Review Comments' }}
+            </label>
+            <textarea [ngModel]="reviewComments()"
+                      (ngModelChange)="reviewComments.set($event)"
+                      rows="2"
+                      [placeholder]="task.currentState === 'AWAITING_KYC_DOCS' ? 'Add optional submission notes or context for the legal reviewer...' : 'Add decision notes, compliance justification, or rejection reason...'"
+                      class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1 text-xs text-zinc-900 outline-none focus:border-zinc-900 transition"></textarea>
+          </div>
         </div>
 
         <!-- Technical Traceability (Compact 2-Column Table) -->

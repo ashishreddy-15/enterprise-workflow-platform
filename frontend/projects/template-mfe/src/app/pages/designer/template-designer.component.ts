@@ -28,6 +28,7 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
   readonly zoomLevel = signal<number>(1);
   readonly panOffset = signal<{ x: number; y: number }>({ x: 30, y: 30 });
   readonly isPanning = signal<boolean>(false);
+  readonly isFullscreenCanvas = signal<boolean>(false);
   private panStart = { x: 0, y: 0 };
   readonly hoveredNodeKey = signal<string | null>(null);
   readonly hoveredEdgeId = signal<string | null>(null);
@@ -367,6 +368,8 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
   onEscape(): void {
     if (this.selectedNode()) {
       this.selectedNode.set(null);
+    } else if (this.isFullscreenCanvas()) {
+      this.toggleFullscreen(false);
     } else if (this.isCreateModalOpen()) {
       this.closeCreateModal();
     }
@@ -431,6 +434,15 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
 
   setViewMode(mode: 'canvas' | 'pipeline' | 'dsl'): void {
     this.viewMode.set(mode);
+  }
+
+  toggleFullscreen(enable?: boolean): void {
+    const next = enable !== undefined ? enable : !this.isFullscreenCanvas();
+    this.isFullscreenCanvas.set(next);
+    this.setScrollLock(next);
+    if (next) {
+      this.resetZoom();
+    }
   }
 
   // Interactive 2D Canvas Viewport Controls

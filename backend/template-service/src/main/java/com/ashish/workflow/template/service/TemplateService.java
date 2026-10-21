@@ -3,7 +3,10 @@ package com.ashish.workflow.template.service;
 import com.ashish.workflow.template.document.WorkflowTemplateDocument;
 import com.ashish.workflow.template.repository.WorkflowTemplateRepository;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,6 +61,17 @@ public class TemplateService {
     public Optional<WorkflowTemplateDocument> getActivePublishedTemplate(String templateKey) {
         log.debug("Fetching active published template for key: '{}'", templateKey);
         return templateRepository.findFirstByTemplateKeyAndStatusOrderByVersionDesc(templateKey, "PUBLISHED");
+    }
+
+    public List<WorkflowTemplateDocument> getAllActivePublishedTemplates() {
+        log.debug("Fetching all active published templates");
+        List<WorkflowTemplateDocument> published =
+                templateRepository.findByStatusOrderByTemplateKeyAscVersionDesc("PUBLISHED");
+        Map<String, WorkflowTemplateDocument> latestByKey = new LinkedHashMap<>();
+        for (WorkflowTemplateDocument doc : published) {
+            latestByKey.putIfAbsent(doc.getTemplateKey(), doc);
+        }
+        return new ArrayList<>(latestByKey.values());
     }
 
     public List<WorkflowTemplateDocument> getAllVersions(String templateKey) {

@@ -12,4 +12,6 @@ public interface WorkflowTemplateRepository extends MongoRepository<WorkflowTemp
             String templateKey, String status);
 
     List<WorkflowTemplateDocument> findByTemplateKeyOrderByVersionDesc(String templateKey);
+
+    List<WorkflowTemplateDocument> findByStatusOrderByTemplateKeyAscVersionDesc(String status);
 }

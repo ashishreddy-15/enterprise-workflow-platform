@@ -34,6 +34,12 @@ public class TemplateController {
         return ResponseEntity.ok(templateService.publishTemplate(templateKey, version));
     }
 
+    @GetMapping
+    public ResponseEntity<List<WorkflowTemplateDocument>> getAllPublished() {
+        log.debug("REST: Get all active published templates");
+        return ResponseEntity.ok(templateService.getAllActivePublishedTemplates());
+    }
+
     @GetMapping("/{templateKey}")
     public ResponseEntity<WorkflowTemplateDocument> getActivePublished(@PathVariable String templateKey) {
         log.debug("REST: Get active published template - key: '{}'", templateKey);

@@ -15,6 +15,10 @@ export class WorkflowService {
     return this.http.get<TaskInboxItem[]>(`${this.gatewayBaseUrl}/tasks/inbox`);
   }
 
+  getTemplates(): Observable<WorkflowTemplate[]> {
+    return this.http.get<WorkflowTemplate[]>(`${this.templateBaseUrl}/templates`);
+  }
+
   getTemplate(templateKey: string): Observable<WorkflowTemplate> {
     return this.http.get<WorkflowTemplate>(`${this.templateBaseUrl}/templates/${templateKey}`);
   }

@@ -33,25 +33,9 @@ export class InboxComponent implements OnInit, OnDestroy {
   readonly createErrorMessage = signal<string | null>(null);
   readonly selectedTemplateKey = signal<string>('VENDOR_ONBOARDING');
   readonly newWorkflowTitle = signal<string>('');
-
-  readonly templateCatalog: TemplateCatalogItem[] = [
-    {
-      key: 'VENDOR_ONBOARDING',
-      name: 'Enterprise Vendor KYC & Legal Onboarding',
-      category: 'Procurement & Compliance',
-      description: 'Two-stage multi-party vendor onboarding. Requester uploads verified PAN & GST credentials, routed to Legal & Compliance officers for final verification.',
-      initialStep: 'Awaiting KYC Documents',
-      estimatedSla: '24h'
-    },
-    {
-      key: 'VENDOR_ONBOARDING_TEST',
-      name: 'Fast-Track Vendor Audit & Risk Check',
-      category: 'Vendor Governance',
-      description: 'Expedited compliance audit with automated state machine transitions and audit logging.',
-      initialStep: 'Awaiting KYC Documents',
-      estimatedSla: '12h'
-    }
-  ];
+  // Dynamic published template catalog loaded via template-service
+  readonly templateCatalog = signal<TemplateCatalogItem[]>([]);
+  readonly isTemplatesLoading = signal<boolean>(false);
 
   readonly quickFillTitles: string[] = [
     'Acme Industrial Technologies Ltd',
@@ -70,6 +54,7 @@ export class InboxComponent implements OnInit, OnDestroy {
 
   private personaChangeListener = () => {
     this.loadInbox();
+    this.loadTemplates();
   };
 
   // Live SLA Countdown Computation
@@ -313,6 +298,7 @@ export class InboxComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadInbox();
+    this.loadTemplates();
     // Re-fetch inbox whenever the persona switcher in Shell changes roles
     window.addEventListener('ewp:persona-changed', this.personaChangeListener);
 
@@ -325,6 +311,48 @@ export class InboxComponent implements OnInit, OnDestroy {
     this.route.queryParams.subscribe(params => {
       if (params['action'] === 'new') {
         this.openCreateModal();
+      }
+    });
+  }
+
+  loadTemplates(): void {
+    this.isTemplatesLoading.set(true);
+    this.workflowService.getTemplates().subscribe({
+      next: (templates) => {
+        this.isTemplatesLoading.set(false);
+
+        // Pre-populate templateMap with every template loaded from backend
+        const nextMap = new Map(this.templateMap());
+        for (const tpl of templates) {
+          nextMap.set(tpl.templateKey, tpl);
+        }
+        this.templateMap.set(nextMap);
+
+        // Map to catalog items for the modal picker
+        const catalogItems: TemplateCatalogItem[] = templates.map(tpl => {
+          const initialStepDef = tpl.steps?.[tpl.initialState];
+          const initialStepName = initialStepDef?.stepName || tpl.initialState || 'Initial Step';
+          const sla = initialStepDef?.slaHours ? `${initialStepDef.slaHours}h` : '24h';
+          return {
+            key: tpl.templateKey,
+            name: tpl.name || tpl.templateKey,
+            category: 'Enterprise Governance',
+            description: tpl.description || 'Active published workflow template registered in template registry.',
+            initialStep: initialStepName,
+            estimatedSla: sla
+          };
+        });
+
+        this.templateCatalog.set(catalogItems);
+
+        // Default selected key if not already set to a valid template
+        if (catalogItems.length > 0 && !catalogItems.some(c => c.key === this.selectedTemplateKey())) {
+          this.selectedTemplateKey.set(catalogItems[0].key);
+        }
+      },
+      error: (err) => {
+        this.isTemplatesLoading.set(false);
+        console.error('Failed to load published templates from template-service:', err);
       }
     });
   }

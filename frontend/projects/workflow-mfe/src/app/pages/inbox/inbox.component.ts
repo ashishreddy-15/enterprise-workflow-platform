@@ -37,16 +37,16 @@ export class InboxComponent implements OnInit, OnDestroy {
   readonly templateCatalog = signal<TemplateCatalogItem[]>([]);
   readonly isTemplatesLoading = signal<boolean>(false);
 
-  readonly quickFillTitles: string[] = [
-    'Acme Industrial Technologies Ltd',
-    'Starlight Global Logistics Inc',
-    'Zenith Semiconductor Labs'
-  ];
-
   // Dynamic Form Model State (Signals for instantaneous zoneless UI reactivity)
-  readonly panCardUrl = signal<string>('https://storage.corp.internal/kyc/pan.pdf');
-  readonly gstCertUrl = signal<string>('https://storage.corp.internal/kyc/gst.pdf');
+  readonly panCardUrl = signal<string>('');
+  readonly gstCertUrl = signal<string>('');
   readonly reviewComments = signal<string>('');
+
+  // Selected template object dynamically computed for the launch modal
+  readonly selectedTemplate = computed(() => {
+    const key = this.selectedTemplateKey();
+    return this.templateCatalog().find(t => t.key === key) || this.templateCatalog()[0];
+  });
 
   // Live Clock Signal for real-time SLA countdown updating
   readonly now = signal<number>(Date.now());
@@ -242,11 +242,6 @@ export class InboxComponent implements OnInit, OnDestroy {
     ];
   });
 
-  fillSampleKycData(): void {
-    this.panCardUrl.set('https://storage.corp.internal/kyc/pan.pdf');
-    this.gstCertUrl.set('https://storage.corp.internal/kyc/gst.pdf');
-  }
-
   isPayloadValid(task: TaskInboxItem): boolean {
     const tpl = this.templateMap().get(task.templateId);
     const step = tpl?.steps?.[task.currentState];
@@ -380,10 +375,6 @@ export class InboxComponent implements OnInit, OnDestroy {
     this.selectedTemplateKey.set(key);
   }
 
-  setQuickTitle(title: string): void {
-    this.newWorkflowTitle.set(title);
-  }
-
   createAndLaunchWorkflow(): void {
     const title = this.newWorkflowTitle().trim();
     if (!title) {
@@ -492,13 +483,9 @@ export class InboxComponent implements OnInit, OnDestroy {
     this.reviewComments.set('');
     this.loadTemplate(task.templateId);
 
-    // If task contextData already contains submitted values, populate form inputs
-    if (task.contextData?.['panCardUrl']) {
-      this.panCardUrl.set(String(task.contextData['panCardUrl']));
-    }
-    if (task.contextData?.['gstCertUrl']) {
-      this.gstCertUrl.set(String(task.contextData['gstCertUrl']));
-    }
+    // If task contextData already contains submitted values, populate form inputs, else reset
+    this.panCardUrl.set(task.contextData?.['panCardUrl'] ? String(task.contextData['panCardUrl']) : '');
+    this.gstCertUrl.set(task.contextData?.['gstCertUrl'] ? String(task.contextData['gstCertUrl']) : '');
   }
 
   onSearchInput(event: Event): void {

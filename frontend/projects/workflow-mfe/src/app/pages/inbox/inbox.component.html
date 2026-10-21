@@ -92,8 +92,8 @@
   <main class="flex-1 flex flex-col bg-white overflow-y-auto">
     @if (selectedTask(); as task) {
       
-      <!-- Top Action Bar (Sticky at Top of Canvas) -->
-      <div class="sticky top-0 z-10 px-5 py-3 border-b border-zinc-200 flex items-center justify-between gap-3 bg-white/95 backdrop-blur-xs">
+      <!-- Top Action Bar (Sticky at Top of Canvas - Solid Opaque z-30) -->
+      <div class="sticky top-0 z-30 px-5 py-3 border-b border-zinc-200 flex items-center justify-between gap-3 bg-white shadow-xs">
         <div>
           <div class="flex items-center gap-2 text-xs text-zinc-500">
             <span class="font-mono text-zinc-400 text-[11px]">ID: {{ task.workflowId.substring(0, 8) }}...</span>
@@ -197,10 +197,10 @@
           <div class="relative flex items-start justify-between pt-1">
             
             <!-- Continuous Track Line Behind Nodes -->
-            <div class="absolute top-4 left-8 right-8 h-0.5 bg-zinc-200 -z-0"></div>
+            <div class="absolute top-4 left-8 right-8 h-0.5 bg-zinc-200"></div>
 
             @for (node of stepperNodes(); track node.stepKey; let idx = $index; let isLast = $last) {
-              <div class="relative z-10 flex flex-col items-center text-center px-1"
+              <div class="relative flex flex-col items-center text-center px-1"
                    [style.width.%]="100 / stepperNodes().length">
                 
                 <!-- Node State Marker -->
@@ -262,16 +262,7 @@
 
         <!-- Step Context & Action Payload -->
         <div class="border border-zinc-200 rounded-lg p-3.5 space-y-3">
-          <div class="flex items-center justify-between">
-            <div class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Step Context & Payload</div>
-            @if (task.currentState === 'AWAITING_KYC_DOCS') {
-              <button (click)="fillSampleKycData()"
-                      type="button"
-                      class="text-[11px] text-zinc-500 hover:text-zinc-950 font-mono underline cursor-pointer transition">
-                Autofill Sample Docs
-              </button>
-            }
-          </div>
+          <div class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Step Context & Payload</div>
 
           @if (task.currentState === 'AWAITING_KYC_DOCS') {
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -516,18 +507,6 @@
                  (input)="newWorkflowTitle.set($any($event.target).value)"
                  placeholder="e.g., Vendor Onboarding - Acme Industrial Supplies Ltd"
                  class="w-full bg-zinc-50 border border-zinc-200 rounded-md px-3 py-2 text-xs text-zinc-950 placeholder:text-zinc-400 outline-none focus:bg-white focus:border-zinc-900 transition">
-          
-          <!-- Quick Fill Pills -->
-          <div class="flex items-center gap-1.5 pt-1 flex-wrap">
-            <span class="text-[10px] text-zinc-400 font-mono">Suggestions:</span>
-            @for (title of quickFillTitles; track title) {
-              <button type="button"
-                      (click)="setQuickTitle(title)"
-                      class="px-2 py-0.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded text-[10px] font-medium transition cursor-pointer">
-                {{ title }}
-              </button>
-            }
-          </div>
         </div>
 
         <!-- Information notice -->
@@ -536,7 +515,7 @@
             <span class="font-mono text-zinc-400">ℹ</span> Requester Context &amp; Governance
           </div>
           <p>
-            This workflow will be instantiated under your current authenticated identity. Initial step task (<code class="bg-zinc-100 px-1 py-0.5 rounded text-[10px]">AWAITING_KYC_DOCS</code>) will be immediately routed to your inbox.
+            This workflow will be instantiated under your authenticated identity. The initial step (<code class="bg-zinc-100 px-1 py-0.5 rounded text-[10px] font-mono text-zinc-800">{{ selectedTemplate()?.initialStep || 'Initial Step' }}</code>) will be immediately routed to your inbox.
           </p>
         </div>
 

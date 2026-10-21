@@ -1,0 +1,13 @@
+<div class="fallback-container">
+  <div class="fallback-icon">⏳</div>
+  <h2 class="fallback-title">{{ remoteName }} Remote Module</h2>
+  <p class="fallback-description">
+    This Micro-Frontend is registered under Native Federation at <span class="fallback-code">{{ expectedPort }}</span>.
+    It is either compiling or currently transitioning into Phase 2 development.
+  </p>
+  <div class="fallback-diagnostics">
+    <div class="diagnostic-item"><strong>Status:</strong> Native Federation Standby</div>
+    <div class="diagnostic-item"><strong>Expected Entry:</strong> http://localhost:{{ expectedPort }}/remoteEntry.json</div>
+    <div class="diagnostic-item"><strong>Exposed Contract:</strong> {{ exposedRoutes }}</div>
+  </div>
+</div>

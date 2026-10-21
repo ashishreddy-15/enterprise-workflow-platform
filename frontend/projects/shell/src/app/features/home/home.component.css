@@ -1,0 +1,250 @@
+.home-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Hero Section */
+.hero-banner {
+  background: linear-gradient(135deg, #4338ca 0%, #3730a3 50%, #581c87 100%);
+  border-radius: 1rem;
+  padding: 2rem;
+  color: #ffffff;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.hero-title {
+  font-size: 1.875rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+
+@media (min-width: 640px) {
+  .hero-title {
+    font-size: 2.25rem;
+  }
+}
+
+.hero-subtitle {
+  margin-top: 0.75rem;
+  color: #e0e7ff;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.hero-user {
+  color: #ffffff;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.hero-actions {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.btn-hero-primary {
+  background-color: #ffffff;
+  color: #4338ca;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  transition: background-color 0.15s ease;
+}
+
+.btn-hero-primary:hover {
+  background-color: #eef2ff;
+}
+
+.btn-hero-secondary {
+  background-color: rgba(79, 70, 229, 0.3);
+  color: #ffffff;
+  border: 1px solid rgba(165, 180, 252, 0.6);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.btn-hero-secondary:hover {
+  background-color: rgba(79, 70, 229, 0.5);
+}
+
+/* MFE Grid */
+.mfe-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .mfe-grid {
+    grid-template-columns: repeat(3, min-width 0, 1fr);
+  }
+}
+
+.mfe-card {
+  background-color: #ffffff;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.mfe-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.mfe-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mfe-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.badge-indigo {
+  background-color: #eef2ff;
+  color: #4f46e5;
+}
+
+.badge-purple {
+  background-color: #faf5ff;
+  color: #9333ea;
+}
+
+.badge-emerald {
+  background-color: #ecfdf5;
+  color: #059669;
+}
+
+.mfe-port {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.mfe-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.mfe-description {
+  font-size: 0.75rem;
+  color: #64748b;
+  line-height: 1.5;
+  flex: 1;
+}
+
+.mfe-footer {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mfe-status {
+  font-size: 0.6875rem;
+  color: #94a3b8;
+}
+
+.mfe-link {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #4f46e5;
+  text-decoration: none;
+}
+
+.mfe-link:hover {
+  color: #3730a3;
+}
+
+/* Session Details Panel */
+.session-panel {
+  background-color: #ffffff;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+}
+
+.session-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin: 0;
+}
+
+.session-grid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .session-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.session-stat {
+  background-color: #f8fafc;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid #f1f5f9;
+}
+
+.stat-label {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.stat-value {
+  margin-top: 0.25rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stat-value.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.stat-value.highlight {
+  color: #4338ca;
+}
+
+.stat-value.success {
+  color: #059669;
+}

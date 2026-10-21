@@ -693,19 +693,19 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
         });
       }
 
-      const payloadKeys = s.payloadKeysInput
+      const payloadKeys = !s.isTerminal && s.payloadKeysInput
         ? s.payloadKeysInput.split(',').map(k => k.trim()).filter(Boolean)
-        : s.requiredPayloadKeys || [];
+        : (!s.isTerminal ? s.requiredPayloadKeys || [] : []);
 
       stepsMap[s.stateKey] = {
         stepOrder: idx + 1,
         stepName: s.stepName,
-        stepType: s.stepType,
-        actorScope: s.actorScope,
-        requiredRole: s.actorScope === 'ROLE' ? (s.requiredRole || null) : null,
+        stepType: s.isTerminal ? 'TERMINAL' : s.stepType,
+        actorScope: s.isTerminal ? 'ANY' : s.actorScope,
+        requiredRole: !s.isTerminal && s.actorScope === 'ROLE' ? (s.requiredRole || null) : null,
         requiredPayloadKeys: payloadKeys,
         isTerminal: s.isTerminal,
-        slaHours: s.slaHours ? +s.slaHours : null,
+        slaHours: !s.isTerminal && s.slaHours ? +s.slaHours : null,
         transitions: transMap
       };
     });
@@ -1172,6 +1172,9 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     if (isTerminal) {
       states[index].stepType = 'TERMINAL';
       states[index].actorScope = 'ANY';
+      states[index].requiredRole = null;
+      states[index].requiredPayloadKeys = [];
+      states[index].payloadKeysInput = '';
       states[index].transitions = [];
       states[index].slaHours = null;
     } else {

@@ -924,85 +924,7 @@
                           </div>
                         </div>
 
-                        <!-- Card Step Attributes (Type, Scope, Role, SLA) -->
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
-                          <div>
-                            <label class="block text-zinc-500 text-[11px] font-mono mb-1">Step Type</label>
-                            <select [(ngModel)]="state.stepType"
-                                    class="w-full px-2 py-1.5 text-xs bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:bg-white focus:border-zinc-900 transition cursor-pointer">
-                              @for (st of availableStepTypes; track st.value) {
-                                <option [value]="st.value">{{ st.label }}</option>
-                              }
-                            </select>
-                          </div>
-
-                          <div>
-                            <label class="block text-zinc-500 text-[11px] font-mono mb-1">Actor Scope</label>
-                            <select [(ngModel)]="state.actorScope"
-                                    class="w-full px-2 py-1.5 text-xs bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:bg-white focus:border-zinc-900 transition cursor-pointer">
-                              @for (sc of availableActorScopes; track sc.value) {
-                                <option [value]="sc.value">{{ sc.label }}</option>
-                              }
-                            </select>
-                          </div>
-
-                          <div>
-                            <div class="flex items-center justify-between mb-1">
-                              <label class="block text-zinc-500 text-[11px] font-mono">Required Authority</label>
-                              @if (state.actorScope === 'ROLE' && isCustomRole(state.requiredRole)) {
-                                <span class="text-[9px] font-mono text-purple-700 bg-purple-100 px-1 rounded font-semibold">Custom</span>
-                              }
-                            </div>
-
-                            @if (state.actorScope === 'ROLE') {
-                              <div class="space-y-1.5">
-                                <select [ngModel]="isCustomRole(state.requiredRole) ? '__CUSTOM__' : state.requiredRole"
-                                        (ngModelChange)="onRoleSelectChange(state, $event)"
-                                        class="w-full px-2 py-1.5 font-mono text-[11px] bg-purple-50 text-purple-900 border border-purple-200 rounded-md outline-none focus:bg-white focus:border-purple-600 transition cursor-pointer">
-                                  @for (role of availableRoles; track role) {
-                                    <option [value]="role">{{ role.replace('ROLE_', '') }}</option>
-                                  }
-                                  <option value="__CUSTOM__">➕ Other (Specify Custom Role...)</option>
-                                </select>
-
-                                @if (isCustomRole(state.requiredRole)) {
-                                  <div class="animate-in fade-in duration-150">
-                                    <input type="text"
-                                           [ngModel]="state.requiredRole"
-                                           (ngModelChange)="onCustomRoleInput(state, $event)"
-                                           placeholder="e.g. ROLE_COMPLIANCE_OFFICER"
-                                           class="w-full px-2 py-1 font-mono text-[11px] bg-white border border-purple-300 rounded outline-none focus:border-purple-700 focus:ring-1 focus:ring-purple-700 text-purple-900 font-semibold shadow-2xs">
-                                    <span class="text-[9px] text-zinc-400 font-mono mt-0.5 block leading-tight">
-                                      Specify exact role identifier
-                                    </span>
-                                  </div>
-                                }
-                              </div>
-                            } @else {
-                              <input type="text"
-                                     disabled
-                                     value="Inherited"
-                                     class="w-full px-2 py-1.5 font-mono text-xs bg-zinc-100 text-zinc-400 border border-zinc-200 rounded-md cursor-not-allowed">
-                            }
-                          </div>
-
-                          <div>
-                            <label class="block text-zinc-500 text-[11px] font-mono mb-1">SLA Target</label>
-                            <div class="flex items-center">
-                              <input type="number"
-                                     [(ngModel)]="state.slaHours"
-                                     placeholder="None"
-                                     min="1"
-                                     max="720"
-                                     class="w-full px-2 py-1.5 font-mono text-xs bg-zinc-50 border border-zinc-200 rounded-l-md outline-none focus:bg-white focus:border-zinc-900 transition">
-                              <span class="px-2 py-1.5 bg-zinc-100 text-zinc-600 border border-l-0 border-zinc-200 rounded-r-md text-[11px] font-mono">
-                                hrs
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <!-- Terminal State Checkbox & Payload Input -->
+                        <!-- Terminal State Checkbox & Indicator Row -->
                         <div class="pt-2 border-t border-zinc-100 flex flex-wrap items-center justify-between gap-3 text-xs">
                           <label class="flex items-center gap-2 cursor-pointer font-medium text-zinc-800 shrink-0">
                             <input type="checkbox"
@@ -1012,14 +934,105 @@
                             <span>Is Terminal State (Workflow stops here)</span>
                           </label>
 
-                          <div class="flex items-center gap-2 min-w-[280px] flex-1">
-                            <span class="text-zinc-400 text-[10px] font-mono whitespace-nowrap">Payload Keys:</span>
+                          @if (state.isTerminal) {
+                            <div class="flex items-center gap-2 text-[11px] font-mono text-zinc-600 bg-zinc-100 px-2.5 py-1 rounded-md border border-zinc-200">
+                              <span class="w-2 h-2 rounded-full"
+                                    [ngClass]="['REJECTED', 'CANCELLED'].includes(state.stateKey.toUpperCase()) ? 'bg-rose-500' : 'bg-emerald-500'"></span>
+                              <span>Terminal State &bull; Process concludes here (No SLA, actor, or payload)</span>
+                            </div>
+                          }
+                        </div>
+
+                        <!-- Non-Terminal State Fields: Step Attributes, Payload Schema, Outgoing Transitions -->
+                        @if (!state.isTerminal) {
+                          <!-- Card Step Attributes (Type, Scope, Role, SLA) -->
+                          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs pt-1 border-t border-zinc-100">
+                            <div>
+                              <label class="block text-zinc-500 text-[11px] font-mono mb-1">Step Type</label>
+                              <select [(ngModel)]="state.stepType"
+                                      class="w-full px-2 py-1.5 text-xs bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:bg-white focus:border-zinc-900 transition cursor-pointer">
+                                @for (st of availableStepTypes; track st.value) {
+                                  @if (st.value !== 'TERMINAL') {
+                                    <option [value]="st.value">{{ st.label }}</option>
+                                  }
+                                }
+                              </select>
+                            </div>
+
+                            <div>
+                              <label class="block text-zinc-500 text-[11px] font-mono mb-1">Actor Scope</label>
+                              <select [(ngModel)]="state.actorScope"
+                                      class="w-full px-2 py-1.5 text-xs bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:bg-white focus:border-zinc-900 transition cursor-pointer">
+                                @for (sc of availableActorScopes; track sc.value) {
+                                  <option [value]="sc.value">{{ sc.label }}</option>
+                                }
+                              </select>
+                            </div>
+
+                            <div>
+                              <div class="flex items-center justify-between mb-1">
+                                <label class="block text-zinc-500 text-[11px] font-mono">Required Authority</label>
+                                @if (state.actorScope === 'ROLE' && isCustomRole(state.requiredRole)) {
+                                  <span class="text-[9px] font-mono text-purple-700 bg-purple-100 px-1 rounded font-semibold">Custom</span>
+                                }
+                              </div>
+
+                              @if (state.actorScope === 'ROLE') {
+                                <div class="space-y-1.5">
+                                  <select [ngModel]="isCustomRole(state.requiredRole) ? '__CUSTOM__' : state.requiredRole"
+                                          (ngModelChange)="onRoleSelectChange(state, $event)"
+                                          class="w-full px-2 py-1.5 font-mono text-[11px] bg-purple-50 text-purple-900 border border-purple-200 rounded-md outline-none focus:bg-white focus:border-purple-600 transition cursor-pointer">
+                                    @for (role of availableRoles; track role) {
+                                      <option [value]="role">{{ role.replace('ROLE_', '') }}</option>
+                                    }
+                                    <option value="__CUSTOM__">➕ Other (Specify Custom Role...)</option>
+                                  </select>
+
+                                  @if (isCustomRole(state.requiredRole)) {
+                                    <div class="animate-in fade-in duration-150">
+                                      <input type="text"
+                                             [ngModel]="state.requiredRole"
+                                             (ngModelChange)="onCustomRoleInput(state, $event)"
+                                             placeholder="e.g. ROLE_COMPLIANCE_OFFICER"
+                                             class="w-full px-2 py-1 font-mono text-[11px] bg-white border border-purple-300 rounded outline-none focus:border-purple-700 focus:ring-1 focus:ring-purple-700 text-purple-900 font-semibold shadow-2xs">
+                                      <span class="text-[9px] text-zinc-400 font-mono mt-0.5 block leading-tight">
+                                        Specify exact role identifier
+                                      </span>
+                                    </div>
+                                  }
+                                </div>
+                              } @else {
+                                <input type="text"
+                                       disabled
+                                       value="Inherited"
+                                       class="w-full px-2 py-1.5 font-mono text-xs bg-zinc-100 text-zinc-400 border border-zinc-200 rounded-md cursor-not-allowed">
+                              }
+                            </div>
+
+                            <div>
+                              <label class="block text-zinc-500 text-[11px] font-mono mb-1">SLA Target</label>
+                              <div class="flex items-center">
+                                <input type="number"
+                                       [(ngModel)]="state.slaHours"
+                                       placeholder="None"
+                                       min="1"
+                                       max="720"
+                                       class="w-full px-2 py-1.5 font-mono text-xs bg-zinc-50 border border-zinc-200 rounded-l-md outline-none focus:bg-white focus:border-zinc-900 transition">
+                                <span class="px-2 py-1.5 bg-zinc-100 text-zinc-600 border border-l-0 border-zinc-200 rounded-r-md text-[11px] font-mono">
+                                  hrs
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Payload Input -->
+                          <div class="pt-2 border-t border-zinc-100 flex items-center gap-2 text-xs">
+                            <span class="text-zinc-500 text-[11px] font-mono whitespace-nowrap">Payload Schema:</span>
                             <input type="text"
                                    [(ngModel)]="state.payloadKeysInput"
-                                   placeholder="e.g. invoiceNumber, amount, vendorEmail"
+                                   placeholder="e.g. invoiceNumber, amount, vendorEmail (comma-separated)"
                                    class="flex-1 px-2.5 py-1.5 font-mono text-xs bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:bg-white focus:border-zinc-900 transition">
                           </div>
-                        </div>
 
                         <!-- Outgoing Transitions Section (if not terminal) -->
                         @if (!state.isTerminal) {

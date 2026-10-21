@@ -1,6 +1,6 @@
 <div class="h-screen flex flex-col bg-zinc-50 text-zinc-900 overflow-hidden">
   <!-- Minimalist Top Navigation -->
-  <header class="bg-white border-b border-zinc-200 flex-none h-14 z-50">
+  <header class="bg-white border-b border-zinc-200 flex-none h-14 z-30">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 h-full flex items-center justify-between">
       
       <!-- Brand & Navigation Links -->
@@ -26,10 +26,14 @@
         </nav>
       </div>
 
-      <!-- Persona Switcher -->
+      <!-- Identity & Custom Login Button -->
       <div class="flex items-center gap-3">
-        <div class="flex items-center gap-2 border border-zinc-200 rounded-md bg-white px-2 py-1 text-xs">
-          <span class="w-2 h-2 rounded-full"
+        <button (click)="openLoginModal()"
+                title="Switch persona or sign in with custom role"
+                class="flex items-center gap-2 border border-zinc-200 hover:border-zinc-400 rounded-lg bg-white px-2.5 py-1 text-xs transition cursor-pointer shadow-xs group">
+          
+          <!-- Online status dot -->
+          <span class="w-2 h-2 rounded-full shrink-0"
                 [ngClass]="{
                   'bg-emerald-500': auth.isAuthenticated(),
                   'bg-amber-400 animate-pulse': auth.isAuthenticating(),
@@ -37,13 +41,22 @@
                 }">
           </span>
 
-          <select [value]="auth.activePersona().id" (change)="onPersonaChange($event)"
-                  class="bg-transparent font-medium text-zinc-800 outline-none cursor-pointer">
-            @for (p of auth.personas; track p.id) {
-              <option [value]="p.id">{{ p.name }} &bull; {{ p.role }}</option>
-            }
-          </select>
-        </div>
+          <!-- User Details -->
+          <div class="text-left flex items-center gap-1.5">
+            <span class="font-semibold text-zinc-900 group-hover:text-zinc-950">
+              {{ auth.activePersona().name }}
+            </span>
+            <span class="text-zinc-400 text-[10px]">&bull;</span>
+            <span class="px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-600 text-[10px] font-mono">
+              {{ auth.activePersona().role }}
+            </span>
+          </div>
+
+          <!-- Switch icon -->
+          <span class="text-[10px] text-zinc-400 group-hover:text-zinc-700 ml-1">
+            ▼
+          </span>
+        </button>
       </div>
 
     </div>
@@ -53,7 +66,7 @@
   @if (auth.authError()) {
     <div class="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-900 flex justify-between items-center max-w-7xl mx-auto w-full flex-none">
       <span>{{ auth.authError() }} (Gateway: localhost:8080)</span>
-      <button (click)="auth.switchPersona(auth.activePersona())" class="underline font-semibold hover:text-amber-950">
+      <button (click)="auth.switchPersona(auth.activePersona())" class="underline font-semibold hover:text-amber-950 cursor-pointer">
         Retry
       </button>
     </div>
@@ -72,4 +85,170 @@
       Gateway :8080 Connected
     </span>
   </footer>
+
+  <!-- =================================================================== -->
+  <!-- CUSTOM LOGIN & IDENTITY ACCESS MODAL                                -->
+  <!-- =================================================================== -->
+  @if (isLoginModalOpen()) {
+    <div class="fixed inset-0 z-50 bg-zinc-950/40 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 overscroll-contain select-none"
+         (click)="closeLoginModal()"
+         (wheel)="$event.preventDefault()">
+      
+      <!-- Modal Container -->
+      <div class="w-full max-w-lg bg-white rounded-xl border border-zinc-200 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden select-text animate-in fade-in zoom-in-95 duration-150"
+           (click)="$event.stopPropagation()"
+           (wheel)="$event.stopPropagation()">
+        
+        <!-- Modal Header -->
+        <div class="px-5 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50/70">
+          <div>
+            <h3 class="text-sm font-semibold text-zinc-950 tracking-tight">
+              Sign In & Role Provisioning
+            </h3>
+            <p class="text-xs text-zinc-500 mt-0.5">
+              Authenticate with custom username and roles or quick-select preset
+            </p>
+          </div>
+
+          <button (click)="closeLoginModal()"
+                  aria-label="Close dialog"
+                  class="text-zinc-400 hover:text-zinc-950 text-base leading-none p-1.5 rounded-md hover:bg-zinc-100 transition cursor-pointer">
+            ✕
+          </button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="p-5 space-y-4 overflow-y-auto">
+          
+          <!-- Error alert -->
+          @if (loginError()) {
+            <div class="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-900 text-xs flex items-center justify-between">
+              <span>{{ loginError() }}</span>
+              <button (click)="loginError.set(null)" class="text-rose-700 font-bold">✕</button>
+            </div>
+          }
+
+          <!-- Custom Credentials Section -->
+          <div class="space-y-3 bg-zinc-50/60 border border-zinc-200 rounded-lg p-3.5">
+            <span class="text-[11px] font-semibold text-zinc-600 uppercase tracking-wider block">
+              Custom User Credentials
+            </span>
+
+            <!-- User ID / Username -->
+            <div class="space-y-1">
+              <label class="text-xs font-medium text-zinc-700 block">
+                User ID / Username <span class="text-rose-500">*</span>
+              </label>
+              <input type="text"
+                     [value]="customUsername()"
+                     (input)="customUsername.set($any($event.target).value)"
+                     placeholder="e.g. user_alex, compliance_lead_01, meera_law"
+                     class="w-full bg-white border border-zinc-200 rounded px-3 py-1.5 text-xs text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-950 transition font-mono">
+            </div>
+
+            <!-- Display Name (Optional) -->
+            <div class="space-y-1">
+              <label class="text-xs font-medium text-zinc-700 block">
+                Display Name (Optional)
+              </label>
+              <input type="text"
+                     [value]="customDisplayName()"
+                     (input)="customDisplayName.set($any($event.target).value)"
+                     placeholder="e.g. Alex Morgan"
+                     class="w-full bg-white border border-zinc-200 rounded px-3 py-1.5 text-xs text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-950 transition">
+            </div>
+
+            <!-- Role Selector -->
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-medium text-zinc-700">
+                  Authority Role <span class="text-rose-500">*</span>
+                </label>
+                
+                <label class="flex items-center gap-1.5 text-[11px] text-zinc-500 cursor-pointer">
+                  <input type="checkbox"
+                         [checked]="useCustomRole()"
+                         (change)="useCustomRole.set($any($event.target).checked)"
+                         class="rounded border-zinc-300">
+                  <span>Enter custom role string</span>
+                </label>
+              </div>
+
+              @if (!useCustomRole()) {
+                <select [value]="selectedRole()"
+                        (change)="selectedRole.set($any($event.target).value)"
+                        class="w-full bg-white border border-zinc-200 rounded px-3 py-1.5 text-xs text-zinc-900 outline-none focus:border-zinc-950 transition font-mono">
+                  @for (role of availableRoles; track role.id) {
+                    <option [value]="role.id">{{ role.label }} ({{ role.id }})</option>
+                  }
+                </select>
+              } @else {
+                <input type="text"
+                       [value]="customRoleInput()"
+                       (input)="customRoleInput.set($any($event.target).value)"
+                       placeholder="e.g. ROLE_AUDITOR, ROLE_REGULATOR, ROLE_LEAD_DEV"
+                       class="w-full bg-white border border-zinc-200 rounded px-3 py-1.5 text-xs text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-950 transition font-mono">
+              }
+            </div>
+
+            <!-- Submit Custom Login Button -->
+            <button (click)="submitCustomLogin()"
+                    [disabled]="auth.isAuthenticating()"
+                    class="w-full mt-2 py-2 rounded bg-zinc-900 hover:bg-zinc-800 disabled:opacity-50 text-white text-xs font-semibold tracking-tight transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs">
+              @if (auth.isAuthenticating()) {
+                <span class="animate-spin text-xs">↻</span>
+                <span>Generating Token...</span>
+              } @else {
+                <span>Sign In with Custom Identity →</span>
+              }
+            </button>
+          </div>
+
+          <!-- Divider -->
+          <div class="relative flex items-center justify-center">
+            <div class="border-t border-zinc-200 w-full"></div>
+            <span class="bg-white px-2 text-[10px] font-mono text-zinc-400 uppercase tracking-wider shrink-0">
+              Or Quick-Select Preset Persona
+            </span>
+          </div>
+
+          <!-- Preset Persona Cards -->
+          <div class="grid grid-cols-2 gap-2">
+            @for (p of auth.personas; track p.id) {
+              <button (click)="selectPreset(p)"
+                      class="p-2.5 rounded-lg border text-left transition cursor-pointer flex flex-col gap-0.5"
+                      [ngClass]="auth.activePersona().id === p.id 
+                        ? 'border-zinc-900 bg-zinc-50 ring-1 ring-zinc-900' 
+                        : 'border-zinc-200 hover:bg-zinc-50 hover:border-zinc-300'">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="font-semibold text-zinc-900">{{ p.name }}</span>
+                  @if (auth.activePersona().id === p.id) {
+                    <span class="text-emerald-600 font-bold text-[11px]">✓ Active</span>
+                  }
+                </div>
+                <span class="text-[10px] text-zinc-500 font-mono">{{ p.role }}</span>
+                <span class="text-[9px] text-zinc-400">{{ p.department }}</span>
+              </button>
+            }
+          </div>
+
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="px-5 py-3 border-t border-zinc-200 bg-zinc-50 flex items-center justify-between">
+          <button (click)="auth.logout(); closeLoginModal()"
+                  class="px-2.5 py-1 text-xs text-rose-600 hover:text-rose-800 hover:underline transition cursor-pointer">
+            Sign Out
+          </button>
+
+          <button (click)="closeLoginModal()"
+                  class="px-3.5 py-1.5 rounded-md border border-zinc-200 hover:bg-zinc-100 text-zinc-700 text-xs font-medium transition cursor-pointer">
+            Close
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
 </div>

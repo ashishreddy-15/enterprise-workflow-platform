@@ -10,7 +10,6 @@ export class AuthService {
   private http = inject(HttpClient);
   private readonly gatewayBaseUrl = 'http://localhost:8080';
 
-  // State Signals (Rehydrated synchronously from localStorage to eliminate reload 401s)
   readonly personas = PRECONFIGURED_PERSONAS;
   readonly activePersona = signal<UserPersona>(this.getInitialPersona());
   readonly currentToken = signal<string | null>(localStorage.getItem('ewp_auth_token'));
@@ -20,31 +19,67 @@ export class AuthService {
   readonly isAuthenticated = computed(() => !!this.currentToken());
 
   constructor() {
-    // If no token exists yet, authenticate immediately
+    // If no token exists yet, authenticate initial persona
     if (!this.currentToken()) {
       this.switchPersona(this.activePersona());
     }
   }
 
   private getInitialPersona(): UserPersona {
-    const savedPersonaId = localStorage.getItem('ewp_active_persona');
-    const matched = this.personas.find(p => p.id === savedPersonaId);
-    return matched || PRECONFIGURED_PERSONAS[0];
+    const saved = localStorage.getItem('ewp_active_persona');
+    if (saved) {
+      try {
+        if (saved.startsWith('{')) {
+          return JSON.parse(saved);
+        }
+        const matched = this.personas.find(p => p.id === saved);
+        if (matched) return matched;
+      } catch (e) {
+        // fallback
+      }
+    }
+    return PRECONFIGURED_PERSONAS[0];
   }
 
   switchPersona(persona: UserPersona): void {
+    this.authenticate(persona.id, persona.roles, persona);
+  }
+
+  loginCustom(username: string, role: string, displayName?: string): void {
+    const trimmedUser = username.trim();
+    const trimmedRole = role.trim();
+    const roles = Array.from(new Set([trimmedRole, 'ROLE_EMPLOYEE']));
+
+    const persona: UserPersona = {
+      id: trimmedUser,
+      name: displayName?.trim() || trimmedUser,
+      role: trimmedRole,
+      roles: roles,
+      department: 'Custom Session',
+      avatarColor: 'bg-zinc-800'
+    };
+    this.authenticate(trimmedUser, roles, persona);
+  }
+
+  logout(): void {
+    this.currentToken.set(null);
+    localStorage.removeItem('ewp_auth_token');
+    localStorage.removeItem('ewp_active_persona');
+  }
+
+  private authenticate(userId: string, roles: string[], persona: UserPersona): void {
     this.isAuthenticating.set(true);
     this.authError.set(null);
     this.activePersona.set(persona);
-    localStorage.setItem('ewp_active_persona', persona.id);
+    localStorage.setItem('ewp_active_persona', JSON.stringify(persona));
 
-    this.requestDevToken(persona.id, persona.roles).subscribe({
+    this.requestDevToken(userId, roles).subscribe({
       next: (res) => {
         this.currentToken.set(res.access_token);
         localStorage.setItem('ewp_auth_token', res.access_token);
         this.isAuthenticating.set(false);
 
-        // Broadcast to all MFEs (such as workflow-mfe) that the persona & token changed
+        // Broadcast to all MFEs that the persona & token changed
         window.dispatchEvent(new CustomEvent('ewp:persona-changed', {
           detail: { persona, token: res.access_token }
         }));

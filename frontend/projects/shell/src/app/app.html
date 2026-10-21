@@ -59,8 +59,8 @@
     </div>
   }
 
-  <!-- Main Content Container: Takes remaining height with zero page-level scrollbars -->
-  <main class="flex-1 min-h-0 w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col overflow-hidden">
+  <!-- Main Content Container: Scrollable area for dashboards and views -->
+  <main class="flex-1 min-h-0 w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col overflow-y-auto">
     <router-outlet></router-outlet>
   </main>
 

@@ -1,0 +1,395 @@
+<div class="space-y-4 pb-16 pr-1">
+
+  <!-- =================================================================== -->
+  <!-- TOP HEADER & CONTROLS BAR                                           -->
+  <!-- =================================================================== -->
+  <div class="bg-white border border-zinc-200 rounded-lg p-4 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2">
+        <h1 class="text-base font-semibold text-zinc-950 tracking-tight">Workflow Blueprints</h1>
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
+          {{ templates().length }} Active Blueprints
+        </span>
+      </div>
+      <p class="text-xs text-zinc-500 mt-0.5">
+        Declarative workflow schemas & directed acyclic graph (DAG) state machine specifications
+      </p>
+    </div>
+
+    <!-- Actions & Filter Inputs -->
+    <div class="flex flex-wrap items-center gap-2.5">
+      <!-- Search Input -->
+      <div class="relative w-full sm:w-64">
+        <input type="text"
+               [value]="searchQuery()"
+               (input)="searchQuery.set($any($event.target).value)"
+               placeholder="Filter blueprints..."
+               class="w-full bg-zinc-50 border border-zinc-200 rounded px-2.5 py-1.5 text-xs text-zinc-900 placeholder:text-zinc-400 outline-none focus:bg-white focus:border-zinc-950 transition">
+        @if (searchQuery()) {
+          <button (click)="searchQuery.set('')"
+                  class="absolute right-2 top-1.5 text-zinc-400 hover:text-zinc-700 text-xs">
+            ✕
+          </button>
+        }
+      </div>
+
+      <!-- Draft Blueprint Button -->
+      <button (click)="openCreateModal()"
+              class="px-2.5 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium tracking-tight transition flex items-center gap-1.5 cursor-pointer shadow-xs">
+        <span>+</span>
+        <span>Draft Blueprint</span>
+      </button>
+
+      <!-- Refresh Button -->
+      <button (click)="loadTemplates()"
+              [disabled]="isLoading()"
+              title="Refresh templates"
+              class="px-2.5 py-1.5 rounded border border-zinc-200 hover:bg-zinc-100 disabled:opacity-50 text-zinc-700 text-xs font-medium tracking-tight transition flex items-center gap-1.5 cursor-pointer">
+        <span [class.animate-spin]="isLoading()">↻</span>
+        <span>Refresh</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Error Alert -->
+  @if (errorMessage()) {
+    <div class="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between">
+      <span>{{ errorMessage() }}</span>
+      <button (click)="errorMessage.set(null)" class="text-amber-700 hover:text-amber-950 font-bold">✕</button>
+    </div>
+  }
+
+  <!-- =================================================================== -->
+  <!-- MAIN 2-COLUMN WORKSPACE: CATALOG LIST & VISUAL DAG INSPECTOR       -->
+  <!-- =================================================================== -->
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+
+    <!-- LEFT COLUMN: Blueprint Selection Cards (Span 4) -->
+    <div class="md:col-span-4 lg:col-span-4 space-y-2">
+      <div class="text-xs font-semibold text-zinc-500 uppercase tracking-wider px-1">
+        Catalog ({{ filteredTemplates().length }})
+      </div>
+
+      @if (filteredTemplates().length === 0) {
+        <div class="bg-white border border-zinc-200 rounded-lg p-6 text-center text-xs text-zinc-400">
+          No blueprints match the search criteria.
+        </div>
+      } @else {
+        @for (tpl of filteredTemplates(); track tpl.templateKey) {
+          <div (click)="selectTemplate(tpl)"
+               class="bg-white border rounded-lg p-3.5 transition cursor-pointer shadow-xs hover:border-zinc-400"
+               [ngClass]="selectedTemplate()?.templateKey === tpl.templateKey 
+                 ? 'border-zinc-900 ring-1 ring-zinc-900 bg-zinc-50/40' 
+                 : 'border-zinc-200'">
+            
+            <div class="flex items-start justify-between gap-2">
+              <h3 class="text-xs font-semibold text-zinc-950 tracking-tight line-clamp-1">
+                {{ tpl.name }}
+              </h3>
+              <span class="px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-700 text-[10px] font-mono font-medium border border-zinc-200 shrink-0">
+                v{{ tpl.version }}
+              </span>
+            </div>
+
+            <p class="font-mono text-[11px] text-zinc-500 mt-1 truncate">
+              {{ tpl.templateKey }}
+            </p>
+
+            @if (tpl.description) {
+              <p class="text-[11px] text-zinc-400 mt-1.5 line-clamp-2">
+                {{ tpl.description }}
+              </p>
+            }
+
+            <div class="mt-3 pt-2 border-t border-zinc-100 flex items-center justify-between text-[10px] font-mono text-zinc-500">
+              <span class="flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                {{ tpl.status }}
+              </span>
+              <span>
+                {{ tpl.steps ? (tpl.steps | keyvalue).length : 0 }} Steps
+              </span>
+            </div>
+          </div>
+        }
+      }
+    </div>
+
+    <!-- RIGHT COLUMN: DAG Flowchart & State Machine Visualizer (Span 8) -->
+    <div class="md:col-span-8 lg:col-span-8 space-y-4">
+      
+      @if (selectedTemplate()) {
+        <!-- Selected Template Header Card -->
+        <div class="bg-white border border-zinc-200 rounded-lg p-4 shadow-xs">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-sm font-bold text-zinc-950">{{ selectedTemplate()?.name }}</h2>
+                <span class="px-2 py-0.5 rounded bg-zinc-100 text-zinc-800 text-[10px] font-mono font-medium border border-zinc-200">
+                  {{ selectedTemplate()?.templateKey }}
+                </span>
+                <span class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-mono font-medium border border-blue-200">
+                  v{{ selectedTemplate()?.version }}
+                </span>
+              </div>
+              <p class="text-xs text-zinc-500 mt-1">
+                {{ selectedTemplate()?.description || 'Declarative state machine blueprint schema' }}
+              </p>
+            </div>
+
+            <!-- View Switcher Tabs -->
+            <div class="flex items-center bg-zinc-100 p-0.5 rounded border border-zinc-200 shrink-0">
+              <button (click)="setViewMode('graph')"
+                      class="px-2.5 py-1 text-xs font-medium rounded transition cursor-pointer"
+                      [ngClass]="viewMode() === 'graph' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
+                DAG Flow
+              </button>
+              <button (click)="setViewMode('dsl')"
+                      class="px-2.5 py-1 text-xs font-medium rounded transition cursor-pointer"
+                      [ngClass]="viewMode() === 'dsl' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
+                DSL Schema
+              </button>
+            </div>
+          </div>
+
+          <!-- Summary Badges -->
+          <div class="mt-3 pt-3 border-t border-zinc-100 flex flex-wrap items-center gap-4 text-xs font-mono">
+            <div>
+              <span class="text-zinc-400 text-[10px] uppercase block">Initial Entry State</span>
+              <span class="font-medium text-zinc-900">{{ selectedTemplate()?.initialState }}</span>
+            </div>
+            <div>
+              <span class="text-zinc-400 text-[10px] uppercase block">Total Lifecycle Nodes</span>
+              <span class="font-medium text-zinc-900">{{ dagNodes().length }} States</span>
+            </div>
+            <div>
+              <span class="text-zinc-400 text-[10px] uppercase block">Lifecycle Model</span>
+              <span class="font-medium text-zinc-900">Deterministic Finite Automaton (DFA)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================================= -->
+        <!-- VIEW 1: INTERACTIVE DIRECTED GRAPH (DAG)                       -->
+        <!-- ============================================================= -->
+        @if (viewMode() === 'graph') {
+          <div class="space-y-3">
+            
+            <div class="text-xs font-semibold text-zinc-500 uppercase tracking-wider px-1 flex items-center justify-between">
+              <span>State Machine Execution Path</span>
+              <span class="text-[11px] font-mono text-zinc-400">Click node for deep inspection</span>
+            </div>
+
+            <!-- Sequential DAG Pipeline -->
+            <div class="space-y-3">
+              @for (node of dagNodes(); track node.stateKey; let idx = $index; let isLast = $last) {
+                
+                <!-- Node Card -->
+                <div (click)="selectNode(node)"
+                     class="bg-white border rounded-lg p-4 shadow-xs transition cursor-pointer hover:border-zinc-400 relative"
+                     [ngClass]="{
+                       'border-zinc-900 ring-2 ring-zinc-900 bg-zinc-50/20': selectedNode()?.stateKey === node.stateKey,
+                       'border-zinc-200': selectedNode()?.stateKey !== node.stateKey
+                     }">
+                  
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                      <!-- Step Order Pill -->
+                      <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold"
+                            [ngClass]="node.isTerminal ? 'bg-zinc-800 text-white' : 'bg-zinc-200 text-zinc-800'">
+                        {{ node.isTerminal ? 'TERM' : 'STEP ' + node.order }}
+                      </span>
+
+                      <!-- State Name -->
+                      <h4 class="text-xs font-bold text-zinc-950">{{ node.name }}</h4>
+
+                      <!-- Initial State Badge -->
+                      @if (node.isInitial) {
+                        <span class="px-1.5 py-0.2 rounded bg-amber-50 text-amber-800 text-[9px] font-mono font-semibold border border-amber-200">
+                          START
+                        </span>
+                      }
+                    </div>
+
+                    <!-- State Key -->
+                    <span class="font-mono text-[10px] text-zinc-400 font-medium">
+                      {{ node.stateKey }}
+                    </span>
+                  </div>
+
+                  <!-- Metadata Attributes Bar -->
+                  <div class="mt-2.5 flex flex-wrap items-center gap-2 text-[11px]">
+                    <!-- Step Type -->
+                    <span class="px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 font-medium border border-zinc-200">
+                      {{ node.type }}
+                    </span>
+
+                    <!-- Actor Scope / Authority -->
+                    <span class="px-2 py-0.5 rounded font-mono text-[10px]"
+                          [ngClass]="node.requiredRole ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-zinc-100 text-zinc-600 border border-zinc-200'">
+                      {{ node.requiredRole ? 'Authority: ' + node.requiredRole : 'Scope: ' + node.actorScope }}
+                    </span>
+
+                    <!-- SLA -->
+                    @if (node.slaHours) {
+                      <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-mono text-[10px] border border-blue-200">
+                        ⏱ {{ node.slaHours }}h SLA
+                      </span>
+                    }
+
+                    <!-- Terminal -->
+                    @if (node.isTerminal) {
+                      <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono text-[10px] border border-emerald-200">
+                        ✓ Terminal State
+                      </span>
+                    }
+                  </div>
+
+                  <!-- Required Payload Attributes (if any) -->
+                  @if (node.requiredPayloadKeys && node.requiredPayloadKeys.length > 0) {
+                    <div class="mt-2.5 pt-2 border-t border-zinc-100 flex items-center gap-1.5 text-[11px]">
+                      <span class="text-zinc-400 text-[10px] font-mono">Payload Schema:</span>
+                      <div class="flex flex-wrap gap-1">
+                        @for (key of node.requiredPayloadKeys; track key) {
+                          <span class="px-1.5 py-0.2 rounded bg-zinc-100 font-mono text-zinc-700 text-[10px] border border-zinc-200">
+                            {{ key }}
+                          </span>
+                        }
+                      </div>
+                    </div>
+                  }
+
+                  <!-- Outgoing State Transitions -->
+                  @if (node.outgoingTransitions.length > 0) {
+                    <div class="mt-3 pt-2.5 border-t border-zinc-100 space-y-1.5">
+                      <span class="text-[10px] font-medium text-zinc-400 uppercase tracking-wider block">
+                        Permitted Outgoing Transitions
+                      </span>
+                      <div class="flex flex-wrap gap-2">
+                        @for (trans of node.outgoingTransitions; track trans.action) {
+                          <div class="flex items-center gap-1 bg-zinc-50 border border-zinc-200 rounded px-2 py-1 text-[11px] font-mono">
+                            <span class="text-zinc-900 font-semibold">[{{ trans.action }}]</span>
+                            <span class="text-zinc-400 font-bold">➔</span>
+                            <span class="px-1.5 py-0.2 rounded bg-zinc-900 text-white text-[10px]">
+                              {{ trans.targetState }}
+                            </span>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+
+                <!-- Directed Arrow Connector -->
+                @if (!isLast) {
+                  <div class="flex items-center justify-center py-0.5">
+                    <div class="flex flex-col items-center">
+                      <div class="w-0.5 h-3 bg-zinc-300"></div>
+                      <span class="text-zinc-400 text-xs leading-none">▼</span>
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+          </div>
+        }
+
+        <!-- ============================================================= -->
+        <!-- VIEW 2: RAW BLUEPRINT DSL (JSON)                              -->
+        <!-- ============================================================= -->
+        @if (viewMode() === 'dsl') {
+          <div class="bg-zinc-950 text-zinc-100 rounded-lg p-4 font-mono text-xs shadow-xs relative overflow-hidden">
+            <div class="flex items-center justify-between pb-3 mb-3 border-b border-zinc-800">
+              <span class="text-[11px] text-zinc-400">schema-definition.json</span>
+              <button (click)="copyDsl()"
+                      class="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-white text-[11px] transition cursor-pointer">
+                Copy JSON DSL
+              </button>
+            </div>
+            <pre class="overflow-x-auto text-[11px] leading-relaxed text-emerald-400 font-mono">{{ selectedTemplateDsl() }}</pre>
+          </div>
+        }
+
+      } @else {
+        <div class="bg-white border border-zinc-200 rounded-lg p-12 text-center text-xs text-zinc-400">
+          Select a template blueprint from the left catalog to inspect its state machine directed graph.
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- DRAFT NEW BLUEPRINT MODAL DIALOG                                   -->
+  <!-- Centered with backdrop blur & scroll-locking                       -->
+  <!-- =================================================================== -->
+  @if (isCreateModalOpen()) {
+    <div class="fixed inset-0 z-40 bg-zinc-950/40 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 overscroll-contain select-none"
+         (click)="closeCreateModal()"
+         (wheel)="$event.preventDefault()">
+      
+      <!-- Modal Container Dialog -->
+      <div class="w-full max-w-2xl bg-white rounded-xl border border-zinc-200 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden select-text animate-in fade-in zoom-in-95 duration-150"
+           (click)="$event.stopPropagation()"
+           (wheel)="$event.stopPropagation()">
+        
+        <!-- Modal Header -->
+        <div class="px-5 py-3.5 border-b border-zinc-200 flex items-center justify-between bg-zinc-50/70">
+          <div>
+            <h3 class="text-xs font-semibold text-zinc-950 tracking-tight uppercase">
+              Draft New Workflow Blueprint
+            </h3>
+            <p class="text-xs text-zinc-500 mt-0.5">
+              Define a declarative deterministic state machine DSL specification
+            </p>
+          </div>
+
+          <button (click)="closeCreateModal()"
+                  aria-label="Close dialog"
+                  class="text-zinc-400 hover:text-zinc-950 text-base leading-none p-1.5 rounded-md hover:bg-zinc-100 transition cursor-pointer">
+            ✕
+          </button>
+        </div>
+
+        <!-- Modal Body: JSON DSL Editor -->
+        <div class="flex-1 overflow-y-auto p-5 space-y-3">
+          @if (createError()) {
+            <div class="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-900 text-xs">
+              {{ createError() }}
+            </div>
+          }
+
+          <div class="space-y-1.5">
+            <label class="text-xs font-medium text-zinc-700 block">
+              Blueprint Specification (JSON DSL)
+            </label>
+            <textarea [(ngModel)]="newTemplateJson"
+                      rows="16"
+                      class="w-full font-mono text-xs bg-zinc-900 text-emerald-400 p-3 rounded-lg border border-zinc-800 outline-none focus:border-zinc-600 transition leading-relaxed"></textarea>
+          </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="px-5 py-3 border-t border-zinc-200 bg-zinc-50 flex items-center justify-between">
+          <button (click)="closeCreateModal()"
+                  class="px-3.5 py-1.5 rounded-md border border-zinc-200 hover:bg-zinc-100 text-zinc-700 text-xs font-medium transition cursor-pointer">
+            Cancel
+          </button>
+
+          <button (click)="submitNewTemplate()"
+                  [disabled]="isSubmitting()"
+                  class="px-3.5 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 disabled:opacity-50 text-white text-xs font-medium transition flex items-center gap-1.5 cursor-pointer">
+            @if (isSubmitting()) {
+              <span class="animate-spin text-xs">↻</span>
+              <span>Validating & Deploying...</span>
+            } @else {
+              <span>Deploy Draft Blueprint</span>
+            }
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>

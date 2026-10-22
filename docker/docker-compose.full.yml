@@ -171,6 +171,9 @@ services:
       OAUTH2_TOKEN_URI: http://keycloak:8085/realms/ewp/protocol/openid-connect/token
       OAUTH2_JWKS_URI: http://keycloak:8085/realms/ewp/protocol/openid-connect/certs
       OAUTH2_USERINFO_URI: http://keycloak:8085/realms/ewp/protocol/openid-connect/userinfo
+      AZURE_CLIENT_ID: ${AZURE_CLIENT_ID:-ewp-azure-client-id}
+      AZURE_CLIENT_SECRET: ${AZURE_CLIENT_SECRET:-ewp-azure-client-secret}
+      AZURE_TENANT_ID: ${AZURE_TENANT_ID:-common}
     depends_on:
       - template-service
       - workflow-service

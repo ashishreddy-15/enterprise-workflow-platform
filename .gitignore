@@ -17,6 +17,11 @@ release.properties
 .DS_Store
 *.log
 
+# Environment variables & local secrets
+.env
+.env.*
+!.env.example
+
 /backend/common-contracts/target/
 /backend/workflow-service/target/
 /backend/audit-analytics-service/target/

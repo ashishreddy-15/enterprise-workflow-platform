@@ -1,5 +1,8 @@
 import { Routes } from '@angular/router';
 import { HomeComponent } from './features/home/home.component';
+import { AccessDeniedComponent } from './features/access-denied/access-denied.component';
+import { authGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
 import { loadRemoteModule } from '@angular-architects/native-federation';
 
 export const routes: Routes = [
@@ -9,6 +12,7 @@ export const routes: Routes = [
   },
   {
     path: 'workflows',
+    canActivate: [authGuard, roleGuard],
     loadChildren: () =>
       loadRemoteModule('workflow-mfe', './WorkflowRoutes')
         .then((m) => m.WORKFLOW_ROUTES)
@@ -19,6 +23,7 @@ export const routes: Routes = [
   },
   {
     path: 'templates',
+    canActivate: [authGuard, roleGuard],
     loadChildren: () =>
       loadRemoteModule('template-mfe', './TemplateRoutes')
         .then((m) => m.TEMPLATE_ROUTES)
@@ -29,6 +34,7 @@ export const routes: Routes = [
   },
   {
     path: 'analytics',
+    canActivate: [authGuard, roleGuard],
     loadChildren: () =>
       loadRemoteModule('analytics-mfe', './AnalyticsRoutes')
         .then((m) => m.ANALYTICS_ROUTES)
@@ -36,6 +42,10 @@ export const routes: Routes = [
           console.warn('Failed to load Analytics MFE remote:', err);
           return import('./features/fallback/mfe-fallback.component').then(m => m.FALLBACK_ANALYTICS_ROUTES);
         })
+  },
+  {
+    path: 'access-denied',
+    component: AccessDeniedComponent
   },
   {
     path: '**',

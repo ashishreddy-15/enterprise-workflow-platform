@@ -1,0 +1,64 @@
+<div class="min-h-[calc(100vh-3.5rem)] flex items-center justify-center p-6 bg-zinc-50">
+  <div class="ewp-card max-w-lg w-full p-8 text-center space-y-6">
+    
+    <!-- Lock Header Icon -->
+    <div class="mx-auto w-12 h-12 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+      <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      </svg>
+    </div>
+
+    <!-- Title & Explanation -->
+    <div class="space-y-2">
+      <span class="ewp-badge ewp-badge-warning">403 Access Restricted</span>
+      <h1 class="text-xl font-bold tracking-tight text-zinc-950">
+        {{ targetTitle() }}
+      </h1>
+      <p class="text-xs text-zinc-500 leading-relaxed max-w-sm mx-auto">
+        Your active security persona does not hold the authorities required to access this feature.
+      </p>
+    </div>
+
+    <!-- Authority Breakdown Card -->
+    <div class="ewp-code-block text-left p-4 rounded-lg bg-zinc-50 border border-zinc-200/80 space-y-3">
+      
+      <!-- Current Persona -->
+      <div class="flex items-center justify-between text-xs pb-2 border-b border-zinc-200">
+        <span class="text-zinc-500 font-sans">Current Identity:</span>
+        <div class="flex items-center gap-1.5">
+          <span class="font-medium text-zinc-900 font-sans">{{ auth.activePersona().name }}</span>
+          <span class="ewp-badge-sm ewp-badge-neutral">{{ auth.activePersona().role }}</span>
+        </div>
+      </div>
+
+      <!-- Required Roles -->
+      <div class="flex items-start justify-between text-xs pt-1">
+        <span class="text-zinc-500 font-sans">Required Authority:</span>
+        <div class="flex flex-wrap gap-1 justify-end max-w-[240px]">
+          @for (role of requiredRoles(); track role) {
+            <span class="ewp-badge-sm bg-amber-100 text-amber-800 border-amber-200 font-mono">
+              {{ role }}
+            </span>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+      @if (suggestedPersona()) {
+        <button (click)="switchToAuthorizedPersona()" 
+                class="ewp-btn-primary w-full sm:w-auto inline-flex items-center justify-center gap-1.5">
+          <span>⚡ Switch to {{ suggestedPersona()?.name }}</span>
+        </button>
+      }
+
+      <a routerLink="/" 
+         class="ewp-btn-secondary w-full sm:w-auto inline-flex items-center justify-center">
+        <span>← Return to Home</span>
+      </a>
+    </div>
+
+  </div>
+</div>

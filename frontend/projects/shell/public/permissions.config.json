@@ -1,0 +1,22 @@
+{
+  "routes": {
+    "workflows": {
+      "title": "Task Inbox & Approvals",
+      "requiredRoles": ["ROLE_EMPLOYEE", "ROLE_MANAGER", "ROLE_ADMIN", "ROLE_SUBMITTER"],
+      "suggestedPersonaId": "usr_ashish_01",
+      "suggestedPersonaName": "Ashish Reddy"
+    },
+    "templates": {
+      "title": "Workflow Blueprints Studio",
+      "requiredRoles": ["ROLE_ADMIN"],
+      "suggestedPersonaId": "usr_admin_system",
+      "suggestedPersonaName": "Platform Administrator"
+    },
+    "analytics": {
+      "title": "Audit & Analytics Dashboard",
+      "requiredRoles": ["ROLE_ANALYST", "ROLE_MANAGER", "ROLE_ADMIN", "ROLE_AUDITOR", "ROLE_LEGAL_COUNSEL", "ROLE_FINANCE_APPROVER"],
+      "suggestedPersonaId": "usr_admin_system",
+      "suggestedPersonaName": "Platform Administrator"
+    }
+  }
+}

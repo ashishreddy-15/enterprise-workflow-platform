@@ -12,16 +12,28 @@
 
         <nav class="hidden sm:flex items-center gap-1 text-sm">
           <a routerLink="/workflows" routerLinkActive="bg-zinc-100 text-zinc-950 font-medium"
-             class="ewp-nav-link">
-            Inbox
+             class="ewp-nav-link inline-flex items-center gap-1.5"
+             [class.opacity-60]="!canAccess('workflows')">
+            <span>Inbox</span>
+            @if (!canAccess('workflows')) {
+              <span class="text-[10px] text-zinc-400" title="Restricted access">🔒</span>
+            }
           </a>
           <a routerLink="/templates" routerLinkActive="bg-zinc-100 text-zinc-950 font-medium"
-             class="ewp-nav-link">
-            Blueprints
+             class="ewp-nav-link inline-flex items-center gap-1.5"
+             [class.opacity-60]="!canAccess('templates')">
+            <span>Blueprints</span>
+            @if (!canAccess('templates')) {
+              <span class="text-[10px] text-zinc-400" title="Requires Administrator role">🔒</span>
+            }
           </a>
           <a routerLink="/analytics" routerLinkActive="bg-zinc-100 text-zinc-950 font-medium"
-             class="ewp-nav-link">
-            Analytics
+             class="ewp-nav-link inline-flex items-center gap-1.5"
+             [class.opacity-60]="!canAccess('analytics')">
+            <span>Analytics</span>
+            @if (!canAccess('analytics')) {
+              <span class="text-[10px] text-zinc-400" title="Requires Analyst or Manager role">🔒</span>
+            }
           </a>
         </nav>
       </div>

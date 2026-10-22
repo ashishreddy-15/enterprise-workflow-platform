@@ -116,12 +116,10 @@
   <!-- =================================================================== -->
   <!-- TABS & VIEW SELECTION                                               -->
   <!-- =================================================================== -->
-  <div class="flex-none flex items-center gap-2 border-b border-zinc-200 pb-1">
+  <div class="ewp-tab-bar">
     <button (click)="setTab('ledger')"
-            class="px-3 py-1.5 text-xs font-medium rounded-t transition cursor-pointer border-b-2 -mb-[5px] flex items-center gap-2"
-            [ngClass]="activeTab() === 'ledger' 
-              ? 'text-zinc-950 border-zinc-950 font-semibold bg-white' 
-              : 'text-zinc-500 border-transparent hover:text-zinc-900'">
+            class="ewp-tab-btn"
+            [ngClass]="activeTab() === 'ledger' ? 'ewp-tab-btn-active' : 'ewp-tab-btn-idle'">
       <span>Activity Log</span>
       <span class="ewp-count-badge"
             [ngClass]="activeTab() === 'ledger' ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-600'">
@@ -130,10 +128,8 @@
     </button>
 
     <button (click)="setTab('overview')"
-            class="px-3 py-1.5 text-xs font-medium rounded-t transition cursor-pointer border-b-2 -mb-[5px] flex items-center gap-2"
-            [ngClass]="activeTab() === 'overview' 
-              ? 'text-zinc-950 border-zinc-950 font-semibold bg-white' 
-              : 'text-zinc-500 border-transparent hover:text-zinc-900'">
+            class="ewp-tab-btn"
+            [ngClass]="activeTab() === 'overview' ? 'ewp-tab-btn-active' : 'ewp-tab-btn-idle'">
       <span>Workflow Summary</span>
       <span class="ewp-count-badge"
             [ngClass]="activeTab() === 'overview' ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-600'">

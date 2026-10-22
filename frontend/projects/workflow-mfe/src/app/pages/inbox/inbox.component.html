@@ -30,20 +30,20 @@
       </div>
 
       <!-- Scope Filter Tabs: Inbox vs Participated vs Created -->
-      <div class="grid grid-cols-3 bg-zinc-100 p-0.5 rounded border border-zinc-200 text-[11px] font-medium text-center">
+      <div class="ewp-segmented-grid grid-cols-3">
         <button (click)="setScope('inbox')"
-                class="py-1 px-1 rounded transition cursor-pointer"
-                [ngClass]="activeScope() === 'inbox' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-500 hover:text-zinc-900'">
+                class="ewp-segmented-btn"
+                [ngClass]="activeScope() === 'inbox' ? 'ewp-segmented-btn-active' : 'ewp-segmented-btn-idle'">
           Pending
         </button>
         <button (click)="setScope('participated')"
-                class="py-1 px-1 rounded transition cursor-pointer"
-                [ngClass]="activeScope() === 'participated' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-500 hover:text-zinc-900'">
+                class="ewp-segmented-btn"
+                [ngClass]="activeScope() === 'participated' ? 'ewp-segmented-btn-active' : 'ewp-segmented-btn-idle'">
           Involved
         </button>
         <button (click)="setScope('initiated')"
-                class="py-1 px-1 rounded transition cursor-pointer"
-                [ngClass]="activeScope() === 'initiated' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-500 hover:text-zinc-900'">
+                class="ewp-segmented-btn"
+                [ngClass]="activeScope() === 'initiated' ? 'ewp-segmented-btn-active' : 'ewp-segmented-btn-idle'">
           Created
         </button>
       </div>
@@ -61,19 +61,16 @@
       @if (isLoading()) {
         <div class="p-6 text-center text-xs text-zinc-400">Loading queue...</div>
       } @else if (filteredTasks().length === 0) {
-        <div class="p-8 text-center space-y-1.5">
-          <div class="text-zinc-300 text-base font-mono">✓</div>
-          <p class="text-xs font-medium text-zinc-700">Inbox Zero</p>
-          <p class="text-[11px] text-zinc-400">No tasks currently require action for your role.</p>
+        <div class="ewp-empty-state">
+          <div class="ewp-empty-state-icon">✓</div>
+          <p class="ewp-empty-state-title">Inbox Zero</p>
+          <p class="ewp-empty-state-desc">No tasks currently require action for your role.</p>
         </div>
       } @else {
         @for (task of filteredTasks(); track task.workflowId) {
           <button (click)="selectTask(task)"
-                  class="w-full text-left p-3 transition flex flex-col gap-1 cursor-pointer"
-                  [ngClass]="{
-                    'bg-white border-l-2 border-l-zinc-950 shadow-xs': selectedTask()?.workflowId === task.workflowId,
-                    'hover:bg-zinc-100/70': selectedTask()?.workflowId !== task.workflowId
-                  }">
+                  class="ewp-task-item"
+                  [ngClass]="selectedTask()?.workflowId === task.workflowId ? 'ewp-task-item-active' : 'ewp-task-item-idle'">
             
             <div class="flex items-center justify-between text-[11px] gap-2">
               <span class="font-mono text-zinc-400 truncate text-[10px]">{{ task.templateId }}</span>
@@ -132,11 +129,8 @@
                 <button (click)="executeAction(action.key, task)"
                         [disabled]="isActionDisabled(action, task)"
                         [title]="getActionDisabledReason(action, task)"
-                        class="px-2.5 py-1.5 bg-white border border-zinc-200 text-rose-600 rounded text-xs font-medium transition"
-                        [ngClass]="{
-                          'opacity-40 cursor-not-allowed border-zinc-200': isActionDisabled(action, task),
-                          'hover:bg-rose-50 hover:border-rose-300 cursor-pointer': !isActionDisabled(action, task)
-                        }">
+                        class="ewp-btn-danger-outline"
+                        [ngClass]="{ 'ewp-btn-disabled': isActionDisabled(action, task) }">
                   {{ action.label }}
                 </button>
               } @else if (action.variant === 'primary') {
@@ -144,10 +138,7 @@
                         [disabled]="isActionDisabled(action, task)"
                         [title]="getActionDisabledReason(action, task)"
                         class="ewp-btn-primary px-3 py-1.5"
-                        [ngClass]="{
-                          'opacity-40 cursor-not-allowed': isActionDisabled(action, task),
-                          'hover:bg-zinc-800 cursor-pointer': !isActionDisabled(action, task)
-                        }">
+                        [ngClass]="{ 'ewp-btn-disabled': isActionDisabled(action, task) }">
                   {{ action.label }}
                 </button>
               } @else {
@@ -155,10 +146,7 @@
                         [disabled]="isActionDisabled(action, task)"
                         [title]="getActionDisabledReason(action, task)"
                         class="ewp-btn-secondary px-2.5 py-1.5"
-                        [ngClass]="{
-                          'opacity-40 cursor-not-allowed': isActionDisabled(action, task),
-                          'hover:bg-zinc-50 cursor-pointer': !isActionDisabled(action, task)
-                        }">
+                        [ngClass]="{ 'ewp-btn-disabled': isActionDisabled(action, task) }">
                   {{ action.label }}
                 </button>
               }
@@ -218,17 +206,17 @@
             </div>
 
             <!-- Live SLA Countdown Badge -->
-            <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-medium border"
+            <div class="ewp-sla-badge"
                  [ngClass]="{
-                   'bg-rose-50 text-rose-700 border-rose-200': slaCountdown().urgency === 'breached',
-                   'bg-amber-50 text-amber-700 border-amber-200': slaCountdown().urgency === 'warning',
-                   'bg-zinc-100 text-zinc-700 border-zinc-200': slaCountdown().urgency === 'normal'
+                   'ewp-sla-badge-breached': slaCountdown().urgency === 'breached',
+                   'ewp-sla-badge-warning': slaCountdown().urgency === 'warning',
+                   'ewp-sla-badge-normal': slaCountdown().urgency === 'normal'
                  }">
               <span class="w-1.5 h-1.5 rounded-full"
                     [ngClass]="{
-                      'bg-rose-500 animate-ping': slaCountdown().urgency === 'breached',
-                      'bg-amber-500 animate-pulse': slaCountdown().urgency === 'warning',
-                      'bg-emerald-500': slaCountdown().urgency === 'normal'
+                      'ewp-dot-breached': slaCountdown().urgency === 'breached',
+                      'ewp-dot-warning': slaCountdown().urgency === 'warning',
+                      'ewp-dot-normal': slaCountdown().urgency === 'normal'
                     }"></span>
               <span>SLA: {{ slaCountdown().label }}</span>
               @if (!task.slaBreached && task.currentStepDueAt) {
@@ -241,19 +229,19 @@
           <div class="relative flex items-start justify-between pt-1">
             
             <!-- Continuous Track Line Behind Nodes -->
-            <div class="absolute top-4 left-8 right-8 h-0.5 bg-zinc-200"></div>
+            <div class="ewp-stepper-track"></div>
 
             @for (node of stepperNodes(); track node.stepKey; let idx = $index; let isLast = $last) {
               <div class="relative flex flex-col items-center text-center px-1"
                    [style.width.%]="100 / stepperNodes().length">
                 
                 <!-- Node State Marker -->
-                <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition shrink-0"
+                <div class="ewp-stepper-marker"
                      [ngClass]="{
-                       'bg-emerald-600 text-white shadow-xs': node.status === 'COMPLETED' || node.status === 'TERMINAL_APPROVED',
-                       'bg-rose-600 text-white shadow-xs ring-4 ring-rose-500/10': node.status === 'TERMINAL_REJECTED',
-                       'bg-white border-2 border-zinc-900 text-zinc-900 ring-4 ring-zinc-900/10 shadow-xs': node.status === 'CURRENT',
-                       'bg-zinc-100 border border-zinc-300 text-zinc-500': node.status === 'UPCOMING'
+                       'ewp-stepper-marker-completed': node.status === 'COMPLETED' || node.status === 'TERMINAL_APPROVED',
+                       'ewp-stepper-marker-rejected': node.status === 'TERMINAL_REJECTED',
+                       'ewp-stepper-marker-current': node.status === 'CURRENT',
+                       'ewp-stepper-marker-upcoming': node.status === 'UPCOMING'
                      }">
                   @if (node.status === 'COMPLETED' || node.status === 'TERMINAL_APPROVED') {
                     <span class="text-xs font-bold">&#10003;</span>
@@ -458,8 +446,8 @@
       </div>
 
     } @else {
-      <div class="flex-1 flex flex-col items-center justify-center p-8 text-center text-zinc-400">
-        <p class="text-xs font-medium text-zinc-700">Select a Task from the Queue</p>
+      <div class="ewp-empty-state flex-1 flex flex-col items-center justify-center">
+        <p class="ewp-empty-state-title">Select a Task from the Queue</p>
       </div>
     }
   </main>

@@ -12,8 +12,8 @@
 
     <!-- Quick Count Pills -->
     <div class="flex items-center gap-2">
-      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-medium border"
-            [ngClass]="tasks().length > 0 ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-zinc-50 text-zinc-600 border-zinc-200'">
+      <span class="ewp-counter-pill"
+            [ngClass]="tasks().length > 0 ? 'ewp-counter-pill-active' : 'ewp-counter-pill-idle'">
         <span>Pending Tasks:</span>
         <span>{{ tasks().length }}</span>
       </span>
@@ -40,14 +40,14 @@
       @if (isLoading()) {
         <div class="p-6 text-center text-xs text-zinc-400">Refreshing queue stream...</div>
       } @else if (tasks().length === 0) {
-        <div class="p-8 text-center space-y-1">
-          <div class="text-zinc-300 text-sm font-mono">✓</div>
-          <p class="text-xs font-medium text-zinc-700">Inbox Zero</p>
-          <p class="text-[11px] text-zinc-400">No active workflows currently waiting for your role.</p>
+        <div class="ewp-empty-state">
+          <div class="ewp-empty-state-icon">✓</div>
+          <p class="ewp-empty-state-title">Inbox Zero</p>
+          <p class="ewp-empty-state-desc">No active workflows currently waiting for your role.</p>
         </div>
       } @else {
         <!-- Table Column Header -->
-        <div class="bg-zinc-50/70 px-4 py-2 text-[11px] font-medium text-zinc-500 grid grid-cols-12 gap-3">
+        <div class="ewp-grid-table-header">
           <div class="col-span-5">Workflow Reference</div>
           <div class="col-span-3">Stage / Step</div>
           <div class="col-span-2">SLA Status</div>
@@ -55,7 +55,7 @@
         </div>
 
         @for (item of tasks(); track item.workflowId) {
-          <div class="px-4 py-3 grid grid-cols-12 gap-3 items-center text-xs hover:bg-zinc-50/60 transition">
+          <div class="ewp-grid-table-row">
             
             <!-- Col 1: Title, Template ID & Timestamp -->
             <div class="col-span-5 truncate">

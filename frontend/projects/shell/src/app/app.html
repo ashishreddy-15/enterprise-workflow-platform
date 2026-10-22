@@ -30,14 +30,14 @@
       <div class="flex items-center gap-3">
         <button (click)="openLoginModal()"
                 title="Switch persona or sign in with custom role"
-                class="flex items-center gap-2 border border-zinc-200 hover:border-zinc-400 rounded-lg bg-white px-2.5 py-1 text-xs transition cursor-pointer shadow-xs group">
+                class="ewp-identity-pill group">
           
           <!-- Online status dot -->
           <span class="ewp-status-dot"
                 [ngClass]="{
-                  'bg-emerald-500': auth.isAuthenticated(),
-                  'bg-amber-400 animate-pulse': auth.isAuthenticating(),
-                  'bg-rose-500': !auth.isAuthenticated() && !auth.isAuthenticating()
+                  'ewp-dot-online': auth.isAuthenticated(),
+                  'ewp-dot-pending': auth.isAuthenticating(),
+                  'ewp-dot-offline': !auth.isAuthenticated() && !auth.isAuthenticating()
                 }">
           </span>
 
@@ -47,7 +47,7 @@
               {{ auth.activePersona().name }}
             </span>
             <span class="text-zinc-400 text-[10px]">&bull;</span>
-            <span class="px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-600 text-[10px] font-mono">
+            <span class="ewp-badge-sm ewp-badge-neutral font-mono">
               {{ auth.activePersona().role }}
             </span>
           </div>
@@ -216,10 +216,10 @@
           <div class="grid grid-cols-2 gap-2">
             @for (p of auth.personas; track p.id) {
               <button (click)="selectPreset(p)"
-                      class="p-2.5 rounded-lg border text-left transition cursor-pointer flex flex-col gap-0.5"
+                      class="ewp-selectable-card flex flex-col gap-0.5 p-2.5"
                       [ngClass]="auth.activePersona().id === p.id 
-                        ? 'border-zinc-900 bg-zinc-50 ring-1 ring-zinc-900' 
-                        : 'border-zinc-200 hover:bg-zinc-50 hover:border-zinc-300'">
+                        ? 'ewp-selectable-card-active' 
+                        : 'ewp-selectable-card-idle'">
                 <div class="flex items-center justify-between text-xs">
                   <span class="font-semibold text-zinc-900">{{ p.name }}</span>
                   @if (auth.activePersona().id === p.id) {

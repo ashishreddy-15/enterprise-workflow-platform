@@ -377,3 +377,210 @@ code, kbd, samp, pre {
   @apply w-6 h-6 rounded bg-zinc-900 text-white
          flex items-center justify-center text-xs font-bold;
 }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   INTERACTIVE SELECTION & SEGMENTED CONTROLS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Segmented button container / tab switcher */
+.ewp-segmented-bar {
+  @apply inline-flex items-center bg-zinc-100 p-0.5 rounded border border-zinc-200 text-[11px] font-medium;
+}
+
+/* Grid-based full width segmented control */
+.ewp-segmented-grid {
+  @apply grid bg-zinc-100 p-0.5 rounded border border-zinc-200 text-[11px] font-medium text-center;
+}
+
+/* Segmented button item */
+.ewp-segmented-btn {
+  @apply py-1 px-2 rounded transition cursor-pointer text-zinc-600 hover:text-zinc-950;
+}
+
+.ewp-segmented-btn-active {
+  @apply bg-white text-zinc-950 font-semibold shadow-xs;
+}
+
+.ewp-segmented-btn-idle {
+  @apply text-zinc-500 hover:text-zinc-900;
+}
+
+/* Tab navigation bar */
+.ewp-tab-bar {
+  @apply flex-none flex items-center gap-2 border-b border-zinc-200 pb-1;
+}
+
+.ewp-tab-btn {
+  @apply px-3 py-1.5 text-xs font-medium rounded-t transition cursor-pointer border-b-2 -mb-[5px] flex items-center gap-2;
+}
+
+.ewp-tab-btn-active {
+  @apply text-zinc-950 border-zinc-950 font-semibold bg-white;
+}
+
+.ewp-tab-btn-idle {
+  @apply text-zinc-500 border-transparent hover:text-zinc-900;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SELECTABLE CARDS & LIST ITEMS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Generic selectable card (persona, catalog template, preset) */
+.ewp-selectable-card {
+  @apply p-3 rounded-lg border transition cursor-pointer;
+}
+
+.ewp-selectable-card-active {
+  @apply border-zinc-900 bg-zinc-50/80 shadow-xs ring-1 ring-zinc-900/10;
+}
+
+.ewp-selectable-card-idle {
+  @apply border-zinc-200 hover:border-zinc-300 bg-white;
+}
+
+/* Queue/Inbox task list item */
+.ewp-task-item {
+  @apply w-full text-left p-3 transition flex flex-col gap-1 cursor-pointer;
+}
+
+.ewp-task-item-active {
+  @apply bg-white border-l-2 border-l-zinc-950 shadow-xs;
+}
+
+.ewp-task-item-idle {
+  @apply hover:bg-zinc-100/70;
+}
+
+/* Header identity switch pill button */
+.ewp-identity-pill {
+  @apply flex items-center gap-2 border border-zinc-200 hover:border-zinc-400 rounded-lg bg-white px-2.5 py-1 text-xs transition cursor-pointer shadow-xs;
+}
+
+/* Counter pill (e.g. "Pending Tasks: 3") */
+.ewp-counter-pill {
+  @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-medium border;
+}
+
+.ewp-counter-pill-active {
+  @apply bg-zinc-900 text-white border-zinc-900;
+}
+
+.ewp-counter-pill-idle {
+  @apply bg-zinc-50 text-zinc-600 border-zinc-200;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   STATUS INDICATORS & DOTS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.ewp-dot-online {
+  @apply bg-emerald-500;
+}
+
+.ewp-dot-pending {
+  @apply bg-amber-400 animate-pulse;
+}
+
+.ewp-dot-offline {
+  @apply bg-rose-500;
+}
+
+/* SLA Countdowns */
+.ewp-sla-badge {
+  @apply flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-medium border;
+}
+
+.ewp-sla-badge-breached {
+  @apply bg-rose-50 text-rose-700 border-rose-200;
+}
+
+.ewp-sla-badge-warning {
+  @apply bg-amber-50 text-amber-700 border-amber-200;
+}
+
+.ewp-sla-badge-normal {
+  @apply bg-zinc-100 text-zinc-700 border-zinc-200;
+}
+
+.ewp-dot-breached {
+  @apply bg-rose-500 animate-ping;
+}
+
+.ewp-dot-warning {
+  @apply bg-amber-500 animate-pulse;
+}
+
+.ewp-dot-normal {
+  @apply bg-emerald-500;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   EMPTY STATE PATTERNS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.ewp-empty-state {
+  @apply p-8 text-center space-y-1.5;
+}
+
+.ewp-empty-state-icon {
+  @apply text-zinc-300 text-base font-mono;
+}
+
+.ewp-empty-state-title {
+  @apply text-xs font-medium text-zinc-700;
+}
+
+.ewp-empty-state-desc {
+  @apply text-[11px] text-zinc-400;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   GRID TABLE / WORKBENCH
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.ewp-grid-table-header {
+  @apply bg-zinc-50/70 px-4 py-2 text-[11px] font-medium text-zinc-500 grid grid-cols-12 gap-3;
+}
+
+.ewp-grid-table-row {
+  @apply px-4 py-3 grid grid-cols-12 gap-3 items-center text-xs hover:bg-zinc-50/60 transition;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   STEPPER ENGINE
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.ewp-stepper-track {
+  @apply absolute top-4 left-8 right-8 h-0.5 bg-zinc-200;
+}
+
+.ewp-stepper-marker {
+  @apply w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition shrink-0;
+}
+
+.ewp-stepper-marker-completed {
+  @apply bg-emerald-600 text-white shadow-xs;
+}
+
+.ewp-stepper-marker-rejected {
+  @apply bg-rose-600 text-white shadow-xs ring-4 ring-rose-500/10;
+}
+
+.ewp-stepper-marker-current {
+  @apply bg-white border-2 border-zinc-900 text-zinc-900 ring-4 ring-zinc-900/10 shadow-xs;
+}
+
+.ewp-stepper-marker-upcoming {
+  @apply bg-zinc-100 border border-zinc-300 text-zinc-500;
+}
+
+/* Additional Button Variants */
+.ewp-btn-danger-outline {
+  @apply px-2.5 py-1.5 bg-white border border-zinc-200 text-rose-600 rounded text-xs font-medium transition hover:bg-rose-50 hover:border-rose-300 cursor-pointer;
+}
+
+.ewp-btn-disabled {
+  @apply opacity-40 cursor-not-allowed;
+}

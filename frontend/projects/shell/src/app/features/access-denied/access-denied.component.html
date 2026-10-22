@@ -16,25 +16,29 @@
         Workflow Blueprints Studio
       </h1>
       <p class="text-xs text-zinc-500 leading-relaxed max-w-sm mx-auto">
-        Creating and modifying workflow templates requires Platform Administrator authority. Your current role has access to the Task Inbox and Analytics.
+        Creating and modifying workflow templates requires Platform Administrator (ROLE_ADMIN) authority. Your current account has access to Task Inbox and Analytics.
       </p>
     </div>
 
     <!-- Authority Breakdown Card -->
     <div class="ewp-code-block text-left p-4 rounded-lg bg-zinc-50 border border-zinc-200/80 space-y-3">
       
-      <!-- Current Persona -->
+      <!-- Current Identity -->
       <div class="flex items-center justify-between text-xs pb-2 border-b border-zinc-200">
-        <span class="text-zinc-500 font-sans">Current Identity:</span>
+        <span class="text-zinc-500 font-sans">Current User:</span>
         <div class="flex items-center gap-1.5">
-          <span class="font-medium text-zinc-900 font-sans">{{ auth.activePersona().name }}</span>
-          <span class="ewp-badge-sm ewp-badge-neutral">{{ auth.activePersona().role }}</span>
+          <span class="font-medium text-zinc-900 font-sans">{{ auth.currentUser()?.userId || 'Guest' }}</span>
+          <div class="flex items-center gap-1">
+            @for (role of auth.currentUser()?.roles; track role) {
+              <span class="ewp-badge-sm ewp-badge-neutral">{{ role }}</span>
+            }
+          </div>
         </div>
       </div>
 
       <!-- Required Role -->
       <div class="flex items-center justify-between text-xs pt-1">
-        <span class="text-zinc-500 font-sans">Required Authority:</span>
+        <span class="text-zinc-500 font-sans">Required Role:</span>
         <span class="ewp-badge-sm bg-amber-100 text-amber-800 border-amber-200 font-mono">
           ROLE_ADMIN
         </span>
@@ -43,12 +47,10 @@
 
     <!-- Action Buttons -->
     <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-      @if (adminPersona()) {
-        <button (click)="switchToAdmin()" 
-                class="ewp-btn-primary w-full sm:w-auto inline-flex items-center justify-center gap-1.5">
-          <span>⚡ Switch to {{ adminPersona()?.name }}</span>
-        </button>
-      }
+      <a routerLink="/login" [queryParams]="{ role: 'ROLE_ADMIN', returnUrl: '/templates' }"
+         class="ewp-btn-primary w-full sm:w-auto inline-flex items-center justify-center gap-1.5">
+        <span>⚡ Sign In as Administrator</span>
+      </a>
 
       <a routerLink="/workflows" 
          class="ewp-btn-secondary w-full sm:w-auto inline-flex items-center justify-center">

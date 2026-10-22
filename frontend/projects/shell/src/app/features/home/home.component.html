@@ -5,8 +5,10 @@
     <div>
       <h1 class="ewp-page-title">Operational Workbench</h1>
       <p class="ewp-muted mt-0.5">
-        Assigned approvals for <strong class="text-zinc-900 font-medium">{{ auth.activePersona().name }}</strong>
-        &bull; {{ auth.activePersona().role }}
+        Assigned approvals for <strong class="text-zinc-900 font-medium">{{ auth.currentUser()?.userId || 'Current User' }}</strong>
+        @if (auth.currentUser()?.roles?.length) {
+          &bull; {{ auth.currentUser()?.roles?.[0] }}
+        }
       </p>
     </div>
 

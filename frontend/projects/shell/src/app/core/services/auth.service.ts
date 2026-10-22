@@ -1,159 +1,128 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { PRECONFIGURED_PERSONAS, UserPersona, DevTokenResponse } from '../models/persona.model';
-import { Observable } from 'rxjs';
+import { Router } from '@angular/router';
+import { Observable, tap, catchError, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { AuthenticatedUser, CurrentUserResponse, LoginRequest, LoginResponse } from '../models/user.model';
 import { dispatchPersonaChanged } from '../utils/auth-bridge.util';
-
-export interface CurrentUserResponse {
-  authenticated: boolean;
-  userId?: string;
-  roles?: string[];
-}
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
   private http = inject(HttpClient);
+  private router = inject(Router);
   private readonly gatewayBaseUrl = environment.gatewayUrl;
 
-  readonly personas = PRECONFIGURED_PERSONAS;
-  readonly activePersona = signal<UserPersona>(this.getInitialPersona());
+  readonly currentUser = signal<AuthenticatedUser | null>(null);
   readonly isAuthenticated = signal<boolean>(false);
   readonly isAuthenticating = signal<boolean>(false);
   readonly authError = signal<string | null>(null);
 
-  constructor() {
-    this.checkSession();
-  }
+  readonly isAdmin = computed(() => {
+    return this.currentUser()?.roles.includes('ROLE_ADMIN') ?? false;
+  });
 
-  private getInitialPersona(): UserPersona {
-    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('ewp_active_persona') : null;
-    if (saved) {
-      try {
-        if (saved.startsWith('{')) {
-          return JSON.parse(saved);
-        }
-        const matched = this.personas.find(p => p.id === saved);
-        if (matched) return matched;
-      } catch (e) {
-        // fallback
-      }
-    }
-    return PRECONFIGURED_PERSONAS[0];
+  constructor() {
+    this.checkSession().subscribe();
   }
 
   /**
    * Introspects the Gateway session via /auth/me using HttpOnly cookie credentials.
    * If an active session exists, updates authentication state.
-   * If not, establishes a session using the initial persona.
    */
-  checkSession(): void {
+  checkSession(): Observable<CurrentUserResponse> {
     this.isAuthenticating.set(true);
-    this.http.get<CurrentUserResponse>(`${this.gatewayBaseUrl}/auth/me`, { withCredentials: true }).subscribe({
-      next: (res) => {
+    return this.http.get<CurrentUserResponse>(`${this.gatewayBaseUrl}/auth/me`, { withCredentials: true }).pipe(
+      tap((res) => {
+        this.isAuthenticating.set(false);
         if (res && res.authenticated && res.userId) {
-          const matched = this.personas.find(p => p.id === res.userId);
-          const persona: UserPersona = matched || {
-            id: res.userId,
-            name: res.userId,
-            role: res.roles?.[0] || 'ROLE_EMPLOYEE',
-            roles: res.roles && res.roles.length > 0 ? res.roles : ['ROLE_EMPLOYEE'],
-            department: 'Enterprise Session',
-            avatarColor: 'bg-zinc-800'
+          const user: AuthenticatedUser = {
+            userId: res.userId,
+            roles: res.roles && res.roles.length > 0 ? res.roles : ['ROLE_EMPLOYEE']
           };
-          this.activePersona.set(persona);
+          this.currentUser.set(user);
           this.isAuthenticated.set(true);
-          this.isAuthenticating.set(false);
-          dispatchPersonaChanged({ persona });
+          this.authError.set(null);
+          this.broadcastUser(user);
         } else {
-          this.switchPersona(this.getInitialPersona());
+          this.currentUser.set(null);
+          this.isAuthenticated.set(false);
+          this.broadcastUser(null);
         }
-      },
-      error: () => {
-        this.switchPersona(this.getInitialPersona());
-      }
+      }),
+      catchError(() => {
+        this.isAuthenticating.set(false);
+        this.currentUser.set(null);
+        this.isAuthenticated.set(false);
+        this.broadcastUser(null);
+        return of({ authenticated: false });
+      })
+    );
+  }
+
+  /**
+   * Authenticates against the backend API Gateway (/auth/login).
+   * Backend issues an HttpOnly JWT cookie (ewp_access_token) for subsequent requests.
+   */
+  login(userId: string, roles: string[]): Observable<LoginResponse> {
+    this.isAuthenticating.set(true);
+    this.authError.set(null);
+
+    const resolvedRoles = roles && roles.length > 0 ? roles : ['ROLE_EMPLOYEE'];
+    const payload: LoginRequest = {
+      userId: userId.trim(),
+      roles: resolvedRoles
+    };
+
+    return this.http.post<LoginResponse>(`${this.gatewayBaseUrl}/auth/login`, payload, { withCredentials: true }).pipe(
+      tap(() => {
+        const user: AuthenticatedUser = {
+          userId: payload.userId,
+          roles: payload.roles
+        };
+        this.currentUser.set(user);
+        this.isAuthenticated.set(true);
+        this.isAuthenticating.set(false);
+        this.broadcastUser(user);
+      }),
+      catchError((err) => {
+        this.isAuthenticating.set(false);
+        this.authError.set(err?.error?.message || 'Authentication failed. Please verify credentials.');
+        throw err;
+      })
+    );
+  }
+
+  /**
+   * Invalidates the backend session cookie and clears local auth state.
+   */
+  logout(): void {
+    this.http.post(`${this.gatewayBaseUrl}/auth/logout`, {}, { withCredentials: true }).subscribe({
+      next: () => this.handleLoggedOut(),
+      error: () => this.handleLoggedOut()
     });
   }
 
-  isAdmin(): boolean {
-    return this.hasRole('ROLE_ADMIN');
+  private handleLoggedOut(): void {
+    this.currentUser.set(null);
+    this.isAuthenticated.set(false);
+    this.authError.set(null);
+    this.broadcastUser(null);
+    this.router.navigate(['/login']);
   }
 
   hasRole(role: string): boolean {
-    const roles = this.activePersona()?.roles || [];
-    return roles.includes(role);
+    return this.currentUser()?.roles.includes(role) ?? false;
   }
 
-  switchPersona(persona: UserPersona): void {
-    this.authenticate(persona.id, persona.roles, persona);
-  }
-
-  loginCustom(username: string, role: string, displayName?: string): void {
-    const trimmedUser = username.trim();
-    const trimmedRole = role.trim();
-    const roles = Array.from(new Set([trimmedRole, 'ROLE_EMPLOYEE']));
-
-    const persona: UserPersona = {
-      id: trimmedUser,
-      name: displayName?.trim() || trimmedUser,
-      role: trimmedRole,
-      roles: roles,
-      department: 'Custom Session',
-      avatarColor: 'bg-zinc-800'
-    };
-    this.authenticate(trimmedUser, roles, persona);
-  }
-
-  logout(): void {
-    this.http.post(`${this.gatewayBaseUrl}/auth/logout`, {}, { withCredentials: true }).subscribe({
-      next: () => {
-        this.isAuthenticated.set(false);
-        if (typeof localStorage !== 'undefined') {
-          localStorage.removeItem('ewp_active_persona');
-        }
-      },
-      error: () => {
-        this.isAuthenticated.set(false);
-        if (typeof localStorage !== 'undefined') {
-          localStorage.removeItem('ewp_active_persona');
-        }
+  private broadcastUser(user: AuthenticatedUser | null): void {
+    dispatchPersonaChanged({
+      persona: {
+        id: user ? user.userId : '',
+        name: user ? user.userId : '',
+        roles: user ? user.roles : []
       }
     });
-  }
-
-  private authenticate(userId: string, roles: string[], persona: UserPersona): void {
-    this.isAuthenticating.set(true);
-    this.authError.set(null);
-    this.activePersona.set(persona);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('ewp_active_persona', JSON.stringify(persona));
-    }
-
-    this.requestDevToken(userId, roles).subscribe({
-      next: () => {
-        this.isAuthenticated.set(true);
-        this.isAuthenticating.set(false);
-
-        // Broadcast to all MFEs that the persona changed
-        dispatchPersonaChanged({ persona });
-      },
-      error: (err) => {
-        console.error('Failed to obtain authentication session from API Gateway:', err);
-        if (!this.isAuthenticated()) {
-          this.authError.set('Gateway offline or session generation failed');
-        }
-        this.isAuthenticating.set(false);
-      }
-    });
-  }
-
-  private requestDevToken(userId: string, roles: string[]): Observable<DevTokenResponse> {
-    return this.http.post<DevTokenResponse>(
-      `${this.gatewayBaseUrl}/auth/dev-token`,
-      { userId, roles },
-      { withCredentials: true }
-    );
   }
 }

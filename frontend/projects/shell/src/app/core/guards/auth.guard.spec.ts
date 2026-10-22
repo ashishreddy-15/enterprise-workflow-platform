@@ -1,40 +1,44 @@
 import { TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
+import { Router, UrlTree } from '@angular/router';
+import { signal } from '@angular/core';
+import { Observable, firstValueFrom, of } from 'rxjs';
 import { authGuard } from './auth.guard';
 import { AuthService } from '../services/auth.service';
-import { ActivatedRouteSnapshot } from '@angular/router';
-import { environment } from '../../../environments/environment';
 
 describe('authGuard', () => {
-  let authService: AuthService;
-  let httpMock: HttpTestingController;
+  let router: Router;
+  const isAuthenticatedSignal = signal<boolean>(false);
+
+  const mockAuthService = {
+    isAuthenticated: isAuthenticatedSignal,
+    checkSession: () => of({ authenticated: isAuthenticatedSignal() })
+  };
 
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        AuthService
+        { provide: AuthService, useValue: mockAuthService }
       ]
     });
 
-    httpMock = TestBed.inject(HttpTestingController);
-    authService = TestBed.inject(AuthService);
-
-    // Drain initial checkSession requests initiated by AuthService
-    const initReq = httpMock.expectOne(`${environment.gatewayUrl}/auth/me`);
-    initReq.flush({ authenticated: false });
-    const devTokenReq = httpMock.expectOne(`${environment.gatewayUrl}/auth/dev-token`);
-    devTokenReq.flush({ access_token: 'mock-token', token_type: 'Bearer', expires_in: '28800' });
+    router = TestBed.inject(Router);
+    isAuthenticatedSignal.set(false);
   });
 
-  afterEach(() => {
-    httpMock.verify();
-  });
+  it('should allow navigation when user is authenticated', () => {
+    isAuthenticatedSignal.set(true);
 
-  it('should allow navigation when user is authenticated or active persona exists', () => {
-    const result = TestBed.runInInjectionContext(() => authGuard({} as ActivatedRouteSnapshot, {} as any));
+    const result = TestBed.runInInjectionContext(() => authGuard({} as any, { url: '/workflows' } as any));
     expect(result).toBe(true);
+  });
+
+  it('should redirect to /login when user is not authenticated', async () => {
+    isAuthenticatedSignal.set(false);
+
+    const result$ = TestBed.runInInjectionContext(() => authGuard({} as any, { url: '/workflows' } as any)) as Observable<any>;
+    const result = await firstValueFrom(result$);
+
+    expect(result instanceof UrlTree).toBe(true);
+    expect((result as UrlTree).toString()).toContain('/login?returnUrl=%2Fworkflows');
   });
 });

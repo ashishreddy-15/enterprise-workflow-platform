@@ -1,0 +1,120 @@
+<div class="min-h-[calc(100vh-3.5rem)] flex items-center justify-center p-6 bg-zinc-50">
+  <div class="ewp-card max-w-md w-full p-8 space-y-6">
+    
+    <!-- Platform Branding Header -->
+    <div class="text-center space-y-2">
+      <div class="mx-auto w-12 h-12 rounded-xl bg-zinc-900 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+        W
+      </div>
+      <h1 class="text-xl font-bold tracking-tight text-zinc-950">
+        Enterprise Platform Sign In
+      </h1>
+      <p class="text-xs text-zinc-500 leading-relaxed">
+        Authenticate with your enterprise username and assigned security roles.
+      </p>
+    </div>
+
+    <!-- Error Alert -->
+    @if (errorMessage()) {
+      <div class="p-3.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2.5">
+        <svg class="w-4 h-4 mt-0.5 flex-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <span>{{ errorMessage() }}</span>
+      </div>
+    }
+
+    <!-- Login Form -->
+    <form (ngSubmit)="onSubmit()" class="space-y-4">
+      
+      <!-- Username Field -->
+      <div>
+        <label for="username" class="block text-xs font-semibold text-zinc-700 mb-1.5">
+          Username / User ID
+        </label>
+        <input id="username" 
+               type="text" 
+               [value]="username()"
+               (input)="username.set($any($event.target).value)"
+               placeholder="e.g. ashish, admin.sys"
+               required
+               class="ewp-input w-full" />
+        <span class="text-[11px] text-zinc-400 mt-1 block">
+          Used as your subject claim for audit trails and task assignments.
+        </span>
+      </div>
+
+      <!-- Role Selection -->
+      <div>
+        <label class="block text-xs font-semibold text-zinc-700 mb-1.5">
+          Assigned Security Role
+        </label>
+        
+        <div class="space-y-2">
+          @for (role of roleOptions; track role.id) {
+            <label class="flex items-start gap-3 p-2.5 rounded-lg border transition-all cursor-pointer"
+                   [ngClass]="{
+                     'border-zinc-900 bg-zinc-50 ring-1 ring-zinc-900': !useCustomRole() && selectedRole() === role.id,
+                     'border-zinc-200 hover:border-zinc-300 bg-white': useCustomRole() || selectedRole() !== role.id
+                   }"
+                   (click)="selectRole(role.id)">
+              <input type="radio" 
+                     name="role" 
+                     [value]="role.id" 
+                     [checked]="!useCustomRole() && selectedRole() === role.id" 
+                     class="mt-0.5 text-zinc-900 focus:ring-zinc-900" />
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-semibold text-zinc-900">{{ role.label }}</span>
+                  <span class="ewp-badge-sm ewp-badge-neutral font-mono text-[10px]">{{ role.id }}</span>
+                </div>
+                <p class="text-[11px] text-zinc-500 mt-0.5">{{ role.description }}</p>
+              </div>
+            </label>
+          }
+
+          <!-- Custom Role Option -->
+          <label class="flex items-start gap-3 p-2.5 rounded-lg border transition-all cursor-pointer"
+                 [ngClass]="{
+                   'border-zinc-900 bg-zinc-50 ring-1 ring-zinc-900': useCustomRole(),
+                   'border-zinc-200 hover:border-zinc-300 bg-white': !useCustomRole()
+                 }"
+                 (click)="useCustomRole.set(true)">
+            <input type="radio" 
+                   name="role" 
+                   [checked]="useCustomRole()" 
+                   class="mt-0.5 text-zinc-900 focus:ring-zinc-900" />
+            <div class="flex-1 min-w-0">
+              <span class="text-xs font-semibold text-zinc-900">Custom Role</span>
+              @if (useCustomRole()) {
+                <input type="text" 
+                       [value]="customRole()"
+                       (input)="customRole.set($any($event.target).value)"
+                       placeholder="e.g. ROLE_AUDITOR" 
+                       class="ewp-input w-full mt-2 font-mono text-xs" />
+              }
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <button type="submit" 
+              [disabled]="isSubmitting()"
+              class="ewp-btn-primary w-full py-2.5 text-sm font-medium flex items-center justify-center gap-2 mt-6">
+        @if (isSubmitting()) {
+          <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+          <span>Authenticating...</span>
+        } @else {
+          <span>Sign In to Platform</span>
+        }
+      </button>
+
+    </form>
+
+  </div>
+</div>

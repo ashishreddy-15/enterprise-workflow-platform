@@ -37,7 +37,7 @@ public class DevAuthController implements AuthApi {
     }
 
     @Override
-    @PostMapping("/dev-token")
+    @PostMapping({"/dev-token", "/login"})
     public Mono<Map<String, String>> generateToken(@RequestBody TokenRequest request, ServerWebExchange exchange) {
         Instant now = Instant.now();
 

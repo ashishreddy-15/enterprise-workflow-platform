@@ -3,15 +3,13 @@ import { ActivatedRouteSnapshot, Router, UrlTree } from '@angular/router';
 import { signal } from '@angular/core';
 import { roleGuard } from './role.guard';
 import { AuthService } from '../services/auth.service';
-import { PRECONFIGURED_PERSONAS } from '../models/persona.model';
 
 describe('roleGuard', () => {
   let router: Router;
-  const activePersonaSignal = signal(PRECONFIGURED_PERSONAS[0]); // Ashish Reddy: ROLE_EMPLOYEE
+  const isAdminSignal = signal<boolean>(false);
 
   const mockAuthService = {
-    activePersona: activePersonaSignal,
-    isAdmin: () => activePersonaSignal().roles.includes('ROLE_ADMIN')
+    isAdmin: isAdminSignal
   };
 
   beforeEach(() => {
@@ -22,11 +20,12 @@ describe('roleGuard', () => {
     });
 
     router = TestBed.inject(Router);
-    activePersonaSignal.set(PRECONFIGURED_PERSONAS[0]); // Non-admin
+    isAdminSignal.set(false); // Default non-admin
   });
 
   it('should redirect non-admin user to /access-denied', () => {
-    // Ashish Reddy (ROLE_EMPLOYEE) lacks ROLE_ADMIN
+    isAdminSignal.set(false);
+
     const route = { routeConfig: { path: 'templates' } } as ActivatedRouteSnapshot;
     const result = TestBed.runInInjectionContext(() => roleGuard(route, {} as any));
 
@@ -36,8 +35,7 @@ describe('roleGuard', () => {
   });
 
   it('should allow access if user is Administrator (ROLE_ADMIN)', () => {
-    // Switch to Platform Administrator
-    activePersonaSignal.set(PRECONFIGURED_PERSONAS[3]); // usr_admin_system with ROLE_ADMIN
+    isAdminSignal.set(true);
 
     const route = { routeConfig: { path: 'templates' } } as ActivatedRouteSnapshot;
     const result = TestBed.runInInjectionContext(() => roleGuard(route, {} as any));

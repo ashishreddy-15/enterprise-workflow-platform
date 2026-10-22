@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { HomeComponent } from './features/home/home.component';
+import { LoginComponent } from './features/login/login.component';
 import { AccessDeniedComponent } from './features/access-denied/access-denied.component';
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
@@ -9,6 +10,10 @@ export const routes: Routes = [
   {
     path: '',
     component: HomeComponent
+  },
+  {
+    path: 'login',
+    component: LoginComponent
   },
   {
     path: 'workflows',

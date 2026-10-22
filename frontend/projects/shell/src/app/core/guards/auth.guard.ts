@@ -1,27 +1,37 @@
 import { inject } from '@angular/core';
-import { CanActivateFn } from '@angular/router';
+import { CanActivateFn, Router } from '@angular/router';
+import { of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 import { AuthService } from '../services/auth.service';
 
 /**
  * Functional Auth Guard
- * Verifies active session identity. Because the platform uses persona-based
- * authentication, it validates the active persona session without bouncing
- * to a non-existent login form.
+ * Verifies the user session against the backend API Gateway.
+ * If unauthenticated, safely redirects to /login with returnUrl preserved.
  */
-export const authGuard: CanActivateFn = () => {
+export const authGuard: CanActivateFn = (_route, state) => {
   const auth = inject(AuthService);
+  const router = inject(Router);
 
-  // If authenticated with active session, proceed immediately
   if (auth.isAuthenticated()) {
     return true;
   }
 
-  // If persona exists in memory/storage, verify session
-  if (auth.activePersona()) {
-    return true;
-  }
-
-  // If no session exists, initiate session verification
-  auth.checkSession();
-  return true;
+  return auth.checkSession().pipe(
+    map((res) => {
+      if (res && res.authenticated) {
+        return true;
+      }
+      return router.createUrlTree(['/login'], {
+        queryParams: { returnUrl: state.url }
+      });
+    }),
+    catchError(() => {
+      return of(
+        router.createUrlTree(['/login'], {
+          queryParams: { returnUrl: state.url }
+        })
+      );
+    })
+  );
 };

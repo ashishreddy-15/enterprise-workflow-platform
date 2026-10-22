@@ -1,7 +1,6 @@
 package com.ashish.workflow.gateway.controller;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import com.ashish.workflow.gateway.api.AuthApi;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -25,11 +24,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-@Tag(name = "Authentication & Sessions", description = "Endpoints for persona simulation, token issuance, and logout")
 @RestController
 @RequestMapping("/auth")
 @ConditionalOnProperty(name = "jwt.dev-token.enabled", matchIfMissing = true, havingValue = "true")
-public class DevAuthController {
+public class DevAuthController implements AuthApi {
 
     public static final String COOKIE_NAME = "ewp_access_token";
     private final JwtEncoder jwtEncoder;
@@ -38,9 +36,7 @@ public class DevAuthController {
         this.jwtEncoder = jwtEncoder;
     }
 
-    public record TokenRequest(String userId, List<String> roles) {}
-
-    @Operation(summary = "Mint dev JWT token and set HttpOnly session cookie")
+    @Override
     @PostMapping("/dev-token")
     public Mono<Map<String, String>> generateToken(@RequestBody TokenRequest request, ServerWebExchange exchange) {
         Instant now = Instant.now();
@@ -86,7 +82,7 @@ public class DevAuthController {
                 String.join(",", resolvedRoles)));
     }
 
-    @Operation(summary = "Clear HttpOnly session cookie and log out")
+    @Override
     @PostMapping("/logout")
     public Mono<Map<String, String>> logout(ServerWebExchange exchange) {
         ResponseCookie cookie = ResponseCookie.from(COOKIE_NAME, "")
@@ -102,7 +98,7 @@ public class DevAuthController {
         return Mono.just(Map.of("status", "logged_out"));
     }
 
-    @Operation(summary = "Get current authenticated user identity and authorities")
+    @Override
     @GetMapping("/me")
     public Mono<Map<String, Object>> getCurrentUser(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {

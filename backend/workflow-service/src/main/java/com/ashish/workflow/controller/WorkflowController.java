@@ -1,5 +1,6 @@
 package com.ashish.workflow.controller;
 
+import com.ashish.workflow.api.WorkflowApi;
 import com.ashish.workflow.domain.entity.WorkflowInstance;
 import com.ashish.workflow.dto.CreateWorkflowRequest;
 import com.ashish.workflow.dto.TransitionWorkflowRequest;
@@ -9,8 +10,6 @@ import com.ashish.workflow.repository.WorkflowSpecifications;
 import com.ashish.workflow.security.UserContext;
 import com.ashish.workflow.security.UserContextHolder;
 import com.ashish.workflow.service.WorkflowService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -20,10 +19,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@Tag(name = "Workflow Instances", description = "Workflow lifecycle execution, state transitions, and instance queries")
 @RestController
 @RequestMapping("/api/v1/workflows")
-public class WorkflowController {
+public class WorkflowController implements WorkflowApi {
 
     private static final Logger log = LoggerFactory.getLogger(WorkflowController.class);
 
@@ -35,7 +33,7 @@ public class WorkflowController {
         this.workflowRepository = workflowRepository;
     }
 
-    @Operation(summary = "Start a new workflow instance from a published template blueprint")
+    @Override
     @PostMapping
     public ResponseEntity<WorkflowResponse> createWorkflow(@RequestBody CreateWorkflowRequest request)
             throws Exception {
@@ -54,7 +52,7 @@ public class WorkflowController {
         return ResponseEntity.status(HttpStatus.CREATED).body(WorkflowResponse.from(instance));
     }
 
-    @Operation(summary = "Search workflow instances with dynamic JPA filters (state, priority, requesterId)")
+    @Override
     @GetMapping
     public ResponseEntity<List<WorkflowInstance>> searchWorkflows(
             @RequestParam(required = false) String state,
@@ -72,7 +70,7 @@ public class WorkflowController {
         return ResponseEntity.ok(results);
     }
 
-    @Operation(summary = "Get workflow instance details and frozen template snapshot by ID")
+    @Override
     @GetMapping("/{id}")
     public ResponseEntity<WorkflowResponse> getWorkflowById(@PathVariable UUID id) {
         log.debug("REST: Get workflow instance by id: {}", id);
@@ -83,7 +81,7 @@ public class WorkflowController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @Operation(summary = "Transition workflow state by action key (validates actor authority and payload schema)")
+    @Override
     @PostMapping("/{id}/transition")
     public ResponseEntity<WorkflowResponse> transitionWorkflow(
             @PathVariable UUID id, @RequestBody TransitionWorkflowRequest request) throws Exception {

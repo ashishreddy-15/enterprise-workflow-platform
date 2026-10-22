@@ -1,9 +1,8 @@
 package com.ashish.workflow.template.controller;
 
+import com.ashish.workflow.template.api.TemplateApi;
 import com.ashish.workflow.template.document.WorkflowTemplateDocument;
 import com.ashish.workflow.template.service.TemplateService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -12,12 +11,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@Tag(
-        name = "Workflow Blueprints",
-        description = "Authoring, versioning, DAG validation, and publishing of workflow templates")
 @RestController
 @RequestMapping("/api/v1/templates")
-public class TemplateController {
+public class TemplateController implements TemplateApi {
 
     private static final Logger log = LoggerFactory.getLogger(TemplateController.class);
 
@@ -27,14 +23,14 @@ public class TemplateController {
         this.templateService = templateService;
     }
 
-    @Operation(summary = "Create a new draft workflow template with step DAG validation")
+    @Override
     @PostMapping
     public ResponseEntity<WorkflowTemplateDocument> createDraft(@RequestBody WorkflowTemplateDocument doc) {
         log.info("REST: Create draft template - key: '{}', name: '{}'", doc.getTemplateKey(), doc.getName());
         return ResponseEntity.status(HttpStatus.CREATED).body(templateService.createDraft(doc));
     }
 
-    @Operation(summary = "Update an existing draft template version")
+    @Override
     @PutMapping("/{templateKey}/versions/{version}")
     public ResponseEntity<WorkflowTemplateDocument> updateDraft(
             @PathVariable String templateKey, @PathVariable int version, @RequestBody WorkflowTemplateDocument doc) {
@@ -42,7 +38,7 @@ public class TemplateController {
         return ResponseEntity.ok(templateService.updateDraft(templateKey, version, doc));
     }
 
-    @Operation(summary = "Publish a draft template version to make it live for execution")
+    @Override
     @PutMapping("/{templateKey}/versions/{version}/publish")
     public ResponseEntity<WorkflowTemplateDocument> publish(
             @PathVariable String templateKey, @PathVariable int version) {
@@ -50,7 +46,7 @@ public class TemplateController {
         return ResponseEntity.ok(templateService.publishTemplate(templateKey, version));
     }
 
-    @Operation(summary = "Get all workflow templates filtered by status (ALL, DRAFT, PUBLISHED)")
+    @Override
     @GetMapping
     public ResponseEntity<List<WorkflowTemplateDocument>> getAll(
             @RequestParam(required = false, defaultValue = "ALL") String status) {
@@ -58,7 +54,7 @@ public class TemplateController {
         return ResponseEntity.ok(templateService.getAllLatestTemplates(status));
     }
 
-    @Operation(summary = "Get a workflow template by key (optionally latest published)")
+    @Override
     @GetMapping("/{templateKey}")
     public ResponseEntity<WorkflowTemplateDocument> getTemplate(
             @PathVariable String templateKey,
@@ -70,7 +66,7 @@ public class TemplateController {
         return doc.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
-    @Operation(summary = "Get full version history for a workflow template key")
+    @Override
     @GetMapping("/{templateKey}/versions")
     public ResponseEntity<List<WorkflowTemplateDocument>> getAllVersions(@PathVariable String templateKey) {
         log.debug("REST: Get all versions - templateKey: '{}'", templateKey);

@@ -1,10 +1,9 @@
 package com.ashish.workflow.controller;
 
+import com.ashish.workflow.api.TaskApi;
 import com.ashish.workflow.security.UserContext;
 import com.ashish.workflow.security.UserContextHolder;
 import com.ashish.workflow.service.TaskService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,10 +13,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Task Inbox & Decisions", description = "Human task approvals, rejections, and dynamic inbox queries")
 @RestController
 @RequestMapping("/api/v1/tasks")
-public class TaskController {
+public class TaskController implements TaskApi {
 
     private static final Logger log = LoggerFactory.getLogger(TaskController.class);
 
@@ -27,9 +25,7 @@ public class TaskController {
         this.taskService = taskService;
     }
 
-    @Operation(
-            summary =
-                    "Get actionable task inbox for authenticated user with dynamic filter (inbox, participated, initiated, all)")
+    @Override
     @GetMapping("/inbox")
     public ResponseEntity<List<TaskService.TaskInboxItem>> getInbox(
             @RequestParam(required = false, defaultValue = "inbox") String filter) throws Exception {

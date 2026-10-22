@@ -77,6 +77,15 @@ export class AuthService {
     });
   }
 
+  isAdmin(): boolean {
+    return this.hasRole('ROLE_ADMIN');
+  }
+
+  hasRole(role: string): boolean {
+    const roles = this.activePersona()?.roles || [];
+    return roles.includes(role);
+  }
+
   switchPersona(persona: UserPersona): void {
     this.authenticate(persona.id, persona.roles, persona);
   }

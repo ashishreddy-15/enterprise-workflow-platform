@@ -12,7 +12,7 @@ export const routes: Routes = [
   },
   {
     path: 'workflows',
-    canActivate: [authGuard, roleGuard],
+    canActivate: [authGuard],
     loadChildren: () =>
       loadRemoteModule('workflow-mfe', './WorkflowRoutes')
         .then((m) => m.WORKFLOW_ROUTES)
@@ -34,7 +34,7 @@ export const routes: Routes = [
   },
   {
     path: 'analytics',
-    canActivate: [authGuard, roleGuard],
+    canActivate: [authGuard],
     loadChildren: () =>
       loadRemoteModule('analytics-mfe', './AnalyticsRoutes')
         .then((m) => m.ANALYTICS_ROUTES)

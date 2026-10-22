@@ -11,12 +11,12 @@
 
     <!-- Title & Explanation -->
     <div class="space-y-2">
-      <span class="ewp-badge ewp-badge-warning">403 Access Restricted</span>
+      <span class="ewp-badge ewp-badge-warning">403 Administrator Access Required</span>
       <h1 class="text-xl font-bold tracking-tight text-zinc-950">
-        {{ targetTitle() }}
+        Workflow Blueprints Studio
       </h1>
       <p class="text-xs text-zinc-500 leading-relaxed max-w-sm mx-auto">
-        Your active security persona does not hold the authorities required to access this feature.
+        Creating and modifying workflow templates requires Platform Administrator authority. Your current role has access to the Task Inbox and Analytics.
       </p>
     </div>
 
@@ -32,31 +32,27 @@
         </div>
       </div>
 
-      <!-- Required Roles -->
-      <div class="flex items-start justify-between text-xs pt-1">
+      <!-- Required Role -->
+      <div class="flex items-center justify-between text-xs pt-1">
         <span class="text-zinc-500 font-sans">Required Authority:</span>
-        <div class="flex flex-wrap gap-1 justify-end max-w-[240px]">
-          @for (role of requiredRoles(); track role) {
-            <span class="ewp-badge-sm bg-amber-100 text-amber-800 border-amber-200 font-mono">
-              {{ role }}
-            </span>
-          }
-        </div>
+        <span class="ewp-badge-sm bg-amber-100 text-amber-800 border-amber-200 font-mono">
+          ROLE_ADMIN
+        </span>
       </div>
     </div>
 
     <!-- Action Buttons -->
     <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-      @if (suggestedPersona()) {
-        <button (click)="switchToAuthorizedPersona()" 
+      @if (adminPersona()) {
+        <button (click)="switchToAdmin()" 
                 class="ewp-btn-primary w-full sm:w-auto inline-flex items-center justify-center gap-1.5">
-          <span>⚡ Switch to {{ suggestedPersona()?.name }}</span>
+          <span>⚡ Switch to {{ adminPersona()?.name }}</span>
         </button>
       }
 
-      <a routerLink="/" 
+      <a routerLink="/workflows" 
          class="ewp-btn-secondary w-full sm:w-auto inline-flex items-center justify-center">
-        <span>← Return to Home</span>
+        <span>Go to Inbox</span>
       </a>
     </div>
 

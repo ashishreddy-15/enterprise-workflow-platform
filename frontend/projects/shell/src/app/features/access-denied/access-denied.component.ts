@@ -4,7 +4,6 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs/operators';
 import { AuthService } from '../../core/services/auth.service';
-import { PermissionConfigService } from '../../core/services/permission-config.service';
 import { UserPersona } from '../../core/models/persona.model';
 
 @Component({
@@ -17,42 +16,21 @@ export class AccessDeniedComponent {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   readonly auth = inject(AuthService);
-  readonly permissionConfig = inject(PermissionConfigService);
 
-  // Extract 'target' query parameter reactively
   readonly targetRoute = toSignal(
-    this.route.queryParamMap.pipe(map(params => params.get('target') || 'restricted area')),
-    { initialValue: 'restricted area' }
+    this.route.queryParamMap.pipe(map(params => params.get('target') || 'templates')),
+    { initialValue: 'templates' }
   );
 
-  readonly policy = computed(() => {
-    return this.permissionConfig.getRouteConfig(this.targetRoute());
+  readonly adminPersona = computed<UserPersona | undefined>(() => {
+    return this.auth.personas.find(p => p.id === 'usr_admin_system' || p.roles.includes('ROLE_ADMIN'));
   });
 
-  readonly targetTitle = computed(() => {
-    return this.policy()?.title || this.targetRoute();
-  });
-
-  readonly requiredRoles = computed(() => {
-    return this.policy()?.requiredRoles || ['ROLE_ADMIN'];
-  });
-
-  readonly suggestedPersona = computed<UserPersona | undefined>(() => {
-    const suggestedId = this.policy()?.suggestedPersonaId;
-    if (!suggestedId) return undefined;
-    return this.auth.personas.find(p => p.id === suggestedId);
-  });
-
-  switchToAuthorizedPersona(): void {
-    const persona = this.suggestedPersona();
-    if (persona) {
-      this.auth.switchPersona(persona);
-      const target = this.targetRoute();
-      if (target && target !== 'restricted area') {
-        this.router.navigate(['/' + target]);
-      } else {
-        this.router.navigate(['/']);
-      }
+  switchToAdmin(): void {
+    const admin = this.adminPersona();
+    if (admin) {
+      this.auth.switchPersona(admin);
+      this.router.navigate(['/templates']);
     }
   }
 }

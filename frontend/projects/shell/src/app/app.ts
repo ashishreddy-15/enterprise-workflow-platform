@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from './core/services/auth.service';
-import { PermissionConfigService } from './core/services/permission-config.service';
 import { UserPersona } from './core/models/persona.model';
 
 @Component({
@@ -15,11 +14,6 @@ import { UserPersona } from './core/models/persona.model';
 })
 export class AppComponent {
   auth = inject(AuthService);
-  permissionConfig = inject(PermissionConfigService);
-
-  canAccess(route: string): boolean {
-    return this.permissionConfig.canAccessRoute(route, this.auth.activePersona()?.roles || []);
-  }
 
   readonly isLoginModalOpen = signal<boolean>(false);
   readonly customUsername = signal<string>('');

@@ -37,6 +37,19 @@ describe('AuthService', () => {
   it('should authenticate initial persona successfully', () => {
     expect(service.isAuthenticated()).toBe(true);
     expect(service.activePersona().id).toBe(PRECONFIGURED_PERSONAS[0].id);
+    expect(service.isAdmin()).toBe(false);
+    expect(service.hasRole('ROLE_EMPLOYEE')).toBe(true);
+  });
+
+  it('should correctly report isAdmin when switching to admin persona', () => {
+    const adminPersona = PRECONFIGURED_PERSONAS[3]; // Platform Administrator
+    service.switchPersona(adminPersona);
+
+    const req = httpMock.expectOne(`${environment.gatewayUrl}/auth/dev-token`);
+    req.flush({ access_token: 'token-admin', token_type: 'Bearer', expires_in: '28800' });
+
+    expect(service.isAdmin()).toBe(true);
+    expect(service.hasRole('ROLE_ADMIN')).toBe(true);
   });
 
   it('should switch persona and send withCredentials: true', () => {

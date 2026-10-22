@@ -44,10 +44,12 @@ export class AuthService {
           this.currentUser.set(user);
           this.isAuthenticated.set(true);
           this.authError.set(null);
+          this.persistSession(user);
           this.broadcastUser(user);
         } else {
           this.currentUser.set(null);
           this.isAuthenticated.set(false);
+          this.persistSession(null);
           this.broadcastUser(null);
         }
       }),
@@ -55,6 +57,7 @@ export class AuthService {
         this.isAuthenticating.set(false);
         this.currentUser.set(null);
         this.isAuthenticated.set(false);
+        this.persistSession(null);
         this.broadcastUser(null);
         return of({ authenticated: false });
       })
@@ -84,6 +87,7 @@ export class AuthService {
         this.currentUser.set(user);
         this.isAuthenticated.set(true);
         this.isAuthenticating.set(false);
+        this.persistSession(user);
         this.broadcastUser(user);
       }),
       catchError((err) => {
@@ -108,12 +112,24 @@ export class AuthService {
     this.currentUser.set(null);
     this.isAuthenticated.set(false);
     this.authError.set(null);
+    this.persistSession(null);
     this.broadcastUser(null);
     this.router.navigate(['/login']);
   }
 
   hasRole(role: string): boolean {
     return this.currentUser()?.roles.includes(role) ?? false;
+  }
+
+  private persistSession(user: AuthenticatedUser | null): void {
+    if (typeof localStorage === 'undefined') return;
+    if (user) {
+      localStorage.setItem('ewp_active_user', JSON.stringify({ userId: user.userId, roles: user.roles }));
+      localStorage.setItem('ewp_active_persona', JSON.stringify({ id: user.userId, name: user.userId, roles: user.roles }));
+    } else {
+      localStorage.removeItem('ewp_active_user');
+      localStorage.removeItem('ewp_active_persona');
+    }
   }
 
   private broadcastUser(user: AuthenticatedUser | null): void {

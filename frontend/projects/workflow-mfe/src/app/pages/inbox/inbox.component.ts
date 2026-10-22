@@ -3,7 +3,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { WorkflowService } from '../../services/workflow.service';
-import { TaskInboxItem, WorkflowAction, WorkflowTemplate, TemplateCatalogItem, WorkflowStepperNode } from '../../models/workflow.model';
+import { TaskInboxItem, WorkflowAction, WorkflowTemplate, TemplateStepDefinition, TemplateCatalogItem, WorkflowStepperNode } from '../../models/workflow.model';
 import { computeSlaCountdown } from '../../utils/sla.util';
 import { buildStepperNodes } from '../../utils/stepper.util';
 import { onPersonaChanged } from '../../utils/auth-bridge.util';
@@ -94,19 +94,33 @@ export class InboxComponent implements OnInit, OnDestroy {
     );
   });
 
+  // Active workflow template for the selected task
+  readonly activeTemplate = computed<WorkflowTemplate | undefined>(() => {
+    const task = this.selectedTask();
+    if (!task) return undefined;
+    return this.templateMap().get(task.templateId);
+  });
+
+  // Definition of the step matching the current state
+  readonly currentStep = computed<TemplateStepDefinition | undefined>(() => {
+    const task = this.selectedTask();
+    const tpl = this.activeTemplate();
+    if (!task || !tpl) return undefined;
+    return tpl.steps?.[task.currentState];
+  });
+
   // Dynamically derived actions for the currently selected task
   readonly availableActions = computed<WorkflowAction[]>(() => {
     const task = this.selectedTask();
     if (!task) return [];
 
-    const tpl = this.templateMap().get(task.templateId);
-    const step = tpl?.steps?.[task.currentState];
+    const step = this.currentStep();
     if (step && step.transitions && Object.keys(step.transitions).length > 0) {
       return Object.entries(step.transitions).map(([key, targetState]) => ({
         key,
         label: this.formatActionLabel(key),
         variant: this.getActionVariant(key),
-        targetState
+        targetState: String(targetState)
       }));
     }
 
@@ -119,10 +133,7 @@ export class InboxComponent implements OnInit, OnDestroy {
 
   // Keys required by the currently active step (derived directly from template definition)
   readonly currentStepRequiredKeys = computed<string[]>(() => {
-    const task = this.selectedTask();
-    if (!task) return [];
-    const tpl = this.templateMap().get(task.templateId);
-    const step = tpl?.steps?.[task.currentState];
+    const step = this.currentStep();
     if (step?.requiredPayloadKeys && step.requiredPayloadKeys.length > 0) {
       return step.requiredPayloadKeys;
     }
@@ -142,15 +153,28 @@ export class InboxComponent implements OnInit, OnDestroy {
     this.loadInbox();
   }
 
-  getActiveUser(): { id: string; roles: string[] } {
+  readonly activeUser = signal<{ id: string; roles: string[] }>(this.readStoredUser());
+
+  readStoredUser(): { id: string; roles: string[] } {
     try {
+      const userStr = localStorage.getItem('ewp_active_user');
+      if (userStr) {
+        const parsed = JSON.parse(userStr);
+        return {
+          id: (parsed.userId || parsed.id || '').trim(),
+          roles: Array.isArray(parsed.roles) ? parsed.roles : []
+        };
+      }
       const saved = localStorage.getItem('ewp_active_persona');
       if (saved) {
         if (saved.startsWith('{')) {
           const parsed = JSON.parse(saved);
-          return { id: parsed.id || '', roles: parsed.roles || [] };
+          return {
+            id: (parsed.id || parsed.userId || '').trim(),
+            roles: Array.isArray(parsed.roles) ? parsed.roles : []
+          };
         }
-        return { id: saved, roles: [] };
+        return { id: saved.trim(), roles: [] };
       }
     } catch (e) {}
     return { id: '', roles: [] };
@@ -174,7 +198,7 @@ export class InboxComponent implements OnInit, OnDestroy {
     const task = this.selectedTask();
     if (!task || this.isTerminal()) return false;
 
-    const user = this.getActiveUser();
+    const user = this.activeUser();
     const scope = task.actorScope?.toUpperCase() || 'ANY';
     const step = this.currentStep();
     const isInitialStep = (this.activeTemplate()?.initialState?.toUpperCase() === task.currentState?.toUpperCase())
@@ -189,10 +213,19 @@ export class InboxComponent implements OnInit, OnDestroy {
         return false;
       }
       if (!task.requiredRole) return true;
-      return user.roles.some(r => r.toUpperCase() === task.requiredRole?.toUpperCase());
+      return user.roles.some(r => this.roleMatches(r, task.requiredRole!));
     }
     return true;
   });
+
+  private roleMatches(userRole: string, requiredRole: string): boolean {
+    const normUser = userRole.trim().toUpperCase();
+    const normReq = requiredRole.trim().toUpperCase();
+    if (normUser === normReq) return true;
+    const strippedUser = normUser.startsWith('ROLE_') ? normUser.substring(5) : normUser;
+    const strippedReq = normReq.startsWith('ROLE_') ? normReq.substring(5) : normReq;
+    return strippedUser === strippedReq;
+  }
 
   formatFieldLabel(key: string): string {
     return key;
@@ -240,8 +273,16 @@ export class InboxComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadInbox();
     this.loadTemplates();
-    // Re-fetch inbox whenever the persona switcher in Shell changes roles
-    this.destroyPersonaBridge = onPersonaChanged(() => {
+    // Re-fetch inbox whenever the persona switcher or auth session in Shell changes
+    this.destroyPersonaBridge = onPersonaChanged((detail) => {
+      if (detail?.persona) {
+        this.activeUser.set({
+          id: (detail.persona.id || '').trim(),
+          roles: detail.persona.roles || []
+        });
+      } else {
+        this.activeUser.set(this.readStoredUser());
+      }
       this.loadInbox();
       this.loadTemplates();
     });

@@ -41,7 +41,24 @@ public class SecurityConfig {
         return http.csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeExchange(exchanges -> exchanges
-                        .pathMatchers("/actuator/**", "/health", "/auth/dev-token", "/auth/logout", "/auth/me")
+                        .pathMatchers(
+                                "/actuator/**",
+                                "/health",
+                                "/auth/dev-token",
+                                "/auth/logout",
+                                "/auth/me",
+                                "/scalar",
+                                "/scalar/**",
+                                "/v3/api-docs",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/templates/v3/api-docs/**",
+                                "/workflows/v3/api-docs/**",
+                                "/analytics/v3/api-docs/**",
+                                "/templates/swagger-ui/**",
+                                "/workflows/swagger-ui/**",
+                                "/analytics/swagger-ui/**")
                         .permitAll()
                         .anyExchange()
                         .authenticated())

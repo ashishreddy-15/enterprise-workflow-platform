@@ -1,36 +1,46 @@
 # Enterprise Event-Driven Workflow & Audit Platform — Master Handbook
 
 ## 1. Project Elevator Pitch (For Interviews)
-"I built an enterprise-grade, event-driven workflow and approval engine using Java 21, Spring Boot 3, Apache Kafka, and Angular 19 Micro Frontends. It uses PostgreSQL for ACID-compliant multi-tier approvals, MongoDB for schema-less form templates and immutable audit logs, Redis for caching, and the Transactional Outbox Pattern to guarantee zero message loss between PostgreSQL and Kafka."
+"I built an enterprise-grade, event-driven workflow and approval engine using Java 21, Spring Boot 3, Apache Kafka, and Angular 22 Native Federation Micro Frontends. It uses PostgreSQL for ACID-compliant multi-tier approvals, MongoDB for schema-less form templates and immutable audit logs, Redis for caching, and the Transactional Outbox Pattern to guarantee zero message loss between PostgreSQL and Kafka."
 
 ---
 
-## 2. Architecture & Tech Stack Tracker
-- [ ] **Stage 1: Domain Modeling & Contracts** (In Progress)
+## 2. Platform Documentation Index
+- [**ARCHITECTURE.md**](file:///d:/ashish/enterprise-workflow-platform/docs/ARCHITECTURE.md): Complete high/low level architecture, MFE Native Federation, Outbox pattern, and polyglot persistence.
+- [**API_REFERENCE.md**](file:///d:/ashish/enterprise-workflow-platform/docs/API_REFERENCE.md): Interactive Scalar console (`/scalar`), Swagger endpoints, and full REST API catalog with RFC 7807 problem details.
+- [**SECURITY_GUIDE.md**](file:///d:/ashish/enterprise-workflow-platform/docs/SECURITY_GUIDE.md): BFF architecture, HttpOnly cookies, RBAC persona matrix, and Keycloak/OIDC migration blueprint.
+- [**OPERATIONS_RUNBOOK.md**](file:///d:/ashish/enterprise-workflow-platform/docs/OPERATIONS_RUNBOOK.md): Unified Docker Compose, hybrid local dev mode, port matrix, and troubleshooting.
+
+---
+
+## 3. Architecture & Tech Stack Tracker
+- [x] **Stage 1: Domain Modeling & Contracts**
   - PostgreSQL Schema (Workflows, Approvals, Outbox)
   - MongoDB Collections (Templates, Audit Logs)
-  - Shared Kafka Event Contracts
-- [ ] **Stage 2: Local Cloud Infrastructure**
+  - Shared Kafka Event Contracts (`common-contracts`)
+- [x] **Stage 2: Local Cloud Infrastructure**
   - Docker Compose (Postgres, Mongo, Redis, Kafka KRaft)
   - Multi-Module Maven Parent Setup (Java 21 Virtual Threads)
-- [ ] **Stage 3: Core Workflow Service & Outbox**
+  - Multi-stage Frontend Dockerfile with Nginx Multi-Port Reverse Proxy
+- [x] **Stage 3: Core Workflow Service & Outbox**
   - Flyway Migrations & JPA Specifications Dynamic Search
-  - Redis Distributed Caching
+  - Optimistic Locking (`@Version`)
   - Transactional Outbox Publisher to Kafka
-- [ ] **Stage 4: Audit Consumer, DLQ & Resilience**
+- [x] **Stage 4: Audit Consumer, DLQ & Resilience**
   - Idempotent Kafka Consumer + Dead-Letter Topic (DLT)
-  - Resilience4j Circuit Breakers
-- [ ] **Stage 5: Gateway Security, Tracing & CI/CD**
-  - OAuth2/JWT Gateway Security
-  - OpenTelemetry + Prometheus + Grafana
-  - Testcontainers + GitHub Actions + SonarQube
-- [ ] **Stage 6: Angular 19 Micro Frontends**
-  - Module Federation Host + Remotes
-  - Angular Signals & Live Server-Sent Events (SSE)
+  - SLA Compliance & Metric Aggregation Endpoints
+- [x] **Stage 5: Gateway Security & API Documentation**
+  - BFF HttpOnly SameSite Cookie Session Management
+  - CORS configuration with `allowedOriginPatterns`
+  - Interactive Scalar API Console & Springdoc OpenAPI 3
+- [x] **Stage 6: Federated Angular Micro-Frontends**
+  - Native Federation Host (Shell) + 3 Remotes (Workflow, Template, Analytics)
+  - Centralized Design System (`ewp-theme.css`) with Tailwind `@theme` tokens
+  - Cross-MFE Persona Synchronization via `AuthBridge` & BroadcastChannel
 
 ---
 
-## 3. Architectural Decision Log (Why This Way?)
+## 4. Architectural Decision Log (Why This Way?)
 
 ### ADR-001: Polyglot Persistence (PostgreSQL + MongoDB)
 - **Problem:** Approval states require strict ACID transactions, while dynamic form templates and high-volume audit logs vary in structure and are write-heavy.
@@ -52,41 +62,40 @@
 - **Simpler Alternative:** Blindly insert every Kafka message into MongoDB.
 - **Why We Chose This:** Using the event's unique UUID (`eventId`) as the MongoDB document `_id` ensures duplicate messages are safely rejected without corrupting audit data.
 
+### ADR-005: Apache Kafka in KRaft Mode & Alpine Containers
+- **Problem:** Legacy Kafka setups require an external Apache Zookeeper cluster, doubling operational overhead and memory usage.
+- **Simpler Alternative:** Run separate Zookeeper and Kafka containers with standard Debian base images.
+- **Why We Chose This:** Configured Kafka in KRaft mode (embedding consensus directly into the broker) to eliminate Zookeeper overhead, and used lightweight `-alpine` container images with healthchecks to minimize memory footprint and attack surface.
+
+### ADR-006: Multi-Module Maven Monorepo vs. Polyrepo
+- **Problem:** Managing distributed microservices requires sharing data contracts and DTOs without causing version drift or breaking changes across repositories.
+- **Simpler Alternative:** Create a separate GitHub repository for every microservice.
+- **Why We Chose This:** Zero dependency drift across contracts, atomic refactoring, and portfolio visibility in a single unified Git tree.
+
+### ADR-007: Centralized Parent Maven POM
+- **Problem:** Inconsistent library versions and compiler flags across submodules.
+- **Why We Chose This:** Centralized Java 21 definitions, Spring Boot BOMs, and Spring Cloud trains in a single root POM.
+
+### ADR-008: JPA Specifications Over Custom JPQL Query Methods
+- **Problem:** Dynamic filtering requirements on workflows lead to combinatorial explosion if handled via static repository query methods.
+- **Simpler Alternative:** Write multiple `@Query` JPQL methods for every filter combination.
+- **Why We Chose This:** JPA Specifications and `JpaSpecificationExecutor` enable composable, type-safe runtime predicate generation, keeping repositories clean and maintainable.
+
+### ADR-009: Backend-For-Frontend (BFF) HttpOnly Cookies Over LocalStorage
+- **Problem:** Storing access tokens in browser `localStorage` leaves the platform vulnerable to token exfiltration via Cross-Site Scripting (XSS).
+- **Simpler Alternative:** `localStorage.setItem('token', jwt)`.
+- **Why We Chose This:** Storing JWTs in encrypted `HttpOnly`, `SameSite=Lax` cookies prevents JavaScript from accessing the token bytes, while API Gateway automatically extracts and verifies tokens.
+
+### ADR-010: Native Federation Over Webpack Module Federation
+- **Problem:** Webpack Module Federation requires heavy build tooling and doesn't natively integrate with modern browser ES Modules.
+- **Why We Chose This:** Uses native browser ES module imports via `@angular-architects/native-federation` and `importmap`, cutting build time and eliminating Webpack runtime overhead.
+
 ---
 
-## 4. Revision Flashcards (Q&A for Interviews)
+## 5. Revision Flashcards (Q&A for Interviews)
 1. **Q: What happens in your project if Kafka crashes right when a manager clicks Approve?**
    - *A:* The approval still succeeds! The event is saved safely in the PostgreSQL `outbox_events` table as `PENDING`. Once Kafka comes back online, the scheduler automatically publishes it.
 2. **Q: What happens if the same Kafka message is consumed twice by the Audit Service?**
    - *A:* Nothing breaks. The consumer is idempotent because it uses the Kafka event's `eventId` as the primary key in MongoDB.
-
-### ADR-005: Apache Kafka in KRaft Mode & Alpine Containers
-- **Problem:** Legacy Kafka setups require an external Apache Zookeeper cluster, doubling operational overhead and memory usage.
-- **Simpler/Older Alternative:** Run separate Zookeeper and Kafka containers with standard Debian base images.
-- **Why We Chose This:** Configured Kafka 3.8 in KRaft mode (acting as both broker and controller) to eliminate Zookeeper dependencies, and used hardened `-alpine` images with Docker healthchecks to minimize memory footprint and security attack surface.
-
-### ADR-006: Multi-Module Maven Monorepo vs. Polyrepo
-- **Problem:** Managing distributed microservices requires sharing data contracts and DTOs without causing version drift or breaking changes across repositories.
-- **Simpler/Alternative Approach (Polyrepo):** Create a separate GitHub repository for every microservice (`workflow-service`, `audit-service`, `common-contracts`, etc.).
-- **What Breaks with Polyrepos:** Updating an event contract requires publishing a JAR to a private package manager (like Nexus/Artifactory) and updating version numbers across multiple independent repositories, frequently leading to version mismatch bugs.
-- **Why We Chose a Multi-Module Monorepo:** 
-  1. **Zero Dependency Drift:** Shared contracts (`common-contracts`) live in the same repository tree, ensuring atomic updates and compile-time type safety across all producer and consumer services simultaneously.
-  2. **Atomic Refactoring:** Changes to database entities or shared code automatically flag and compile across every affected microservice in a single Pull Request.
-  3. **Portfolio Visibility:** Allows recruiters and engineering managers to review the entire platform layout in a single, cohesive GitHub repository.
-
-### ADR-007: Centralized Parent Maven POM (`<parent>`)
-- **Problem:** Duplicate plugin configurations, scattered library versions, and inconsistent Java compiler flags across different microservices lead to inconsistent builds.
-- **Simpler Alternative:** Copy-pasting dependency versions and build plugins into each microservice's individual `pom.xml`.
-- **Why We Chose a Centralized Parent POM:** 
-  1. **Single Source of Truth:** Centralizes Java version definitions (`Java 21`), Spring Boot BOMs, and Spring Cloud dependency management train versions.
-  2. **Cleaner Sub-Modules:** Keeps individual microservice `pom.xml` files lightweight, containing only the specific starters they need.
-
-### ADR-008: Apache Kafka in KRaft Mode & Alpine Containers
-- **Problem:** Legacy Kafka architectures require a separate Apache Zookeeper cluster, doubling operational complexity and memory consumption.
-- **Simpler Alternative:** Run separate Zookeeper and Kafka containers using standard Debian base images.
-- **Why We Chose This:** Configured Kafka in KRaft mode (embedding consensus directly into the broker) to eliminate Zookeeper overhead, and used lightweight `-alpine` container images with healthchecks to minimize memory footprint and attack surface.
-
-### ADR-009: JPA Specifications Over Custom JPQL Query Methods
-- **Problem:** Dynamic filtering requirements on workflows lead to combinatorial explosion if handled via static repository query methods.
-- **Simpler Alternative:** Write multiple `@Query` JPQL methods for every filter combination.
-- **Why We Chose This:** JPA Specifications and `JpaSpecificationExecutor` enable composable, type-safe runtime predicate generation, keeping repositories clean and maintainable.
+3. **Q: How are authentication tokens protected against XSS in your Angular frontend?**
+   - *A:* The frontend never handles raw token storage in `localStorage`. The API Gateway sets an `HttpOnly`, `SameSite=Lax` cookie, which the browser attaches automatically to API calls without exposing token bytes to JavaScript.

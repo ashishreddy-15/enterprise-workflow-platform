@@ -1,0 +1,42 @@
+package com.ashish.workflow.template.config;
+
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Contact;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.info.License;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class OpenApiConfig {
+
+    @Bean
+    public OpenAPI customOpenAPI() {
+        return new OpenAPI()
+                .info(new Info()
+                        .title("Enterprise Workflow Platform — Template Service")
+                        .version("1.0.0")
+                        .description(
+                                "Workflow blueprint authoring, step DAG modeling, versioning, and validation service.")
+                        .contact(new Contact().name("Ashish Reddy").email("etteashishreddy1504@gmail.com"))
+                        .license(new License().name("Apache 2.0")))
+                .addSecurityItem(new SecurityRequirement().addList("BearerAuth").addList("CookieAuth"))
+                .components(new Components()
+                        .addSecuritySchemes(
+                                "BearerAuth",
+                                new SecurityScheme()
+                                        .name("BearerAuth")
+                                        .type(SecurityScheme.Type.HTTP)
+                                        .scheme("bearer")
+                                        .bearerFormat("JWT"))
+                        .addSecuritySchemes(
+                                "CookieAuth",
+                                new SecurityScheme()
+                                        .name("ewp_access_token")
+                                        .type(SecurityScheme.Type.APIKEY)
+                                        .in(SecurityScheme.In.COOKIE)));
+    }
+}

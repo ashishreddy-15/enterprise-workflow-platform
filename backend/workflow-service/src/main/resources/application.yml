@@ -44,3 +44,9 @@ spring:
 services:
   template-service:
     url: http://localhost:8083/templates
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html

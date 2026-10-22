@@ -49,3 +49,9 @@ logging:
   level:
     com.ashish.workflow.gateway: DEBUG
     org.springframework.cloud.gateway: INFO
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html

@@ -1,8 +1,26 @@
 # Enterprise Workflow Platform
 
-An event-driven microservices platform built with **Java 21** and **Spring Boot 4.x** designed to manage multi-stage, data-driven enterprise approval workflows (e.g. vendor onboarding, KYC compliance, loan approvals) with transactional integrity, fault-tolerant event streaming, and polyglot persistence.
+An event-driven microservices platform built with **Java 21**, **Spring Boot**, **Apache Kafka**, and **Angular 22 Federated Micro-Frontends** designed to manage multi-stage, data-driven enterprise approval workflows (e.g. vendor onboarding, procurement, capital expenditure approvals) with transactional integrity, fault-tolerant event streaming, and polyglot persistence.
 
 Workflows are **fully data-driven** — state graphs, required roles, payload requirements, and transition rules are defined in versioned MongoDB templates, allowing new business processes to be modeled without application code changes.
+
+---
+
+## 📚 Platform Documentation
+
+* [**Architecture Deep Dive (`docs/ARCHITECTURE.md`)**](file:///d:/ashish/enterprise-workflow-platform/docs/ARCHITECTURE.md): Complete high/low level architecture, MFE Native Federation, Outbox pattern, and polyglot persistence.
+* [**Interactive API Reference (`docs/API_REFERENCE.md`)**](file:///d:/ashish/enterprise-workflow-platform/docs/API_REFERENCE.md): Interactive Scalar API console (`http://localhost:8080/scalar`), Swagger endpoints, and complete REST catalog.
+* [**Security & Authentication Guide (`docs/SECURITY_GUIDE.md`)**](file:///d:/ashish/enterprise-workflow-platform/docs/SECURITY_GUIDE.md): BFF architecture, HttpOnly cookies, RBAC persona matrix, and Keycloak/OIDC migration blueprint.
+* [**Operations & Runbook (`docs/OPERATIONS_RUNBOOK.md`)**](file:///d:/ashish/enterprise-workflow-platform/docs/OPERATIONS_RUNBOOK.md): Unified Docker Compose, hybrid local dev mode, port matrix, and troubleshooting.
+* [**Master Handbook (`docs/PROJECT_HANDBOOK.md`)**](file:///d:/ashish/enterprise-workflow-platform/docs/PROJECT_HANDBOOK.md): Architectural Decision Records (ADR-001 through ADR-010) and interview flashcards.
+
+---
+
+## 🌟 Interactive API Console (Scalar)
+
+Test all microservice endpoints interactively in the browser with live request execution and auto-generated code snippets in 15+ languages:
+
+👉 **`http://localhost:8080/scalar`** (or **`http://localhost/scalar`** via Nginx)
 
 ---
 
@@ -59,19 +77,33 @@ enterprise-workflow-platform/
 ├── backend/
 │   ├── pom.xml                        # Root parent POM (Spring Boot 4.1.1, Spotless, Java 21)
 │   ├── common-contracts/              # Shared records: events & cross-service DTOs
+│   ├── api-gateway/                   # Port 8080: Edge reverse proxy, JWT/BFF auth & unified Scalar UI
 │   ├── template-service/              # Port 8083: Workflow blueprint authoring & versioning (MongoDB)
 │   ├── workflow-service/              # Port 8081: Core workflow state machine & Outbox (PostgreSQL)
 │   └── audit-analytics-service/       # Port 8082: Kafka event consumer & CQRS read views (MongoDB)
+├── frontend/
+│   ├── projects/shared-theme/         # Single source of truth: ewp-theme.css & Tailwind @theme
+│   ├── projects/shell/                # Port 4200: Host container & persona switcher
+│   ├── projects/workflow-mfe/         # Port 4201: Task Inbox, approvals, stepper
+│   ├── projects/analytics-mfe/        # Port 4202: SLA monitoring & metrics
+│   └── projects/template-mfe/         # Port 4203: Visual workflow designer
 └── docker/
-    └── docker-compose.infra.yml       # Local PostgreSQL 16, MongoDB 7, Kafka 3.8 (KRaft), Redis 7
+    ├── Dockerfile.frontend            # Multi-stage Node 22 build -> Nginx Alpine runtime
+    ├── Dockerfile.jvm                 # Optimized Java 21 container image
+    ├── docker-compose.infra.yml       # Backing stores: Postgres 16, Mongo 7, Kafka 3.8, Redis 7
+    └── docker-compose.full.yml        # Full-stack orchestrator (Infra + Services + Frontend)
 ```
 
-| Module | Port | Storage | Responsibility |
+| Module / Service | Port | Technology / Storage | Responsibility |
 |---|---|---|---|
-| [`common-contracts`](file:///d:/ashish/enterprise-workflow-platform/backend/common-contracts) | — | — | Shared immutable records (`WorkflowTransitionedEvent`, `TemplateDefinitionResponse`). |
+| [`api-gateway`](file:///d:/ashish/enterprise-workflow-platform/backend/api-gateway) | 8080 | Spring Cloud Gateway WebFlux | Edge reverse proxy, CORS preflight, HttpOnly cookie auth, and unified Scalar API console (`/scalar`). |
 | [`template-service`](file:///d:/ashish/enterprise-workflow-platform/backend/template-service) | 8083 | MongoDB (`template_db`) | Template creation, versioning (`DRAFT` → `PUBLISHED`), and step definitions. |
 | [`workflow-service`](file:///d:/ashish/enterprise-workflow-platform/backend/workflow-service) | 8081 | PostgreSQL (`workflow_db`) | Instance creation, transitions, RBAC & SoD enforcement, task inbox, transactional outbox scheduler. |
 | [`audit-analytics-service`](file:///d:/ashish/enterprise-workflow-platform/backend/audit-analytics-service) | 8082 | MongoDB (`audit_db`) | Consumes `workflow-events`, writes immutable audit logs, maintains pre-joined CQRS analytics views. |
+| **Shell Application** | 4200 / 80 | Angular 22 Native Federation | Host container, lazy routing, persona switcher, error boundaries (`MfeFallbackComponent`). |
+| **Workflow MFE** | 4201 | Angular 22 Remote | Human task inbox, step execution, approval/rejection, SLA badges. |
+| **Template MFE** | 4203 | Angular 22 Remote | Visual workflow blueprint studio, step DAG designer, JSON preview. |
+| **Analytics MFE** | 4202 | Angular 22 Remote | Live SLA compliance metrics, throughput graphs, chronological audit trail. |
 
 ---
 

@@ -15,3 +15,9 @@ spring:
     uri: mongodb://ewp_admin:ewp_password@localhost:27017/template_db?authSource=admin&uuidRepresentation=standard
     uuid-representation: standard
     auto-index-creation: true
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html

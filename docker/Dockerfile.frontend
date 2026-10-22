@@ -1,0 +1,42 @@
+# ==============================================================================
+# Multi-stage Dockerfile for Enterprise Workflow Platform Frontend MFEs
+# ==============================================================================
+
+# Stage 1: Build all Micro-Frontends
+FROM node:22-alpine AS builder
+
+WORKDIR /app
+
+# Cache node dependencies layer
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+
+# Copy frontend source files (shared-theme, projects, tsconfig, angular.json)
+COPY frontend/ ./
+
+# Build all 4 federated micro-frontends
+RUN npx ng build shell && \
+    npx ng build workflow-mfe && \
+    npx ng build template-mfe && \
+    npx ng build analytics-mfe
+
+# Stage 2: Production Nginx Runtime
+FROM nginx:1.27-alpine
+
+# Clean out default configs
+RUN rm -rf /etc/nginx/conf.d/*
+
+# Copy custom multi-port reverse proxy & CORS configuration
+COPY docker/nginx.conf /etc/nginx/conf.d/mfe.conf
+
+# Copy compiled bundles into designated webroots
+COPY --from=builder /app/dist/shell/browser /usr/share/nginx/html/shell
+COPY --from=builder /app/dist/workflow-mfe/browser /usr/share/nginx/html/workflow-mfe
+COPY --from=builder /app/dist/template-mfe/browser /usr/share/nginx/html/template-mfe
+COPY --from=builder /app/dist/analytics-mfe/browser /usr/share/nginx/html/analytics-mfe
+
+EXPOSE 4200 4201 4202 4203 80
+
+STOPSIGNAL SIGQUIT
+
+CMD ["nginx", "-g", "daemon off;"]

@@ -174,6 +174,26 @@ services:
     networks:
       - ewp-network
 
+  # =====================================================================
+  # 3. FRONTEND MICRO-FRONTENDS (NGINX)
+  # =====================================================================
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    container_name: ewp-frontend
+    ports:
+      - "4200:4200"
+      - "4201:4201"
+      - "4202:4202"
+      - "4203:4203"
+      - "80:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - ewp-network
+
 volumes:
   postgres_data:
   mongo_data:

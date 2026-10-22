@@ -55,6 +55,10 @@ This starts:
 
 | Service | Port | Healthcheck / Health Endpoint |
 |---|---|---|
+| **Shell (Host App)** | `4200` / `80` | `http://localhost:4200` or `http://localhost` |
+| **Workflow MFE** | `4201` | `http://localhost:4201/remoteEntry.json` |
+| **Analytics MFE** | `4202` | `http://localhost:4202/remoteEntry.json` |
+| **Template MFE** | `4203` | `http://localhost:4203/remoteEntry.json` |
 | **API Gateway** | `8080` | `http://localhost:8080/actuator/health` |
 | **Workflow Service** | `8081` | `http://localhost:8081/workflows/actuator/health` |
 | **Audit Analytics Service** | `8082` | `http://localhost:8082/analytics/actuator/health` |

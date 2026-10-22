@@ -5,6 +5,7 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "build:all": "ng build shell && ng build workflow-mfe && ng build template-mfe && ng build analytics-mfe",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },

@@ -1,4 +1,33 @@
+# ==============================================================================
 # Multi-stage Dockerfile for Spring Boot Microservices
+# Compiles inside Docker using Maven and packages into minimal JRE runtime
+# ==============================================================================
+
+# Stage 1: Maven Builder
+FROM maven:3.9-eclipse-temurin-21-alpine AS builder
+
+WORKDIR /build
+
+# Copy POM files first for optimal dependency caching
+COPY backend/pom.xml ./pom.xml
+COPY backend/common-contracts/pom.xml ./common-contracts/pom.xml
+COPY backend/template-service/pom.xml ./template-service/pom.xml
+COPY backend/api-gateway/pom.xml ./api-gateway/pom.xml
+COPY backend/workflow-service/pom.xml ./workflow-service/pom.xml
+COPY backend/audit-analytics-service/pom.xml ./audit-analytics-service/pom.xml
+
+# Copy backend source code
+COPY backend/ ./
+
+# Target microservice module passed via build-arg
+ARG MODULE
+
+# Compile and package using BuildKit .m2 cache mount to share dependencies across services
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn clean package -pl ${MODULE} -am -DskipTests -Dspotless.check.skip=true && \
+    cp ${MODULE}/target/${MODULE}-*.jar /build/app.jar
+
+# Stage 2: Production JRE Runtime
 FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
@@ -7,8 +36,7 @@ WORKDIR /app
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser:appgroup
 
-ARG JAR_FILE
-COPY ${JAR_FILE} app.jar
+COPY --from=builder /build/app.jar app.jar
 
 ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError"
 

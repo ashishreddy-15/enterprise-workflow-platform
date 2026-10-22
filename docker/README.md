@@ -6,26 +6,15 @@ This platform can be spun up completely in containerized mode using Docker Compo
 
 ## 1. Prerequisites
 - Docker Engine & Docker Compose (v2.20+)
-- JDK 21 & Maven 3.9+ (for building artifacts)
 
 ---
 
-## 2. Build Microservice Artifacts
+## 2. Launching the Entire Platform (Zero Local Setup)
 
-Before building the Docker images, package the backend JARs:
-
-```powershell
-mvn clean package -DskipTests
-```
-
----
-
-## 3. Launching the Entire Platform
-
-Run the unified compose file:
+Run the unified compose file with `--build`. Docker will automatically compile all Java backend microservices and Angular MFEs using multi-stage builds with BuildKit caching:
 
 ```powershell
-docker compose -f docker/docker-compose.full.yml up -d
+docker compose -f docker/docker-compose.full.yml up -d --build
 ```
 
 To view live aggregated logs:

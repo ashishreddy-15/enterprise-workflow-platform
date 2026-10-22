@@ -19,15 +19,9 @@ This runbook provides complete operational instructions for running, monitoring,
 
 ### Mode A: Full Containerized Stack (Single Command) ⭐
 
-Builds and starts all infrastructure, backend microservices, and Nginx frontend MFEs in Docker:
+Builds and starts all infrastructure, backend microservices, and Nginx frontend MFEs directly in Docker using multi-stage builds (no local Java or Node installation required):
 
 ```powershell
-# 1. Package backend JARs with Spotless compliance
-cd backend
-mvn clean package -DskipTests
-cd ..
-
-# 2. Launch complete containerized platform
 docker compose -f docker/docker-compose.full.yml up -d --build
 ```
 

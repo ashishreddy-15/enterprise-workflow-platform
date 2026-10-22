@@ -183,13 +183,9 @@ mvn spotless:check
 
 ### Option A: Full Containerized Stack (Recommended)
 
-To run the complete platform—databases, Kafka, all backend microservices, and all 4 frontend MFEs with Nginx—in a single command:
+To run the complete platform—databases, Kafka, all backend microservices, and all 4 frontend MFEs with Nginx—in a single command without needing local Java or Node installed:
 
 ```bash
-# 1. Package backend JARs
-cd backend && mvn clean package -DskipTests && cd ..
-
-# 2. Launch full stack
 docker compose -f docker/docker-compose.full.yml up -d --build
 ```
 

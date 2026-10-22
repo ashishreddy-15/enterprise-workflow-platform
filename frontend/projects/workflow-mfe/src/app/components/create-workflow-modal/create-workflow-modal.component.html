@@ -1,26 +1,26 @@
 @if (isOpen()) {
-  <div class="fixed inset-0 z-50 bg-zinc-950/40 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl border border-zinc-200 shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+  <div class="ewp-modal-backdrop">
+    <div class="ewp-modal max-w-lg">
       
       <!-- Modal Header -->
-      <div class="px-5 py-4 border-b border-zinc-100 flex items-center justify-between">
+      <div class="ewp-modal-header border-zinc-100">
         <div>
-          <h2 class="text-sm font-semibold text-zinc-950">Initiate New Workflow</h2>
-          <p class="text-xs text-zinc-500 mt-0.5">Deploy an active process instance from a verified template blueprint</p>
+          <h2 class="ewp-section-title">Initiate New Workflow</h2>
+          <p class="ewp-muted mt-0.5">Deploy an active process instance from a verified template blueprint</p>
         </div>
         <button (click)="onClose()"
                 aria-label="Close dialog"
-                class="text-zinc-400 hover:text-zinc-700 text-lg leading-none p-1 rounded-md hover:bg-zinc-100 transition cursor-pointer">
+                class="ewp-modal-close-btn text-lg">
           &times;
         </button>
       </div>
 
       <!-- Modal Body -->
-      <div class="p-5 space-y-4 text-xs max-h-[70vh] overflow-y-auto">
+      <div class="ewp-modal-body max-h-[70vh]">
         
-        <!-- Error Banner if any -->
+        <!-- Error Banner -->
         @if (createErrorMessage()) {
-          <div class="p-3 rounded-md bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between">
+          <div class="ewp-alert-error">
             <span>{{ createErrorMessage() }}</span>
             <button (click)="onDismissError()" class="text-rose-500 hover:text-rose-900 cursor-pointer">&times;</button>
           </div>
@@ -29,7 +29,7 @@
         <!-- Blueprint Selection -->
         <div class="space-y-2">
           <div class="flex items-center justify-between">
-            <label class="font-semibold text-zinc-900 uppercase tracking-wider text-[10px]">Select Process Blueprint</label>
+            <label class="ewp-label">Select Process Blueprint</label>
             <span class="text-[10px] font-mono text-zinc-400">{{ templateCatalog().length }} published templates</span>
           </div>
 
@@ -59,16 +59,14 @@
                   </div>
 
                   <!-- Content -->
-                  <div class="space-y-1 flex-1">
+                  <div class="space-y-1 flex-1 text-xs">
                     <div class="flex items-center justify-between">
                       <span class="font-medium text-zinc-950">{{ item.name }}</span>
                       @if (item.estimatedSla) {
-                        <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 font-medium">
-                          SLA: {{ item.estimatedSla }}
-                        </span>
+                        <span class="ewp-badge-sm ewp-badge-neutral">SLA: {{ item.estimatedSla }}</span>
                       }
                     </div>
-                    <p class="text-[11px] text-zinc-500 leading-relaxed">{{ item.description }}</p>
+                    <p class="ewp-muted leading-relaxed">{{ item.description }}</p>
                     <div class="flex items-center gap-2 pt-0.5 text-[10px] font-mono text-zinc-400">
                       <span>Key: {{ item.key }}</span>
                       <span>&bull;</span>
@@ -83,7 +81,7 @@
 
         <!-- Title Input -->
         <div class="space-y-1.5">
-          <label for="newWorkflowTitle" class="font-semibold text-zinc-900 uppercase tracking-wider text-[10px]">
+          <label for="newWorkflowTitle" class="ewp-label">
             Workflow Reference / Subject <span class="text-rose-600">*</span>
           </label>
           <input id="newWorkflowTitle"
@@ -91,11 +89,11 @@
                  [ngModel]="newWorkflowTitle()"
                  (ngModelChange)="newWorkflowTitle.set($event)"
                  placeholder="Enter workflow title or reference..."
-                 class="w-full bg-zinc-50 border border-zinc-200 rounded-md px-3 py-2 text-xs text-zinc-950 placeholder:text-zinc-400 outline-none focus:bg-white focus:border-zinc-900 transition">
+                 class="ewp-input">
         </div>
 
         <!-- Information notice -->
-        <div class="rounded-md bg-zinc-50 border border-zinc-200/70 p-3 text-[11px] text-zinc-500 leading-relaxed space-y-1">
+        <div class="ewp-info-block">
           <div class="font-medium text-zinc-700 flex items-center gap-1.5">
             <span class="font-mono text-zinc-400">ℹ</span> Requester Context &amp; Governance
           </div>
@@ -107,16 +105,16 @@
       </div>
 
       <!-- Modal Footer -->
-      <div class="px-5 py-3.5 bg-zinc-50 border-t border-zinc-100 flex items-center justify-between">
+      <div class="ewp-modal-footer bg-zinc-50 border-zinc-100">
         <button (click)="onClose()"
                 [disabled]="isCreating()"
-                class="px-3 py-1.5 rounded-md border border-zinc-200 bg-white hover:bg-zinc-100 text-zinc-700 text-xs font-medium transition cursor-pointer">
+                class="ewp-btn-secondary">
           Cancel
         </button>
 
         <button (click)="onLaunch()"
                 [disabled]="isCreating() || !newWorkflowTitle().trim()"
-                class="px-4 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-medium transition flex items-center gap-1.5 cursor-pointer shadow-xs">
+                class="ewp-btn-primary disabled:opacity-40 disabled:cursor-not-allowed">
           @if (isCreating()) {
             <span class="animate-spin text-xs">↻</span>
             <span>Launching...</span>

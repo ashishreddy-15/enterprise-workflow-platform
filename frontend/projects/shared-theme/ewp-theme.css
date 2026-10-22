@@ -1,0 +1,379 @@
+/* =============================================================================
+   EWP SHARED DESIGN SYSTEM — Enterprise Workflow Platform
+   Single source of truth for ALL MFEs (shell, workflow-mfe, template-mfe,
+   analytics-mfe). Change design here → entire platform updates on next build.
+   =============================================================================
+
+   USAGE IN EACH MFE styles.css:
+     @import "../../shared-theme/ewp-theme.css";
+     @source "../../**\/*.{html,ts}";
+
+   ============================================================================= */
+
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   DESIGN TOKENS
+   Tailwind v4 @theme block — defines platform-wide CSS custom properties.
+   Override these to change the entire design at once.
+   ───────────────────────────────────────────────────────────────────────────── */
+@theme {
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   BASE STYLES
+   ───────────────────────────────────────────────────────────────────────────── */
+body {
+  font-family: var(--font-sans);
+  background-color: #fafafa;
+  color: #09090b;
+  -webkit-font-smoothing: antialiased;
+}
+
+code, kbd, samp, pre {
+  font-family: var(--font-mono);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   LAYOUT PRIMITIVES
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Modal backdrop */
+.ewp-modal-backdrop {
+  @apply fixed inset-0 z-50 bg-zinc-950/40 backdrop-blur-xs
+         flex items-center justify-center p-4 sm:p-6
+         overscroll-contain select-none;
+}
+
+/* Modal container */
+.ewp-modal {
+  @apply w-full bg-white rounded-xl border border-zinc-200 shadow-2xl
+         flex flex-col overflow-hidden select-text;
+}
+
+/* Modal header */
+.ewp-modal-header {
+  @apply px-5 py-4 border-b border-zinc-200
+         flex items-center justify-between bg-zinc-50/70;
+}
+
+/* Modal footer */
+.ewp-modal-footer {
+  @apply px-5 py-3 border-t border-zinc-200 bg-zinc-50
+         flex items-center justify-between;
+}
+
+/* Modal body */
+.ewp-modal-body {
+  @apply p-5 space-y-4 overflow-y-auto;
+}
+
+/* Modal close button */
+.ewp-modal-close-btn {
+  @apply text-zinc-400 hover:text-zinc-950 text-base leading-none
+         p-1.5 rounded-md hover:bg-zinc-100 transition cursor-pointer;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   CARD COMPONENTS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Standard white card with shadow */
+.ewp-card {
+  @apply bg-white border border-zinc-200 rounded-lg shadow-xs;
+}
+
+/* Compact stat/KPI card */
+.ewp-stat-card {
+  @apply bg-white border border-zinc-200 rounded-lg p-3 shadow-xs;
+}
+
+/* Section / panel inside a page */
+.ewp-panel {
+  @apply border border-zinc-200 rounded-lg p-3.5 space-y-3;
+}
+
+/* Subtle info / context block */
+.ewp-info-block {
+  @apply rounded-md bg-zinc-50 border border-zinc-200/70 p-3
+         text-[11px] text-zinc-500 leading-relaxed space-y-1;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   CODE & MONO BLOCKS
+   The pattern you originally spotted: p-3 bg-zinc-50 border border-zinc-100...
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Code / mono panel — JSON previews, schema panels, MFE status blocks */
+.ewp-code-block {
+  @apply p-3 bg-zinc-50 border border-zinc-100 rounded
+         text-left text-[11px] font-mono text-zinc-600 space-y-1;
+}
+
+/* Data context block — submitted documents, step payloads */
+.ewp-context-block {
+  @apply p-3 bg-zinc-50 border border-zinc-200 rounded-lg space-y-2 text-xs;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   BADGES
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Base badge — always combine with a color variant below */
+.ewp-badge {
+  @apply inline-flex items-center px-2 py-0.5 rounded
+         text-[11px] font-mono font-medium border;
+}
+
+.ewp-badge-sm {
+  @apply inline-flex items-center px-1.5 py-0.5 rounded
+         text-[10px] font-mono font-medium border;
+}
+
+/* Color variants */
+.ewp-badge-success { @apply bg-emerald-50 text-emerald-700 border-emerald-200; }
+.ewp-badge-warning { @apply bg-amber-50 text-amber-700 border-amber-200; }
+.ewp-badge-danger  { @apply bg-rose-50 text-rose-700 border-rose-200; }
+.ewp-badge-info    { @apply bg-blue-50 text-blue-700 border-blue-200; }
+.ewp-badge-neutral { @apply bg-zinc-100 text-zinc-700 border-zinc-200; }
+.ewp-badge-dark    { @apply bg-zinc-900 text-white border-zinc-900; }
+
+/* Pill / rounded-full count badge */
+.ewp-count-badge {
+  @apply px-1.5 py-0.5 rounded-full text-[10px] font-mono;
+}
+
+/* Live feed indicator badge (with animated dot) */
+.ewp-live-badge {
+  @apply inline-flex items-center px-2 py-0.5 rounded
+         text-[11px] font-mono font-medium
+         bg-emerald-50 text-emerald-700 border border-emerald-200;
+}
+
+/* Animated live dot used inside .ewp-live-badge */
+.ewp-live-dot {
+  @apply w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse;
+}
+
+/* Status dot in nav/header — apply color via ngClass */
+.ewp-status-dot {
+  @apply w-2 h-2 rounded-full shrink-0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   TYPOGRAPHY UTILITIES
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Page / view title */
+.ewp-page-title {
+  @apply text-base font-semibold text-zinc-950 tracking-tight;
+}
+
+/* Modal / section title */
+.ewp-section-title {
+  @apply text-sm font-semibold text-zinc-950 tracking-tight;
+}
+
+/* Sub-section / group label — all-caps small label */
+.ewp-label {
+  @apply text-[11px] font-semibold text-zinc-600 uppercase tracking-wider;
+}
+
+/* Micro label above a value — e.g. in stat cards, modal meta bars */
+.ewp-meta-label {
+  @apply text-[10px] font-medium text-zinc-400 uppercase tracking-wider block;
+}
+
+/* Muted description paragraph */
+.ewp-muted {
+  @apply text-xs text-zinc-500;
+}
+
+/* Mono ID / code value inline */
+.ewp-mono-value {
+  @apply font-mono text-zinc-900;
+}
+
+/* Stat value number */
+.ewp-stat-value {
+  @apply text-xl font-bold font-mono;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   FORM ELEMENTS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Standard text input */
+.ewp-input {
+  @apply w-full bg-zinc-50 border border-zinc-200 rounded px-2.5 py-1.5
+         text-xs text-zinc-900 placeholder:text-zinc-400
+         outline-none focus:bg-white focus:border-zinc-950 transition;
+}
+
+/* Text input with white background (used in modals) */
+.ewp-input-white {
+  @apply w-full bg-white border border-zinc-200 rounded px-3 py-1.5
+         text-xs text-zinc-900 placeholder:text-zinc-400
+         outline-none focus:border-zinc-950 transition;
+}
+
+/* Mono input variant (for IDs, roles, keys) */
+.ewp-input-mono {
+  @apply w-full bg-white border border-zinc-200 rounded px-3 py-1.5
+         text-xs text-zinc-900 placeholder:text-zinc-400
+         outline-none focus:border-zinc-950 transition font-mono;
+}
+
+/* Select dropdown */
+.ewp-select {
+  @apply bg-zinc-50 border border-zinc-200 rounded px-2.5 py-1.5
+         text-xs text-zinc-800 outline-none focus:border-zinc-950 transition;
+}
+
+/* Full-width select variant */
+.ewp-select-full {
+  @apply w-full bg-white border border-zinc-200 rounded px-3 py-1.5
+         text-xs text-zinc-900 outline-none focus:border-zinc-950 transition font-mono;
+}
+
+/* Textarea */
+.ewp-textarea {
+  @apply w-full bg-white border border-zinc-200 rounded px-2.5 py-1
+         text-xs text-zinc-900 outline-none focus:border-zinc-900 transition;
+}
+
+/* Form field label */
+.ewp-form-label {
+  @apply text-xs font-medium text-zinc-700 block;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   BUTTONS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Primary dark button */
+.ewp-btn-primary {
+  @apply px-2.5 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800
+         disabled:opacity-50 text-white text-xs font-medium
+         tracking-tight transition flex items-center gap-1.5
+         cursor-pointer shadow-xs;
+}
+
+/* Primary full-width (e.g., modal submit) */
+.ewp-btn-primary-full {
+  @apply w-full py-2 rounded bg-zinc-900 hover:bg-zinc-800
+         disabled:opacity-50 text-white text-xs font-semibold
+         tracking-tight transition flex items-center justify-center
+         gap-1.5 cursor-pointer shadow-xs;
+}
+
+/* Secondary outlined button */
+.ewp-btn-secondary {
+  @apply px-3.5 py-1.5 rounded-md border border-zinc-200 hover:bg-zinc-100
+         text-zinc-700 text-xs font-medium transition cursor-pointer;
+}
+
+/* Ghost / icon button */
+.ewp-btn-ghost {
+  @apply p-1 rounded text-zinc-500 hover:text-zinc-950
+         hover:bg-zinc-100 transition cursor-pointer;
+}
+
+/* Danger / destructive text button */
+.ewp-btn-danger-text {
+  @apply px-2.5 py-1 text-xs text-rose-600 hover:text-rose-800
+         hover:underline transition cursor-pointer;
+}
+
+/* Nav link item */
+.ewp-nav-link {
+  @apply px-2.5 py-1.5 rounded-md text-zinc-600
+         hover:text-zinc-950 hover:bg-zinc-50 transition;
+}
+
+/* Table action button (Details →) */
+.ewp-table-action-btn {
+  @apply px-2.5 py-1 rounded text-[11px] font-medium text-zinc-700
+         hover:text-zinc-950 hover:bg-zinc-100 border border-zinc-200
+         transition cursor-pointer whitespace-nowrap
+         inline-flex items-center justify-center gap-1;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ALERT BANNERS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.ewp-alert-warning {
+  @apply p-3 rounded-lg bg-amber-50 border border-amber-200
+         text-amber-900 text-xs flex items-center justify-between;
+}
+
+.ewp-alert-error {
+  @apply p-3 rounded-md bg-rose-50 border border-rose-200
+         text-rose-800 text-xs flex items-center justify-between;
+}
+
+.ewp-alert-info {
+  @apply p-3 rounded-lg bg-zinc-50 border border-zinc-200
+         text-zinc-600 text-xs flex items-center gap-2;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   DATA TABLE
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Table header row */
+.ewp-table-head {
+  @apply border-b border-zinc-200 bg-zinc-50 text-[11px] font-medium
+         text-zinc-500 uppercase tracking-wider sticky top-0 z-10 shadow-2xs;
+}
+
+/* Table header cell */
+.ewp-table-th {
+  @apply py-2.5 px-3 whitespace-nowrap bg-zinc-50;
+}
+
+/* Table body */
+.ewp-table-body {
+  @apply divide-y divide-zinc-100 font-mono text-[11px];
+}
+
+/* Table row */
+.ewp-table-row {
+  @apply hover:bg-zinc-50/80 transition;
+}
+
+/* Table cell */
+.ewp-table-td {
+  @apply py-2.5 px-3 whitespace-nowrap;
+}
+
+/* Key-value table row (metadata panels) */
+.ewp-kv-row {
+  @apply px-3.5 py-2 flex justify-between text-xs;
+}
+
+.ewp-kv-label {
+  @apply text-zinc-500;
+}
+
+.ewp-kv-value {
+  @apply font-mono text-zinc-900;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   AVATAR / ACTOR CHIP
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.ewp-avatar-xs {
+  @apply w-4 h-4 rounded-full bg-zinc-200 text-[9px] font-bold
+         flex items-center justify-center text-zinc-600 font-mono shrink-0;
+}
+
+.ewp-avatar-sm {
+  @apply w-6 h-6 rounded bg-zinc-900 text-white
+         flex items-center justify-center text-xs font-bold;
+}

@@ -6,21 +6,21 @@
       <!-- Brand & Navigation Links -->
       <div class="flex items-center gap-6">
         <a routerLink="/" class="flex items-center gap-2 font-semibold text-sm tracking-tight text-zinc-950">
-          <span class="w-6 h-6 rounded bg-zinc-900 text-white flex items-center justify-center text-xs font-bold">W</span>
+          <span class="ewp-avatar-sm">W</span>
           <span>Workflow Platform</span>
         </a>
 
         <nav class="hidden sm:flex items-center gap-1 text-sm">
           <a routerLink="/workflows" routerLinkActive="bg-zinc-100 text-zinc-950 font-medium"
-             class="px-2.5 py-1.5 rounded-md text-zinc-600 hover:text-zinc-950 hover:bg-zinc-50 transition">
+             class="ewp-nav-link">
             Inbox
           </a>
           <a routerLink="/templates" routerLinkActive="bg-zinc-100 text-zinc-950 font-medium"
-             class="px-2.5 py-1.5 rounded-md text-zinc-600 hover:text-zinc-950 hover:bg-zinc-50 transition">
+             class="ewp-nav-link">
             Blueprints
           </a>
           <a routerLink="/analytics" routerLinkActive="bg-zinc-100 text-zinc-950 font-medium"
-             class="px-2.5 py-1.5 rounded-md text-zinc-600 hover:text-zinc-950 hover:bg-zinc-50 transition">
+             class="ewp-nav-link">
             Analytics
           </a>
         </nav>
@@ -33,7 +33,7 @@
                 class="flex items-center gap-2 border border-zinc-200 hover:border-zinc-400 rounded-lg bg-white px-2.5 py-1 text-xs transition cursor-pointer shadow-xs group">
           
           <!-- Online status dot -->
-          <span class="w-2 h-2 rounded-full shrink-0"
+          <span class="ewp-status-dot"
                 [ngClass]="{
                   'bg-emerald-500': auth.isAuthenticated(),
                   'bg-amber-400 animate-pulse': auth.isAuthenticating(),
@@ -64,7 +64,7 @@
 
   <!-- Error Banner (Only shown if Gateway fails) -->
   @if (auth.authError()) {
-    <div class="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-900 flex justify-between items-center max-w-7xl mx-auto w-full flex-none">
+    <div class="ewp-alert-warning border-b border-amber-200 px-4 py-2 max-w-7xl mx-auto w-full flex-none rounded-none">
       <span>{{ auth.authError() }} (Gateway: localhost:8080)</span>
       <button (click)="auth.switchPersona(auth.activePersona())" class="underline font-semibold hover:text-amber-950 cursor-pointer">
         Retry
@@ -72,7 +72,7 @@
     </div>
   }
 
-  <!-- Main Content Container: Scrollable area for dashboards and views -->
+  <!-- Main Content Container -->
   <main class="flex-1 min-h-0 w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col overflow-y-auto">
     <router-outlet></router-outlet>
   </main>
@@ -90,39 +90,39 @@
   <!-- CUSTOM LOGIN & IDENTITY ACCESS MODAL                                -->
   <!-- =================================================================== -->
   @if (isLoginModalOpen()) {
-    <div class="fixed inset-0 z-50 bg-zinc-950/40 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 overscroll-contain select-none"
+    <div class="ewp-modal-backdrop"
          (click)="closeLoginModal()"
          (wheel)="$event.preventDefault()">
       
       <!-- Modal Container -->
-      <div class="w-full max-w-lg bg-white rounded-xl border border-zinc-200 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden select-text animate-in fade-in zoom-in-95 duration-150"
+      <div class="ewp-modal max-w-lg max-h-[90vh]"
            (click)="$event.stopPropagation()"
            (wheel)="$event.stopPropagation()">
         
         <!-- Modal Header -->
-        <div class="px-5 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50/70">
+        <div class="ewp-modal-header">
           <div>
-            <h3 class="text-sm font-semibold text-zinc-950 tracking-tight">
+            <h3 class="ewp-section-title">
               Sign In & Role Provisioning
             </h3>
-            <p class="text-xs text-zinc-500 mt-0.5">
+            <p class="ewp-muted mt-0.5">
               Authenticate with custom username and roles or quick-select preset
             </p>
           </div>
 
           <button (click)="closeLoginModal()"
                   aria-label="Close dialog"
-                  class="text-zinc-400 hover:text-zinc-950 text-base leading-none p-1.5 rounded-md hover:bg-zinc-100 transition cursor-pointer">
+                  class="ewp-modal-close-btn">
             ✕
           </button>
         </div>
 
         <!-- Modal Body -->
-        <div class="p-5 space-y-4 overflow-y-auto">
+        <div class="ewp-modal-body">
           
           <!-- Error alert -->
           @if (loginError()) {
-            <div class="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-900 text-xs flex items-center justify-between">
+            <div class="ewp-alert-error">
               <span>{{ loginError() }}</span>
               <button (click)="loginError.set(null)" class="text-rose-700 font-bold">✕</button>
             </div>
@@ -130,38 +130,38 @@
 
           <!-- Custom Credentials Section -->
           <div class="space-y-3 bg-zinc-50/60 border border-zinc-200 rounded-lg p-3.5">
-            <span class="text-[11px] font-semibold text-zinc-600 uppercase tracking-wider block">
+            <span class="ewp-label block">
               Custom User Credentials
             </span>
 
             <!-- User ID / Username -->
             <div class="space-y-1">
-              <label class="text-xs font-medium text-zinc-700 block">
+              <label class="ewp-form-label">
                 User ID / Username <span class="text-rose-500">*</span>
               </label>
               <input type="text"
                      [value]="customUsername()"
                      (input)="customUsername.set($any($event.target).value)"
                      placeholder="e.g. user_alex, compliance_lead_01, meera_law"
-                     class="w-full bg-white border border-zinc-200 rounded px-3 py-1.5 text-xs text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-950 transition font-mono">
+                     class="ewp-input-mono">
             </div>
 
             <!-- Display Name (Optional) -->
             <div class="space-y-1">
-              <label class="text-xs font-medium text-zinc-700 block">
+              <label class="ewp-form-label">
                 Display Name (Optional)
               </label>
               <input type="text"
                      [value]="customDisplayName()"
                      (input)="customDisplayName.set($any($event.target).value)"
                      placeholder="e.g. Alex Morgan"
-                     class="w-full bg-white border border-zinc-200 rounded px-3 py-1.5 text-xs text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-950 transition">
+                     class="ewp-input-white">
             </div>
 
             <!-- Role Selector -->
             <div class="space-y-1.5">
               <div class="flex items-center justify-between">
-                <label class="text-xs font-medium text-zinc-700">
+                <label class="ewp-form-label">
                   Authority Role <span class="text-rose-500">*</span>
                 </label>
                 
@@ -177,7 +177,7 @@
               @if (!useCustomRole()) {
                 <select [value]="selectedRole()"
                         (change)="selectedRole.set($any($event.target).value)"
-                        class="w-full bg-white border border-zinc-200 rounded px-3 py-1.5 text-xs text-zinc-900 outline-none focus:border-zinc-950 transition font-mono">
+                        class="ewp-select-full">
                   @for (role of availableRoles; track role.id) {
                     <option [value]="role.id">{{ role.label }} ({{ role.id }})</option>
                   }
@@ -187,14 +187,14 @@
                        [value]="customRoleInput()"
                        (input)="customRoleInput.set($any($event.target).value)"
                        placeholder="e.g. ROLE_AUDITOR, ROLE_REGULATOR, ROLE_LEAD_DEV"
-                       class="w-full bg-white border border-zinc-200 rounded px-3 py-1.5 text-xs text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-950 transition font-mono">
+                       class="ewp-input-mono">
               }
             </div>
 
             <!-- Submit Custom Login Button -->
             <button (click)="submitCustomLogin()"
                     [disabled]="auth.isAuthenticating()"
-                    class="w-full mt-2 py-2 rounded bg-zinc-900 hover:bg-zinc-800 disabled:opacity-50 text-white text-xs font-semibold tracking-tight transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs">
+                    class="ewp-btn-primary-full mt-2">
               @if (auth.isAuthenticating()) {
                 <span class="animate-spin text-xs">↻</span>
                 <span>Generating Token...</span>
@@ -235,14 +235,14 @@
         </div>
 
         <!-- Modal Footer -->
-        <div class="px-5 py-3 border-t border-zinc-200 bg-zinc-50 flex items-center justify-between">
+        <div class="ewp-modal-footer">
           <button (click)="auth.logout(); closeLoginModal()"
-                  class="px-2.5 py-1 text-xs text-rose-600 hover:text-rose-800 hover:underline transition cursor-pointer">
+                  class="ewp-btn-danger-text">
             Sign Out
           </button>
 
           <button (click)="closeLoginModal()"
-                  class="px-3.5 py-1.5 rounded-md border border-zinc-200 hover:bg-zinc-100 text-zinc-700 text-xs font-medium transition cursor-pointer">
+                  class="ewp-btn-secondary">
             Close
           </button>
         </div>

@@ -3,16 +3,16 @@
   <!-- =================================================================== -->
   <!-- TOP HEADER & CONTROLS BAR                                           -->
   <!-- =================================================================== -->
-  <div class="flex-none bg-white border border-zinc-200 rounded-lg p-3.5 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+  <div class="flex-none ewp-card p-3.5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
     <div>
       <div class="flex items-center gap-2">
-        <h1 class="text-base font-semibold text-zinc-950 tracking-tight">Audit Trail & Analytics</h1>
-        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
+        <h1 class="ewp-page-title">Audit Trail & Analytics</h1>
+        <span class="ewp-live-badge">
+          <span class="ewp-live-dot"></span>
           Live Feed
         </span>
       </div>
-      <p class="text-xs text-zinc-500 mt-0.5">
+      <p class="ewp-muted mt-0.5">
         Real-time activity logs and workflow performance overview
       </p>
     </div>
@@ -25,7 +25,7 @@
                [value]="searchQuery()"
                (input)="onSearch($event)"
                placeholder="Search by workflow ID, user, or status..."
-               class="w-full bg-zinc-50 border border-zinc-200 rounded px-2.5 py-1.5 text-xs text-zinc-900 placeholder:text-zinc-400 outline-none focus:bg-white focus:border-zinc-950 transition">
+               class="ewp-input">
         @if (searchQuery()) {
           <button (click)="searchQuery.set('')"
                   class="absolute right-2 top-1.5 text-zinc-400 hover:text-zinc-700 text-xs">
@@ -37,7 +37,7 @@
       <!-- Template Filter -->
       <select [value]="selectedTemplate()"
               (change)="setTemplate($any($event.target).value)"
-              class="bg-zinc-50 border border-zinc-200 rounded px-2.5 py-1.5 text-xs text-zinc-800 outline-none focus:border-zinc-950 transition">
+              class="ewp-select">
         <option value="ALL">All Workflow Types</option>
         @for (tpl of templateOptions(); track tpl) {
           <option [value]="tpl">{{ tpl }}</option>
@@ -48,7 +48,7 @@
       <button (click)="loadData()"
               [disabled]="isLoading()"
               title="Refresh data"
-              class="px-2.5 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 disabled:opacity-50 text-white text-xs font-medium tracking-tight transition flex items-center gap-1.5 cursor-pointer shadow-xs">
+              class="ewp-btn-primary">
         <span [class.animate-spin]="isLoading()">↻</span>
         <span>Refresh</span>
       </button>
@@ -57,7 +57,7 @@
 
   <!-- Error Alert -->
   @if (errorMessage()) {
-    <div class="flex-none p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between">
+    <div class="flex-none ewp-alert-warning">
       <span>{{ errorMessage() }}</span>
       <button (click)="errorMessage.set(null)" class="text-amber-700 hover:text-amber-950 font-bold">✕</button>
     </div>
@@ -68,46 +68,46 @@
   <!-- =================================================================== -->
   <div class="flex-none grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
     <!-- Total Workflows -->
-    <div class="bg-white border border-zinc-200 rounded-lg p-3 shadow-xs">
-      <div class="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Total Workflows</div>
+    <div class="ewp-stat-card">
+      <div class="ewp-meta-label">Total Workflows</div>
       <div class="mt-1 flex items-baseline gap-2">
-        <span class="text-xl font-bold font-mono text-zinc-950">{{ kpis().totalWorkflows }}</span>
+        <span class="ewp-stat-value text-zinc-950">{{ kpis().totalWorkflows }}</span>
         <span class="text-[10px] text-zinc-400">All time</span>
       </div>
     </div>
 
     <!-- Active In-Flight -->
-    <div class="bg-white border border-zinc-200 rounded-lg p-3 shadow-xs">
-      <div class="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">In Progress</div>
+    <div class="ewp-stat-card">
+      <div class="ewp-meta-label">In Progress</div>
       <div class="mt-1 flex items-baseline gap-2">
-        <span class="text-xl font-bold font-mono text-blue-600">{{ kpis().inFlightCount }}</span>
+        <span class="ewp-stat-value text-blue-600">{{ kpis().inFlightCount }}</span>
         <span class="text-[10px] text-zinc-400">Active</span>
       </div>
     </div>
 
     <!-- Completed -->
-    <div class="bg-white border border-zinc-200 rounded-lg p-3 shadow-xs">
-      <div class="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Completed</div>
+    <div class="ewp-stat-card">
+      <div class="ewp-meta-label">Completed</div>
       <div class="mt-1 flex items-baseline gap-2">
-        <span class="text-xl font-bold font-mono text-zinc-800">{{ kpis().terminalCount }}</span>
+        <span class="ewp-stat-value text-zinc-800">{{ kpis().terminalCount }}</span>
         <span class="text-[10px] text-zinc-400">Finished</span>
       </div>
     </div>
 
     <!-- Audit Events Count -->
-    <div class="bg-white border border-zinc-200 rounded-lg p-3 shadow-xs">
-      <div class="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Total Actions</div>
+    <div class="ewp-stat-card">
+      <div class="ewp-meta-label">Total Actions</div>
       <div class="mt-1 flex items-baseline gap-2">
-        <span class="text-xl font-bold font-mono text-emerald-600">{{ kpis().totalEventsLogged }}</span>
+        <span class="ewp-stat-value text-emerald-600">{{ kpis().totalEventsLogged }}</span>
         <span class="text-[10px] text-zinc-400">Logged</span>
       </div>
     </div>
 
     <!-- Avg Steps -->
-    <div class="bg-white border border-zinc-200 rounded-lg p-3 shadow-xs col-span-2 sm:col-span-1">
-      <div class="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Avg. Steps</div>
+    <div class="ewp-stat-card col-span-2 sm:col-span-1">
+      <div class="ewp-meta-label">Avg. Steps</div>
       <div class="mt-1 flex items-baseline gap-2">
-        <span class="text-xl font-bold font-mono text-zinc-950">{{ kpis().avgTransitionVelocity }}</span>
+        <span class="ewp-stat-value text-zinc-950">{{ kpis().avgTransitionVelocity }}</span>
         <span class="text-[10px] text-zinc-400">Per workflow</span>
       </div>
     </div>
@@ -123,7 +123,7 @@
               ? 'text-zinc-950 border-zinc-950 font-semibold bg-white' 
               : 'text-zinc-500 border-transparent hover:text-zinc-900'">
       <span>Activity Log</span>
-      <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono"
+      <span class="ewp-count-badge"
             [ngClass]="activeTab() === 'ledger' ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-600'">
         {{ filteredAuditLogs().length }}
       </span>
@@ -135,7 +135,7 @@
               ? 'text-zinc-950 border-zinc-950 font-semibold bg-white' 
               : 'text-zinc-500 border-transparent hover:text-zinc-900'">
       <span>Workflow Summary</span>
-      <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono"
+      <span class="ewp-count-badge"
             [ngClass]="activeTab() === 'overview' ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-600'">
         {{ filteredWorkflows().length }}
       </span>
@@ -146,7 +146,7 @@
   <!-- TAB 1: ACTIVITY LOG                                                -->
   <!-- =================================================================== -->
   @if (activeTab() === 'ledger') {
-    <div class="flex-1 min-h-[350px] bg-white border border-zinc-200 rounded-lg shadow-xs overflow-hidden flex flex-col">
+    <div class="flex-1 min-h-[350px] ewp-card overflow-hidden flex flex-col">
       
       <div class="flex-none p-3 border-b border-zinc-200 bg-zinc-50/60 flex items-center justify-between text-xs text-zinc-600">
         <span class="font-medium">Recent Activity</span>
@@ -156,17 +156,17 @@
       <div class="flex-1 min-h-0 overflow-y-auto overflow-x-auto in-component-scroll">
         <table class="w-full text-left text-xs border-collapse">
           <thead>
-            <tr class="border-b border-zinc-200 bg-zinc-50 text-[11px] font-medium text-zinc-500 uppercase tracking-wider sticky top-0 z-10 shadow-2xs">
-              <th class="py-2.5 px-3 whitespace-nowrap bg-zinc-50">Date & Time</th>
-              <th class="py-2.5 px-3 whitespace-nowrap bg-zinc-50">Workflow ID</th>
-              <th class="py-2.5 px-3 whitespace-nowrap bg-zinc-50">Workflow Type</th>
-              <th class="py-2.5 px-3 whitespace-nowrap bg-zinc-50">Status Update</th>
-              <th class="py-2.5 px-3 whitespace-nowrap bg-zinc-50">User</th>
-              <th class="py-2.5 px-3 font-mono whitespace-nowrap bg-zinc-50">Event ID</th>
-              <th class="py-2.5 px-3 text-right w-24 shrink-0 whitespace-nowrap bg-zinc-50">Details</th>
+            <tr class="ewp-table-head">
+              <th class="ewp-table-th">Date & Time</th>
+              <th class="ewp-table-th">Workflow ID</th>
+              <th class="ewp-table-th">Workflow Type</th>
+              <th class="ewp-table-th">Status Update</th>
+              <th class="ewp-table-th">User</th>
+              <th class="ewp-table-th font-mono">Event ID</th>
+              <th class="ewp-table-th text-right w-24 shrink-0">Details</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-zinc-100 font-mono text-[11px]">
+          <tbody class="ewp-table-body">
             @if (filteredAuditLogs().length === 0) {
               <tr>
                 <td colspan="7" class="py-12 text-center text-xs font-sans text-zinc-400">
@@ -179,15 +179,15 @@
               </tr>
             } @else {
               @for (entry of filteredAuditLogs(); track entry.eventId) {
-                <tr class="hover:bg-zinc-50/80 transition group">
+                <tr class="ewp-table-row group">
                   
                   <!-- Timestamp -->
-                  <td class="py-2.5 px-3 text-zinc-600 whitespace-nowrap font-sans">
+                  <td class="ewp-table-td text-zinc-600 font-sans">
                     <span class="font-mono text-zinc-800">{{ entry.occurredAt | date:'medium' }}</span>
                   </td>
 
                   <!-- Workflow ID -->
-                  <td class="py-2.5 px-3 whitespace-nowrap">
+                  <td class="ewp-table-td">
                     <button (click)="inspectWorkflowById(entry.workflowId)"
                             class="text-zinc-900 hover:underline hover:text-blue-600 font-mono cursor-pointer inline-flex items-center gap-1 font-medium whitespace-nowrap">
                       <span>{{ entry.workflowId.substring(0, 14) }}...</span>
@@ -195,32 +195,32 @@
                   </td>
 
                   <!-- Template -->
-                  <td class="py-2.5 px-3 whitespace-nowrap">
-                    <span class="px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 text-[10px] font-sans font-medium border border-zinc-200">
+                  <td class="ewp-table-td">
+                    <span class="ewp-badge-sm ewp-badge-neutral font-sans">
                       {{ entry.templateId }}
                     </span>
                   </td>
 
                   <!-- Transition -->
-                  <td class="py-2.5 px-3 whitespace-nowrap">
+                  <td class="ewp-table-td">
                     <div class="flex items-center gap-1.5">
-                      <span class="px-2 py-0.5 rounded bg-zinc-100 text-zinc-600 text-[10px] font-mono">
+                      <span class="ewp-badge-sm ewp-badge-neutral font-mono">
                         {{ entry.previousState || 'Started' }}
                       </span>
                       <span class="text-zinc-400 text-xs font-sans">→</span>
-                      <span class="px-2 py-0.5 rounded text-[10px] font-medium font-mono"
+                      <span class="ewp-badge-sm font-mono"
                             [ngClass]="isTerminalState(entry.newState) 
-                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
-                              : 'bg-zinc-900 text-white'">
+                              ? 'ewp-badge-success' 
+                              : 'ewp-badge-dark'">
                         {{ entry.newState }}
                       </span>
                     </div>
                   </td>
 
                   <!-- Actor -->
-                  <td class="py-2.5 px-3 font-sans whitespace-nowrap">
+                  <td class="ewp-table-td font-sans">
                     <span class="inline-flex items-center gap-1.5 text-zinc-700">
-                      <span class="w-4 h-4 rounded-full bg-zinc-200 text-[9px] font-bold flex items-center justify-center text-zinc-600 font-mono shrink-0">
+                      <span class="ewp-avatar-xs">
                         {{ entry.actorId.charAt(0).toUpperCase() }}
                       </span>
                       <span class="text-xs">{{ entry.actorId }}</span>
@@ -228,14 +228,14 @@
                   </td>
 
                   <!-- Event ID -->
-                  <td class="py-2.5 px-3 text-zinc-400 text-[10px] whitespace-nowrap font-mono select-all">
+                  <td class="ewp-table-td text-zinc-400 text-[10px] font-mono select-all">
                     {{ entry.eventId.substring(0, 16) }}...
                   </td>
 
                   <!-- Inspect Action -->
-                  <td class="py-2.5 px-3 text-right font-sans w-24 shrink-0 whitespace-nowrap">
+                  <td class="ewp-table-td text-right font-sans w-24 shrink-0">
                     <button (click)="inspectWorkflowById(entry.workflowId)"
-                            class="px-2.5 py-1 rounded text-[11px] font-medium text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100 border border-zinc-200 transition cursor-pointer whitespace-nowrap inline-flex items-center justify-center gap-1">
+                            class="ewp-table-action-btn">
                       <span>Details</span>
                       <span>&rarr;</span>
                     </button>
@@ -256,9 +256,9 @@
     <div class="flex-1 min-h-[350px] grid grid-cols-1 md:grid-cols-3 gap-4">
       
       <!-- Left: Status Breakdown Card -->
-      <div class="bg-white border border-zinc-200 rounded-lg p-4 shadow-xs md:col-span-1 flex flex-col min-h-0">
+      <div class="ewp-card p-4 md:col-span-1 flex flex-col min-h-0">
         <div class="flex-none mb-3">
-          <h3 class="text-xs font-semibold text-zinc-900 uppercase tracking-wider mb-0.5">Status Breakdown</h3>
+          <h3 class="ewp-label mb-0.5">Status Breakdown</h3>
           <p class="text-[11px] text-zinc-400">Current step across active workflows</p>
         </div>
 
@@ -283,7 +283,7 @@
       </div>
 
       <!-- Right: Workflow Projections Table (Span 2) -->
-      <div class="bg-white border border-zinc-200 rounded-lg shadow-xs overflow-hidden md:col-span-2 flex flex-col min-h-0">
+      <div class="ewp-card md:col-span-2 flex flex-col min-h-0 overflow-hidden">
         <div class="flex-none p-3 border-b border-zinc-200 bg-zinc-50/60 flex items-center justify-between text-xs text-zinc-600">
           <span class="font-medium">Workflow Status</span>
           <span class="text-[11px] font-mono text-zinc-400">{{ filteredWorkflows().length }} Workflows</span>
@@ -292,16 +292,16 @@
         <div class="flex-1 min-h-0 overflow-y-auto overflow-x-auto in-component-scroll">
           <table class="w-full text-left text-xs border-collapse">
             <thead>
-              <tr class="border-b border-zinc-200 bg-zinc-50 text-[11px] font-medium text-zinc-500 uppercase tracking-wider sticky top-0 z-10 shadow-2xs">
-                <th class="py-2.5 px-3 whitespace-nowrap bg-zinc-50">Workflow ID</th>
-                <th class="py-2.5 px-3 whitespace-nowrap bg-zinc-50">Workflow Type</th>
-                <th class="py-2.5 px-3 whitespace-nowrap bg-zinc-50">Current Step</th>
-                <th class="py-2.5 px-3 text-center whitespace-nowrap bg-zinc-50">Steps Taken</th>
-                <th class="py-2.5 px-3 whitespace-nowrap bg-zinc-50">Last Updated</th>
-                <th class="py-2.5 px-3 text-right w-24 shrink-0 whitespace-nowrap bg-zinc-50">Details</th>
+              <tr class="ewp-table-head">
+                <th class="ewp-table-th">Workflow ID</th>
+                <th class="ewp-table-th">Workflow Type</th>
+                <th class="ewp-table-th">Current Step</th>
+                <th class="ewp-table-th text-center">Steps Taken</th>
+                <th class="ewp-table-th">Last Updated</th>
+                <th class="ewp-table-th text-right w-24 shrink-0">Details</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-zinc-100 font-mono text-[11px]">
+            <tbody class="ewp-table-body">
               @if (filteredWorkflows().length === 0) {
                 <tr>
                   <td colspan="6" class="py-12 text-center text-xs font-sans text-zinc-400">
@@ -310,43 +310,43 @@
                 </tr>
               } @else {
                 @for (wf of filteredWorkflows(); track wf.workflowId) {
-                  <tr class="hover:bg-zinc-50/80 transition">
+                  <tr class="ewp-table-row">
                     <!-- Workflow ID -->
-                    <td class="py-2.5 px-3 font-mono text-zinc-900 font-medium whitespace-nowrap">
+                    <td class="ewp-table-td font-mono text-zinc-900 font-medium">
                       {{ wf.workflowId.substring(0, 16) }}...
                     </td>
 
                     <!-- Template -->
-                    <td class="py-2.5 px-3 font-sans whitespace-nowrap">
-                      <span class="px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 text-[10px] font-medium border border-zinc-200">
+                    <td class="ewp-table-td font-sans">
+                      <span class="ewp-badge-sm ewp-badge-neutral">
                         {{ wf.templateId }}
                       </span>
                     </td>
 
                     <!-- Current State -->
-                    <td class="py-2.5 px-3 whitespace-nowrap">
-                      <span class="px-2 py-0.5 rounded text-[10px] font-medium"
+                    <td class="ewp-table-td">
+                      <span class="ewp-badge-sm"
                             [ngClass]="isTerminalState(wf.currentState) 
-                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
-                              : 'bg-zinc-900 text-white'">
+                              ? 'ewp-badge-success' 
+                              : 'ewp-badge-dark'">
                         {{ wf.currentState }}
                       </span>
                     </td>
 
                     <!-- Transition Count -->
-                    <td class="py-2.5 px-3 text-center font-mono font-medium text-zinc-800 whitespace-nowrap">
+                    <td class="ewp-table-td text-center font-mono font-medium text-zinc-800">
                       {{ wf.transitionCount }}
                     </td>
 
                     <!-- Last Updated -->
-                    <td class="py-2.5 px-3 font-sans text-zinc-500 text-[11px] whitespace-nowrap">
+                    <td class="ewp-table-td font-sans text-zinc-500 text-[11px]">
                       {{ wf.lastUpdatedAt | date:'short' }}
                     </td>
 
                     <!-- Action -->
-                    <td class="py-2.5 px-3 text-right font-sans w-24 shrink-0 whitespace-nowrap">
+                    <td class="ewp-table-td text-right font-sans w-24 shrink-0">
                       <button (click)="inspectWorkflow(wf)"
-                              class="px-2.5 py-1 rounded text-[11px] font-medium text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100 border border-zinc-200 transition cursor-pointer whitespace-nowrap inline-flex items-center justify-center gap-1">
+                              class="ewp-table-action-btn">
                         <span>Details</span>
                         <span>&rarr;</span>
                       </button>
@@ -363,24 +363,23 @@
 
   <!-- =================================================================== -->
   <!-- WORKFLOW HISTORY MODAL DIALOG                                       -->
-  <!-- Centered with backdrop, keeping Shell Header & Footer intact       -->
   <!-- =================================================================== -->
   @if (selectedWorkflow()) {
-    <div class="fixed inset-0 z-40 bg-zinc-950/40 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 overscroll-contain select-none"
+    <div class="ewp-modal-backdrop z-40"
          (click)="closeInspector()"
          (wheel)="$event.preventDefault()">
       
       <!-- Modal Container Dialog -->
-      <div class="w-full max-w-2xl bg-white rounded-xl border border-zinc-200 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden select-text animate-in fade-in zoom-in-95 duration-150"
+      <div class="ewp-modal max-w-2xl max-h-[85vh]"
            (click)="$event.stopPropagation()"
            (wheel)="$event.stopPropagation()">
         
         <!-- Modal Header -->
-        <div class="px-5 py-3.5 border-b border-zinc-200 flex items-center justify-between bg-zinc-50/70">
+        <div class="ewp-modal-header py-3.5">
           <div>
             <div class="flex items-center gap-2">
               <span class="text-xs font-semibold text-zinc-950 tracking-tight uppercase">Workflow History</span>
-              <span class="px-2 py-0.5 rounded bg-zinc-200/80 text-zinc-800 text-[10px] font-mono font-medium">
+              <span class="ewp-badge-sm ewp-badge-neutral font-mono">
                 {{ selectedWorkflow()?.templateId }}
               </span>
             </div>
@@ -391,7 +390,7 @@
 
           <button (click)="closeInspector()"
                   aria-label="Close dialog"
-                  class="text-zinc-400 hover:text-zinc-950 text-base leading-none p-1.5 rounded-md hover:bg-zinc-100 transition cursor-pointer">
+                  class="ewp-modal-close-btn">
             ✕
           </button>
         </div>
@@ -399,15 +398,15 @@
         <!-- Meta Summary Bar -->
         <div class="px-5 py-2.5 bg-zinc-100/60 border-b border-zinc-200 grid grid-cols-3 gap-4 text-xs">
           <div>
-            <span class="text-[10px] font-medium text-zinc-400 uppercase tracking-wider block">Current Step</span>
+            <span class="ewp-meta-label">Current Step</span>
             <span class="font-mono font-semibold text-zinc-900">{{ selectedWorkflow()?.currentState }}</span>
           </div>
           <div>
-            <span class="text-[10px] font-medium text-zinc-400 uppercase tracking-wider block">Steps Taken</span>
+            <span class="ewp-meta-label">Steps Taken</span>
             <span class="font-mono font-semibold text-zinc-900">{{ selectedWorkflow()?.transitionCount }} steps</span>
           </div>
           <div>
-            <span class="text-[10px] font-medium text-zinc-400 uppercase tracking-wider block">Last Updated By</span>
+            <span class="ewp-meta-label">Last Updated By</span>
             <span class="font-mono font-semibold text-zinc-900">{{ selectedWorkflow()?.lastActorId || 'N/A' }}</span>
           </div>
         </div>
@@ -430,16 +429,16 @@
                   <div class="relative pl-6 pb-2 border-l-2 border-zinc-200 last:border-l-0">
                     <div class="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full bg-zinc-950 ring-4 ring-white"></div>
                     
-                    <div class="bg-zinc-50 border border-zinc-200 rounded-lg p-3 space-y-1.5">
+                    <div class="ewp-panel bg-zinc-50 space-y-1.5 p-3">
                       <div class="flex items-center justify-between text-xs">
                         <span class="font-semibold text-zinc-900">Step {{ idx + 1 }}</span>
                         <span class="text-zinc-400 font-mono text-[11px]">{{ h.occurredAt | date:'medium' }}</span>
                       </div>
                       <div class="flex items-center gap-2 text-xs">
-                        <span class="font-mono px-2 py-0.5 rounded bg-zinc-200 text-zinc-800 text-[10px]">{{ h.fromState || 'Started' }}</span>
+                        <span class="ewp-badge-sm ewp-badge-neutral font-mono">{{ h.fromState || 'Started' }}</span>
                         <span class="text-zinc-400 font-bold">→</span>
-                        <span class="font-mono px-2 py-0.5 rounded text-[10px] font-medium"
-                              [ngClass]="isTerminalState(h.toState) ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-zinc-900 text-white'">
+                        <span class="ewp-badge-sm font-mono"
+                              [ngClass]="isTerminalState(h.toState) ? 'ewp-badge-success' : 'ewp-badge-dark'">
                           {{ h.toState }}
                         </span>
                       </div>
@@ -462,19 +461,19 @@
                 <div class="relative pl-6 pb-2 border-l-2 border-zinc-200 last:border-l-0">
                   <div class="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full bg-zinc-950 ring-4 ring-white"></div>
 
-                  <div class="bg-zinc-50 border border-zinc-200 rounded-lg p-3 space-y-2">
+                  <div class="ewp-panel bg-zinc-50 space-y-2 p-3">
                     <div class="flex items-center justify-between text-xs">
                       <span class="font-semibold text-zinc-900">Step {{ idx + 1 }}</span>
                       <span class="text-[10px] font-mono text-zinc-500">{{ entry.occurredAt | date:'medium' }}</span>
                     </div>
 
                     <div class="flex items-center gap-2 text-xs">
-                      <span class="px-2 py-0.5 rounded bg-zinc-200 text-zinc-800 font-mono text-[11px]">
+                      <span class="ewp-badge-sm ewp-badge-neutral font-mono">
                         {{ entry.previousState || 'Started' }}
                       </span>
                       <span class="text-zinc-400 font-bold">→</span>
-                      <span class="px-2 py-0.5 rounded font-mono text-[11px] font-medium"
-                            [ngClass]="isTerminalState(entry.newState) ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-zinc-900 text-white'">
+                      <span class="ewp-badge-sm font-mono"
+                            [ngClass]="isTerminalState(entry.newState) ? 'ewp-badge-success' : 'ewp-badge-dark'">
                         {{ entry.newState }}
                       </span>
                     </div>
@@ -491,9 +490,9 @@
         </div>
 
         <!-- Modal Footer -->
-        <div class="px-5 py-3 border-t border-zinc-200 bg-zinc-50 flex justify-end">
+        <div class="ewp-modal-footer justify-end">
           <button (click)="closeInspector()"
-                  class="px-3.5 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium transition cursor-pointer">
+                  class="ewp-btn-primary">
             Close
           </button>
         </div>

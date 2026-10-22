@@ -3,8 +3,8 @@
   <!-- Section 1: Minimalist Header & Live Counter -->
   <div class="flex items-center justify-between border-b border-zinc-200 pb-4">
     <div>
-      <h1 class="text-base font-semibold text-zinc-950">Operational Workbench</h1>
-      <p class="text-xs text-zinc-500 mt-0.5">
+      <h1 class="ewp-page-title">Operational Workbench</h1>
+      <p class="ewp-muted mt-0.5">
         Assigned approvals for <strong class="text-zinc-900 font-medium">{{ auth.activePersona().name }}</strong>
         &bull; {{ auth.activePersona().role }}
       </p>
@@ -19,24 +19,24 @@
       </span>
 
       <a routerLink="/workflows" [queryParams]="{ action: 'new' }"
-         class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-white rounded-md text-xs font-medium transition flex items-center gap-1 shadow-xs cursor-pointer">
+         class="ewp-btn-primary">
         <span>+</span> New Request
       </a>
 
-      <a routerLink="/workflows" class="px-2.5 py-1 bg-white border border-zinc-200 hover:border-zinc-900 rounded-md text-xs font-medium text-zinc-900 transition">
+      <a routerLink="/workflows" class="ewp-btn-secondary">
         Open Split-Pane Inbox &rarr;
       </a>
     </div>
   </div>
 
-  <!-- Section 2: Live Actionable Work Queue (No Generic Cards!) -->
+  <!-- Section 2: Live Actionable Work Queue -->
   <div class="space-y-2">
     <div class="flex items-center justify-between text-xs">
-      <span class="font-semibold uppercase tracking-wider text-zinc-400 text-[11px]">Active Queue Stream</span>
+      <span class="ewp-label text-zinc-400">Active Queue Stream</span>
       <span class="text-zinc-400 font-mono text-[11px]">{{ tasks().length }} items requiring action</span>
     </div>
 
-    <div class="border border-zinc-200 rounded-lg bg-white overflow-hidden divide-y divide-zinc-100 shadow-xs">
+    <div class="ewp-card overflow-hidden divide-y divide-zinc-100">
       @if (isLoading()) {
         <div class="p-6 text-center text-xs text-zinc-400">Refreshing queue stream...</div>
       } @else if (tasks().length === 0) {
@@ -72,13 +72,9 @@
             <!-- Col 3: SLA Status -->
             <div class="col-span-2">
               @if (item.slaBreached) {
-                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-rose-50 text-rose-700 border border-rose-200">
-                  Breached
-                </span>
+                <span class="ewp-badge-sm ewp-badge-danger">Breached</span>
               } @else if (item.currentStepDueAt) {
-                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                  SLA Active
-                </span>
+                <span class="ewp-badge-sm ewp-badge-warning">SLA Active</span>
               } @else {
                 <span class="text-zinc-400 text-[11px] font-mono">No SLA</span>
               }
@@ -97,9 +93,9 @@
     </div>
   </div>
 
-  <!-- Section 3: System Modules & Security Footer Bar -->
+  <!-- Section 3: System Modules -->
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-    <div class="p-4 bg-white border border-zinc-200 rounded-lg flex items-center justify-between text-xs">
+    <div class="ewp-card p-4 flex items-center justify-between text-xs">
       <div>
         <div class="font-medium text-zinc-900">Blueprint Designer</div>
         <div class="text-[11px] text-zinc-400 mt-0.5">Author workflows & manage versions</div>
@@ -107,7 +103,7 @@
       <a routerLink="/templates" class="text-zinc-900 font-medium hover:underline">Open &rarr;</a>
     </div>
 
-    <div class="p-4 bg-white border border-zinc-200 rounded-lg flex items-center justify-between text-xs">
+    <div class="ewp-card p-4 flex items-center justify-between text-xs">
       <div>
         <div class="font-medium text-zinc-900">Audit & Analytics</div>
         <div class="text-[11px] text-zinc-400 mt-0.5">CQRS read-model timeline & Kafka logs</div>

@@ -1,4 +1,4 @@
-<div class="border border-zinc-200 rounded-lg bg-white overflow-hidden shadow-xs flex flex-col md:flex-row h-full">
+<div class="ewp-card overflow-hidden flex flex-col md:flex-row h-full">
   
   <!-- =================================================================== -->
   <!-- LEFT PANE: Task Queue (Compact Fixed Width)                         -->
@@ -18,12 +18,12 @@
         </div>
         <div class="flex items-center gap-1.5">
           <button (click)="openCreateModal()"
-                  class="px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-[11px] font-medium tracking-tight transition flex items-center gap-1 cursor-pointer shadow-xs">
+                  class="ewp-btn-primary py-0.5 px-2 text-[11px]">
             <span>+</span> New
           </button>
           <button (click)="loadInbox()" [disabled]="isLoading()"
                   title="Refresh tasks"
-                  class="p-1 rounded text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100 transition cursor-pointer">
+                  class="ewp-btn-ghost">
             <span class="text-xs block" [class.animate-spin]="isLoading()">↻</span>
           </button>
         </div>
@@ -52,7 +52,7 @@
       <div>
         <input type="text" [value]="searchQuery()" (input)="onSearchInput($event)"
                placeholder="Filter tasks..."
-               class="w-full bg-zinc-50 border border-zinc-200 rounded px-2.5 py-1 text-xs text-zinc-900 placeholder:text-zinc-400 outline-none focus:bg-white focus:border-zinc-900 transition">
+               class="ewp-input py-1">
       </div>
     </div>
 
@@ -79,21 +79,13 @@
               <span class="font-mono text-zinc-400 truncate text-[10px]">{{ task.templateId }}</span>
               
               @if (task.currentState === 'ONBOARDED') {
-                <span class="px-1.5 py-0.2 rounded text-[10px] font-mono font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  ✓ Approved
-                </span>
+                <span class="ewp-badge-sm ewp-badge-success">✓ Approved</span>
               } @else if (task.currentState === 'REJECTED') {
-                <span class="px-1.5 py-0.2 rounded text-[10px] font-mono font-medium bg-rose-50 text-rose-700 border border-rose-200">
-                  ✕ Rejected
-                </span>
+                <span class="ewp-badge-sm ewp-badge-danger">✕ Rejected</span>
               } @else if (task.slaBreached) {
-                <span class="px-1.5 py-0.2 rounded text-[10px] font-mono font-medium bg-rose-50 text-rose-700 border border-rose-200">
-                  Breached
-                </span>
+                <span class="ewp-badge-sm ewp-badge-danger">Breached</span>
               } @else if (task.currentStepDueAt) {
-                <span class="px-1.5 py-0.2 rounded text-[10px] font-mono font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                  SLA Active
-                </span>
+                <span class="ewp-badge-sm ewp-badge-warning">SLA Active</span>
               }
             </div>
 
@@ -151,7 +143,7 @@
                 <button (click)="executeAction(action.key, task)"
                         [disabled]="isActionDisabled(action, task)"
                         [title]="getActionDisabledReason(action, task)"
-                        class="px-3 py-1.5 bg-zinc-900 text-white rounded text-xs font-medium transition"
+                        class="ewp-btn-primary px-3 py-1.5"
                         [ngClass]="{
                           'opacity-40 cursor-not-allowed': isActionDisabled(action, task),
                           'hover:bg-zinc-800 cursor-pointer': !isActionDisabled(action, task)
@@ -162,7 +154,7 @@
                 <button (click)="executeAction(action.key, task)"
                         [disabled]="isActionDisabled(action, task)"
                         [title]="getActionDisabledReason(action, task)"
-                        class="px-2.5 py-1.5 bg-white border border-zinc-200 text-zinc-700 rounded text-xs font-medium transition"
+                        class="ewp-btn-secondary px-2.5 py-1.5"
                         [ngClass]="{
                           'opacity-40 cursor-not-allowed': isActionDisabled(action, task),
                           'hover:bg-zinc-50 cursor-pointer': !isActionDisabled(action, task)
@@ -175,8 +167,8 @@
             @if (isTerminal()) {
               <span class="px-2.5 py-1 rounded text-xs font-medium border"
                     [ngClass]="task.currentState === 'REJECTED' 
-                      ? 'bg-rose-50 text-rose-700 border-rose-200' 
-                      : 'bg-emerald-50 text-emerald-800 border-emerald-200'">
+                      ? 'ewp-badge-danger' 
+                      : 'ewp-badge-success'">
                 {{ task.currentState === 'REJECTED' ? '✕ Workflow Rejected' : '✓ Process Completed' }}
               </span>
             } @else {
@@ -212,7 +204,7 @@
           <!-- Stepper Header: Step Counter & Real-Time SLA Countdown Badge -->
           <div class="flex items-center justify-between text-xs">
             <div class="flex items-center gap-2">
-              <span class="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Lifecycle Trajectory</span>
+              <span class="ewp-label text-zinc-500">Lifecycle Trajectory</span>
               @if (isTerminal()) {
                 <span class="text-[10px] font-mono px-2 py-0.5 rounded-full font-medium"
                       [ngClass]="isTerminalRejected() ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'">
@@ -326,8 +318,8 @@
         </div>
 
         <!-- Step Context & Action Payload -->
-        <div class="border border-zinc-200 rounded-lg p-3.5 space-y-3">
-          <div class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Step Context & Payload</div>
+        <div class="ewp-panel">
+          <div class="ewp-label text-zinc-400">Step Context & Payload</div>
 
           @if (canActionCurrentStep()) {
             @if (currentStepRequiredKeys().length > 0) {
@@ -343,7 +335,7 @@
                            (input)="setPayloadValue(fieldKey, $any($event.target).value)"
                            placeholder="https://..."
                            [ngClass]="{'border-amber-300 focus:border-amber-500': !(payloadForm()[fieldKey]?.trim())}"
-                           class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1 text-xs font-mono text-zinc-900 outline-none focus:border-zinc-900 transition">
+                           class="ewp-input font-mono">
                   </div>
                 }
               </div>
@@ -356,7 +348,7 @@
               }
             }
           } @else {
-            <div class="p-3 bg-zinc-50 border border-zinc-200 rounded-lg text-xs text-zinc-600 flex items-center gap-2">
+            <div class="ewp-alert-info">
               <span class="text-zinc-400 font-serif font-bold">ℹ</span>
               <span>
                 {{ isTerminal() 
@@ -368,8 +360,8 @@
 
           <!-- Submitted Documents / Fields from Earlier Steps -->
           @if (task.contextData && getContextDataEntries(task).length > 0) {
-            <div class="p-3 bg-zinc-50 border border-zinc-200 rounded-lg space-y-2 text-xs">
-              <div class="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 flex items-center justify-between">
+            <div class="ewp-context-block">
+              <div class="ewp-label text-[10px] text-zinc-500 flex items-center justify-between">
                 <span>Submitted Step Payload & Documents</span>
                 <span class="font-mono text-zinc-400 font-normal">{{ getContextDataEntries(task).length }} fields</span>
               </div>
@@ -397,8 +389,8 @@
 
           <!-- Prior Step Notes & Audit Trail -->
           @if (task.taskHistory && task.taskHistory.length > 0) {
-            <div class="p-3 bg-zinc-50 border border-zinc-200 rounded-lg space-y-2 text-xs">
-              <div class="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 flex items-center justify-between">
+            <div class="ewp-context-block">
+              <div class="ewp-label text-[10px] text-zinc-500 flex items-center justify-between">
                 <span>Prior Step Comments & History</span>
                 <span class="font-mono text-zinc-400 font-normal">{{ task.taskHistory.length }} step(s)</span>
               </div>
@@ -414,7 +406,7 @@
                     <div class="flex items-center gap-2 text-[11px] text-zinc-500">
                       <span>By <strong class="text-zinc-800 font-mono">{{ step.completedBy }}</strong></span>
                       <span>&bull;</span>
-                      <span class="font-mono text-[10px] px-1.5 py-0.2 rounded bg-white text-zinc-700 border border-zinc-200">
+                      <span class="ewp-badge-sm ewp-badge-neutral">
                         {{ step.status }}
                       </span>
                     </div>
@@ -442,23 +434,23 @@
                         (ngModelChange)="reviewComments.set($event)"
                         rows="2"
                         [placeholder]="currentStepRequiredKeys().length > 0 ? 'Add optional submission notes...' : 'Add decision notes or comments...'"
-                        class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1 text-xs text-zinc-900 outline-none focus:border-zinc-900 transition"></textarea>
+                        class="ewp-textarea"></textarea>
             </div>
           }
         </div>
 
         <!-- Technical Traceability (Compact 2-Column Table) -->
         <div class="border border-zinc-200 rounded-lg divide-y divide-zinc-100 text-xs">
-          <div class="px-3.5 py-2 flex justify-between">
-            <span class="text-zinc-500">Requester</span>
-            <span class="font-mono text-zinc-900">{{ task.requesterId }}</span>
+          <div class="ewp-kv-row">
+            <span class="ewp-kv-label">Requester</span>
+            <span class="ewp-kv-value">{{ task.requesterId }}</span>
           </div>
-          <div class="px-3.5 py-2 flex justify-between">
-            <span class="text-zinc-500">Scope Policy</span>
-            <span class="font-mono text-zinc-900">{{ task.actorScope }} ({{ task.requiredRole || 'None' }})</span>
+          <div class="ewp-kv-row">
+            <span class="ewp-kv-label">Scope Policy</span>
+            <span class="ewp-kv-value">{{ task.actorScope }} ({{ task.requiredRole || 'None' }})</span>
           </div>
-          <div class="px-3.5 py-2 flex justify-between">
-            <span class="text-zinc-500">Last Instance Update</span>
+          <div class="ewp-kv-row">
+            <span class="ewp-kv-label">Last Instance Update</span>
             <span class="font-mono text-zinc-500">{{ task.updatedAt | date:'medium' }}</span>
           </div>
         </div>

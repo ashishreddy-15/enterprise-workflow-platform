@@ -3,22 +3,22 @@
   <!-- =================================================================== -->
   <!-- TOP HEADER & CONTROLS BAR                                           -->
   <!-- =================================================================== -->
-  <div class="bg-white border border-zinc-200 rounded-lg p-4 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+  <div class="ewp-card p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
     <div>
       <div class="flex items-center gap-2">
-        <h1 class="text-base font-semibold text-zinc-950 tracking-tight">Workflows</h1>
-        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <h1 class="ewp-page-title">Workflows</h1>
+        <span class="ewp-badge ewp-badge-success">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
           {{ publishedCount() }} Live
         </span>
         @if (draftCount() > 0) {
-          <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-amber-50 text-amber-700 border border-amber-200">
+          <span class="ewp-badge ewp-badge-warning">
             <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>
             {{ draftCount() }} Drafts
           </span>
         }
       </div>
-      <p class="text-xs text-zinc-500 mt-0.5">
+      <p class="ewp-muted mt-0.5">
         Design, preview, and manage your workflow processes.
       </p>
     </div>
@@ -31,7 +31,7 @@
                [value]="searchQuery()"
                (input)="searchQuery.set($any($event.target).value)"
                placeholder="Search workflows..."
-               class="w-full bg-zinc-50 border border-zinc-200 rounded px-2.5 py-1.5 text-xs text-zinc-900 placeholder:text-zinc-400 outline-none focus:bg-white focus:border-zinc-950 transition">
+               class="ewp-input">
         @if (searchQuery()) {
           <button (click)="searchQuery.set('')"
                   class="absolute right-2 top-1.5 text-zinc-400 hover:text-zinc-700 text-xs">
@@ -42,7 +42,7 @@
 
       <!-- New Workflow Button -->
       <button (click)="openCreateModal()"
-              class="px-2.5 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium tracking-tight transition flex items-center gap-1.5 cursor-pointer shadow-xs">
+              class="ewp-btn-primary">
         <span>+</span>
         <span>New Workflow</span>
       </button>
@@ -51,7 +51,7 @@
       <button (click)="loadTemplates()"
               [disabled]="isLoading()"
               title="Refresh templates"
-              class="px-2.5 py-1.5 rounded border border-zinc-200 hover:bg-zinc-100 disabled:opacity-50 text-zinc-700 text-xs font-medium tracking-tight transition flex items-center gap-1.5 cursor-pointer">
+              class="ewp-btn-secondary px-2.5 py-1.5 disabled:opacity-50 flex items-center gap-1.5">
         <span [class.animate-spin]="isLoading()">↻</span>
         <span>Refresh</span>
       </button>
@@ -71,7 +71,7 @@
 
   <!-- Error Alert -->
   @if (errorMessage()) {
-    <div class="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between">
+    <div class="ewp-alert-warning">
       <span>{{ errorMessage() }}</span>
       <button (click)="errorMessage.set(null)" class="text-amber-700 hover:text-amber-950 font-bold cursor-pointer">✕</button>
     </div>

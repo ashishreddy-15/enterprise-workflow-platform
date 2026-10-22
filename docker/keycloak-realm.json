@@ -1,0 +1,148 @@
+{
+  "id": "ewp",
+  "realm": "ewp",
+  "displayName": "Enterprise Workflow Platform",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "roles": {
+    "realm": [
+      {
+        "name": "ROLE_EMPLOYEE",
+        "description": "Standard employee role for initiating and participating in workflows"
+      },
+      {
+        "name": "ROLE_ADMIN",
+        "description": "System administrator with workflow designer authoring rights"
+      },
+      {
+        "name": "ROLE_LEGAL_COUNSEL",
+        "description": "Legal counsel authority for review steps"
+      },
+      {
+        "name": "ROLE_FINANCE_DIRECTOR",
+        "description": "Finance director authority for approval steps"
+      }
+    ]
+  },
+  "defaultRoles": [
+    "ROLE_EMPLOYEE"
+  ],
+  "clients": [
+    {
+      "clientId": "ewp-gateway",
+      "name": "Enterprise Workflow Gateway",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "ewp-client-secret-2026",
+      "redirectUris": [
+        "http://localhost:8080/*",
+        "http://localhost:8080/login/oauth2/code/*",
+        "http://localhost/*",
+        "http://localhost/login/oauth2/code/*",
+        "http://localhost:4200/*"
+      ],
+      "webOrigins": [
+        "+",
+        "*"
+      ],
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "name": "realm-roles-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "ashish",
+      "enabled": true,
+      "email": "ashish@ewp.enterprise.com",
+      "firstName": "Ashish",
+      "lastName": "Reddy",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ROLE_EMPLOYEE"
+      ]
+    },
+    {
+      "username": "admin.sys",
+      "enabled": true,
+      "email": "admin@ewp.enterprise.com",
+      "firstName": "System",
+      "lastName": "Administrator",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ROLE_ADMIN",
+        "ROLE_EMPLOYEE"
+      ]
+    },
+    {
+      "username": "meera.legal",
+      "enabled": true,
+      "email": "meera@ewp.enterprise.com",
+      "firstName": "Meera",
+      "lastName": "Counsel",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ROLE_LEGAL_COUNSEL"
+      ]
+    },
+    {
+      "username": "rahul.finance",
+      "enabled": true,
+      "email": "rahul@ewp.enterprise.com",
+      "firstName": "Rahul",
+      "lastName": "Finance",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ROLE_FINANCE_DIRECTOR"
+      ]
+    }
+  ]
+}

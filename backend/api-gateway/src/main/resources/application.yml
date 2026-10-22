@@ -4,6 +4,25 @@ server:
 spring:
   application:
     name: api-gateway
+  main:
+    allow-circular-references: true
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: ${OAUTH2_CLIENT_ID:ewp-gateway}
+            client-secret: ${OAUTH2_CLIENT_SECRET:ewp-client-secret-2026}
+            scope: openid,profile,email,roles
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          keycloak:
+            authorization-uri: ${OAUTH2_AUTH_URI:http://localhost:8085/realms/ewp/protocol/openid-connect/auth}
+            token-uri: ${OAUTH2_TOKEN_URI:http://localhost:8085/realms/ewp/protocol/openid-connect/token}
+            user-info-uri: ${OAUTH2_USERINFO_URI:http://localhost:8085/realms/ewp/protocol/openid-connect/userinfo}
+            jwk-set-uri: ${OAUTH2_JWKS_URI:http://localhost:8085/realms/ewp/protocol/openid-connect/certs}
+            user-name-attribute: preferred_username
   cloud:
     gateway:
       globalcors:

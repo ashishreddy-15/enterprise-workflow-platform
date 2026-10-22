@@ -2,6 +2,7 @@ package com.ashish.workflow.gateway.filter;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +48,7 @@ public class AuthenticationHeaderFilter implements GlobalFilter, Ordered {
     }
 
     private ServerWebExchange injectClaimsIntoHeaders(ServerWebExchange exchange, Jwt jwt) {
-        // Support standard 'sub' or Azure AD 'oid' / 'preferred_username'
+        // Support standard 'sub' or Keycloak/Azure AD 'preferred_username' / 'oid'
         String userId = jwt.getSubject();
         if (userId == null || userId.isBlank()) {
             userId = jwt.getClaimAsString("preferred_username");
@@ -56,7 +57,7 @@ public class AuthenticationHeaderFilter implements GlobalFilter, Ordered {
             userId = jwt.getClaimAsString("oid");
         }
 
-        // Extract roles from 'roles' or 'scp'/'scope' claim
+        // Extract roles from 'roles', 'realm_access.roles', or 'scp'/'scope' claim
         List<String> rolesList = extractRoles(jwt);
         String rolesHeader = String.join(",", rolesList);
 
@@ -82,7 +83,25 @@ public class AuthenticationHeaderFilter implements GlobalFilter, Ordered {
             return collection.stream().map(Object::toString).collect(Collectors.toList());
         }
 
-        // 2. Direct 'scope' or 'scp' claim
+        // 2. Keycloak 'realm_access.roles'
+        Object realmAccess = jwt.getClaims().get("realm_access");
+        if (realmAccess instanceof Map<?, ?> map) {
+            Object rObj = map.get("roles");
+            if (rObj instanceof Collection<?> col) {
+                List<String> realmRoles = col.stream()
+                        .map(Object::toString)
+                        .filter(r -> !r.startsWith("default-roles")
+                                && !r.equalsIgnoreCase("offline_access")
+                                && !r.equalsIgnoreCase("uma_authorization"))
+                        .map(r -> r.startsWith("ROLE_") ? r.toUpperCase() : "ROLE_" + r.toUpperCase())
+                        .collect(Collectors.toList());
+                if (!realmRoles.isEmpty()) {
+                    return realmRoles;
+                }
+            }
+        }
+
+        // 3. Direct 'scope' or 'scp' claim
         String scopeClaim = jwt.getClaimAsString("scope");
         if (scopeClaim == null) {
             scopeClaim = jwt.getClaimAsString("scp");

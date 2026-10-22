@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+import { environment } from '../../../environments/environment';
 
 interface RoleOption {
   id: string;
@@ -63,6 +64,12 @@ export class LoginComponent implements OnInit {
       return;
     }
 
+    // Check for SSO failure error parameter
+    const errorParam = this.route.snapshot.queryParamMap.get('error');
+    if (errorParam) {
+      this.errorMessage.set('Enterprise Single Sign-On failed or was cancelled. You can retry or use direct login below.');
+    }
+
     // Check query params for prefilled role or username
     const queryRole = this.route.snapshot.queryParamMap.get('role');
     if (queryRole) {
@@ -85,6 +92,10 @@ export class LoginComponent implements OnInit {
     if (roleId === 'ROLE_ADMIN' && this.username() === 'ashish') {
       this.username.set('admin.sys');
     }
+  }
+
+  loginWithSSO(): void {
+    window.location.href = `${environment.gatewayUrl}/oauth2/authorization/keycloak`;
   }
 
   onSubmit(): void {

@@ -22,28 +22,38 @@ public class ScalarController {
             </style>
           </head>
           <body>
-            <script
-              id="api-reference"
-              type="application/json">
-              {
-                "theme": "purple",
-                "layout": "modern",
-                "showSidebar": true,
-                "defaultHttpClient": {
-                  "targetKey": "shell",
-                  "clientKey": "curl"
-                },
-                "spec": {
-                  "urls": [
-                    { "name": "API Gateway & Auth", "url": "/v3/api-docs" },
-                    { "name": "Workflow Service (PostgreSQL & State Engine)", "url": "/workflows/v3/api-docs" },
-                    { "name": "Template Service (MongoDB & Step DAG)", "url": "/templates/v3/api-docs" },
-                    { "name": "Audit & Analytics (MongoDB & Kafka Consumer)", "url": "/analytics/v3/api-docs" }
-                  ]
-                }
-              }
-            </script>
+            <div id="app"></div>
             <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+            <script>
+              Scalar.createApiReference('#app', {
+                theme: 'purple',
+                layout: 'modern',
+                showSidebar: true,
+                sources: [
+                  {
+                    title: 'Workflow Engine (PostgreSQL & Tasks)',
+                    slug: 'workflows',
+                    url: '/workflows/v3/api-docs',
+                    default: true
+                  },
+                  {
+                    title: 'Template Service (MongoDB & Schemas)',
+                    slug: 'templates',
+                    url: '/templates/v3/api-docs'
+                  },
+                  {
+                    title: 'Audit & Analytics (Kafka & SLAs)',
+                    slug: 'analytics',
+                    url: '/analytics/v3/api-docs'
+                  },
+                  {
+                    title: 'API Gateway & Auth',
+                    slug: 'gateway',
+                    url: '/v3/api-docs'
+                  }
+                ]
+              });
+            </script>
           </body>
         </html>
         """;

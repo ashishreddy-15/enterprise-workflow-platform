@@ -1,5 +1,7 @@
 package com.ashish.workflow.gateway.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+@Tag(name = "Authentication & Sessions", description = "Endpoints for persona simulation, token issuance, and logout")
 @RestController
 @RequestMapping("/auth")
 @ConditionalOnProperty(name = "jwt.dev-token.enabled", matchIfMissing = true, havingValue = "true")
@@ -37,6 +40,7 @@ public class DevAuthController {
 
     public record TokenRequest(String userId, List<String> roles) {}
 
+    @Operation(summary = "Mint dev JWT token and set HttpOnly session cookie")
     @PostMapping("/dev-token")
     public Mono<Map<String, String>> generateToken(@RequestBody TokenRequest request, ServerWebExchange exchange) {
         Instant now = Instant.now();
@@ -68,37 +72,54 @@ public class DevAuthController {
                 .sameSite("Lax")
                 .maxAge(Duration.ofHours(8))
                 .build();
+
         exchange.getResponse().addCookie(cookie);
 
-        return Mono.just(
-                Map.of("access_token", token, "token_type", "Bearer", "expires_in", "28800", "userId", resolvedUserId));
+        return Mono.just(Map.of(
+                "token",
+                token,
+                "status",
+                "authenticated",
+                "userId",
+                resolvedUserId,
+                "roles",
+                String.join(",", resolvedRoles)));
     }
 
-    @GetMapping("/me")
-    public Mono<Map<String, Object>> getCurrentUser(Authentication authentication) {
-        if (authentication instanceof JwtAuthenticationToken jwtAuth) {
-            Jwt jwt = jwtAuth.getToken();
-            List<String> roles = jwt.getClaimAsStringList("roles");
-            return Mono.just(Map.of(
-                    "authenticated", true,
-                    "userId", jwt.getSubject() != null ? jwt.getSubject() : "",
-                    "roles", roles != null ? roles : List.of()));
-        }
-        return Mono.just(Map.of("authenticated", false));
-    }
-
+    @Operation(summary = "Clear HttpOnly session cookie and log out")
     @PostMapping("/logout")
-    public Mono<Map<String, Object>> logout(ServerWebExchange exchange) {
-        // Clear HttpOnly cookie immediately
+    public Mono<Map<String, String>> logout(ServerWebExchange exchange) {
         ResponseCookie cookie = ResponseCookie.from(COOKIE_NAME, "")
                 .httpOnly(true)
                 .secure(false)
                 .path("/")
                 .sameSite("Lax")
-                .maxAge(Duration.ZERO)
+                .maxAge(0)
                 .build();
+
         exchange.getResponse().addCookie(cookie);
 
-        return Mono.just(Map.of("message", "Logged out successfully", "authenticated", false));
+        return Mono.just(Map.of("status", "logged_out"));
+    }
+
+    @Operation(summary = "Get current authenticated user identity and authorities")
+    @GetMapping("/me")
+    public Mono<Map<String, Object>> getCurrentUser(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return Mono.just(Map.of("authenticated", false));
+        }
+
+        String userId = authentication.getName();
+        List<String> roles = List.of();
+
+        if (authentication instanceof JwtAuthenticationToken jwtToken) {
+            Jwt jwt = jwtToken.getToken();
+            List<String> claimRoles = jwt.getClaimAsStringList("roles");
+            if (claimRoles != null) {
+                roles = claimRoles;
+            }
+        }
+
+        return Mono.just(Map.of("authenticated", true, "userId", userId, "roles", roles));
     }
 }

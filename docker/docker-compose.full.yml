@@ -196,6 +196,7 @@ services:
       KC_HOSTNAME_STRICT_BACKCHANNEL: "false"
     volumes:
       - ./keycloak-realm.json:/opt/keycloak/data/import/realm.json:ro
+      - ./keycloak-theme:/opt/keycloak/themes/ewp:ro
     ports:
       - "8085:8085"
     networks:

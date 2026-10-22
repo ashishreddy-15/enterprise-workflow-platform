@@ -98,6 +98,10 @@ export class LoginComponent implements OnInit {
     window.location.href = `${environment.gatewayUrl}/oauth2/authorization/keycloak`;
   }
 
+  loginWithAzure(): void {
+    window.location.href = `${environment.gatewayUrl}/oauth2/authorization/azure`;
+  }
+
   onSubmit(): void {
     const user = this.username().trim();
     if (!user) {

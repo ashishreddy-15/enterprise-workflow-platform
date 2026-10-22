@@ -2,6 +2,7 @@
   "id": "ewp",
   "realm": "ewp",
   "displayName": "Enterprise Workflow Platform",
+  "loginTheme": "ewp",
   "enabled": true,
   "sslRequired": "none",
   "registrationAllowed": false,

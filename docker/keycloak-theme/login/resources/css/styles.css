@@ -1,0 +1,122 @@
+/* ==============================================================================
+   Enterprise Workflow Platform - Custom Keycloak Theme Styling
+   Matches the Tailwind zinc-900 / minimalist enterprise design system
+   ============================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+body#keycloak-bg {
+    background: #f8fafc !important;
+    background-image: radial-gradient(#e2e8f0 1px, transparent 1px) !important;
+    background-size: 24px 24px !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    color: #0f172a !important;
+    min-height: 100vh !important;
+}
+
+.pf-v5-c-login {
+    background: transparent !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 2rem 1rem !important;
+}
+
+.pf-v5-c-login__container {
+    max-width: 440px !important;
+    width: 100% !important;
+}
+
+.pf-v5-c-login__header {
+    text-align: center !important;
+    margin-bottom: 1.5rem !important;
+}
+
+.pf-v5-c-login__header .pf-v5-c-brand {
+    font-size: 1.125rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.025em !important;
+    color: #09090b !important;
+    text-transform: uppercase !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+}
+
+.pf-v5-c-login__main {
+    background: #ffffff !important;
+    border: 1px solid #e4e4e7 !important;
+    border-radius: 0.75rem !important;
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05) !important;
+    padding: 2rem !important;
+}
+
+.pf-v5-c-title, #kc-page-title {
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    color: #09090b !important;
+    letter-spacing: -0.02em !important;
+    margin-bottom: 1.5rem !important;
+    text-align: center !important;
+}
+
+.pf-v5-c-form__label-text {
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    color: #3f3f46 !important;
+    text-transform: none !important;
+}
+
+.pf-v5-c-form-control input {
+    background: #ffffff !important;
+    border: 1px solid #d4d4d8 !important;
+    border-radius: 0.5rem !important;
+    font-size: 0.875rem !important;
+    color: #09090b !important;
+    padding: 0.5rem 0.75rem !important;
+    transition: all 0.15s ease-in-out !important;
+}
+
+.pf-v5-c-form-control input:focus {
+    border-color: #18181b !important;
+    outline: 2px solid #18181b !important;
+    outline-offset: 1px !important;
+    box-shadow: none !important;
+}
+
+.pf-v5-c-button.pf-m-primary {
+    background-color: #18181b !important;
+    border-color: #18181b !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    font-size: 0.875rem !important;
+    border-radius: 0.5rem !important;
+    padding: 0.625rem 1rem !important;
+    width: 100% !important;
+    transition: background-color 0.15s ease-in-out !important;
+}
+
+.pf-v5-c-button.pf-m-primary:hover {
+    background-color: #27272a !important;
+    border-color: #27272a !important;
+}
+
+.pf-v5-c-button.pf-m-control {
+    background: transparent !important;
+    border: none !important;
+    color: #71717a !important;
+}
+
+.pf-v5-c-button.pf-m-control:hover {
+    color: #18181b !important;
+}
+
+a {
+    color: #2563eb !important;
+    font-size: 0.75rem !important;
+    text-decoration: none !important;
+}
+
+a:hover {
+    text-decoration: underline !important;
+}

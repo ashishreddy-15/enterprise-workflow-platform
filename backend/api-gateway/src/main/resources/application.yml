@@ -9,18 +9,22 @@ spring:
       globalcors:
         cors-configurations:
           '[/**]':
-            allowedOrigins:
-              - "http://localhost:4200"
-              - "http://localhost:4201"
-              - "http://localhost:4202"
-              - "http://localhost:4203"
+            allowedOriginPatterns:
+              - "http://localhost"
+              - "http://localhost:*"
+              - "http://127.0.0.1"
+              - "http://127.0.0.1:*"
             allowedMethods:
               - GET
               - POST
               - PUT
               - DELETE
               - OPTIONS
+              - HEAD
+              - PATCH
             allowedHeaders:
+              - "*"
+            exposedHeaders:
               - "*"
             allowCredentials: true
       server:

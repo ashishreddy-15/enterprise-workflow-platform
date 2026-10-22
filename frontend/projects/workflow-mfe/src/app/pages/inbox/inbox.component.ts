@@ -176,12 +176,16 @@ export class InboxComponent implements OnInit, OnDestroy {
 
     const user = this.getActiveUser();
     const scope = task.actorScope?.toUpperCase() || 'ANY';
+    const step = this.currentStep();
+    const isInitialStep = (this.activeTemplate()?.initialState?.toUpperCase() === task.currentState?.toUpperCase())
+      || (step?.stepOrder === 1);
+    const isApprovalStep = !step?.stepType || step.stepType.toUpperCase() === 'APPROVAL';
 
     if (scope === 'REQUESTER') {
       return user.id.toLowerCase() === task.requesterId?.toLowerCase();
     } else if (scope === 'ROLE') {
-      // Must not be requester (Separation of Duties)
-      if (user.id.toLowerCase() === task.requesterId?.toLowerCase()) {
+      // Must not be requester (Separation of Duties) ONLY for approval steps (non-initial)
+      if (isApprovalStep && !isInitialStep && user.id.toLowerCase() === task.requesterId?.toLowerCase()) {
         return false;
       }
       if (!task.requiredRole) return true;

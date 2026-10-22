@@ -82,21 +82,27 @@ public class TaskService {
                     currentStep.actorScope() != null ? currentStep.actorScope().toUpperCase() : "ANY";
             boolean isEligible = false;
 
+            boolean isInitialStep = (snapshot.initialState() != null
+                            && currentState.equalsIgnoreCase(snapshot.initialState()))
+                    || currentStep.stepOrder() == 1;
+            boolean isApprovalStep = currentStep.stepType() == null
+                    || "APPROVAL".equalsIgnoreCase(currentStep.stepType());
+
             if ("REQUESTER".equals(scope)) {
                 if (workflow.getRequesterId().equalsIgnoreCase(caller.userId())) {
                     isEligible = true;
                 }
             } else if ("ROLE".equals(scope)) {
-                if (!workflow.getRequesterId().equalsIgnoreCase(caller.userId())) {
+                if (isApprovalStep && !isInitialStep && workflow.getRequesterId().equalsIgnoreCase(caller.userId())) {
+                    log.debug(
+                            "SoD: user '{}' is the requester of workflow {} and cannot approve role-restricted task",
+                            caller.userId(),
+                            workflow.getId());
+                } else {
                     String requiredRole = currentStep.requiredRole();
                     if (requiredRole == null || requiredRole.isBlank() || caller.hasRole(requiredRole)) {
                         isEligible = true;
                     }
-                } else {
-                    log.warn(
-                            "SoD violation: user '{}' is the requester of workflow {} and cannot action ROLE-scoped task",
-                            caller.userId(),
-                            workflow.getId());
                 }
             } else {
                 isEligible = true;

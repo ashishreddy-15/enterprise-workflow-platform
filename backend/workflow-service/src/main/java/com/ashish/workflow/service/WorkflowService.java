@@ -173,17 +173,7 @@ public class WorkflowService {
                         + "' can only be performed by the requester (" + workflow.getRequesterId() + ").");
             }
         } else if ("ROLE".equals(scope)) {
-            // 1. Segregation of Duties: Requester cannot approve their own request
-            if (workflow.getRequesterId().equalsIgnoreCase(actorId)) {
-                log.warn(
-                        "Segregation of Duties violation on workflow {}: Requester '{}' cannot act on role-restricted step '{}'",
-                        workflowId,
-                        actorId,
-                        previousState);
-                throw new SecurityException("Segregation of Duties violation: Requester (" + actorId
-                        + ") cannot act on role-restricted step '" + previousState + "'.");
-            }
-            // 2. Role Enforcement: Caller must hold the step's requiredRole
+            // 1. Role Enforcement: Caller must hold the step's requiredRole
             String requiredRole = currentStep.requiredRole();
             if (requiredRole != null && !requiredRole.isBlank() && !caller.hasRole(requiredRole)) {
                 log.warn(
@@ -195,6 +185,23 @@ public class WorkflowService {
                         caller.roles());
                 throw new SecurityException("Access Denied: Step '" + previousState + "' requires role '" + requiredRole
                         + "', but caller holds " + caller.roles());
+            }
+
+            // 2. Segregation of Duties: Requester cannot approve their own request on approval steps
+            boolean isInitialStep = (snapshot.initialState() != null
+                            && previousState.equalsIgnoreCase(snapshot.initialState()))
+                    || currentStep.stepOrder() == 1;
+            boolean isApprovalStep = currentStep.stepType() == null
+                    || "APPROVAL".equalsIgnoreCase(currentStep.stepType());
+
+            if (isApprovalStep && !isInitialStep && workflow.getRequesterId().equalsIgnoreCase(actorId)) {
+                log.warn(
+                        "Segregation of Duties violation on workflow {}: Requester '{}' cannot approve their own request on step '{}'",
+                        workflowId,
+                        actorId,
+                        previousState);
+                throw new SecurityException("Segregation of Duties violation: Requester (" + actorId
+                        + ") cannot approve their own request on step '" + previousState + "'.");
             }
         }
         // --------------------------------------------------------

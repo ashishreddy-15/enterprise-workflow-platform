@@ -30,16 +30,23 @@ public class SecurityConfig {
     @Value("${jwt.secret:ewp-enterprise-super-secret-signing-key-2026-min-32-bytes}")
     private String jwtSecret;
 
+    private final CookieOrHeaderBearerTokenConverter cookieOrHeaderBearerTokenConverter;
+
+    public SecurityConfig(CookieOrHeaderBearerTokenConverter cookieOrHeaderBearerTokenConverter) {
+        this.cookieOrHeaderBearerTokenConverter = cookieOrHeaderBearerTokenConverter;
+    }
+
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         return http.csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeExchange(exchanges -> exchanges
-                        .pathMatchers("/actuator/**", "/health", "/auth/dev-token")
+                        .pathMatchers("/actuator/**", "/health", "/auth/dev-token", "/auth/logout", "/auth/me")
                         .permitAll()
                         .anyExchange()
                         .authenticated())
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
+                .oauth2ResourceServer(oauth2 ->
+                        oauth2.jwt(Customizer.withDefaults()).bearerTokenConverter(cookieOrHeaderBearerTokenConverter))
                 .build();
     }
 

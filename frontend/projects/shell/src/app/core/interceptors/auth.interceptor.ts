@@ -1,23 +1,23 @@
 import { HttpInterceptorFn } from '@angular/common/http';
-import { inject } from '@angular/core';
-import { AuthService } from '../services/auth.service';
+import { environment } from '../../../environments/environment';
 
+/**
+ * Enterprise Auth Interceptor (Gateway-managed HttpOnly cookie session / BFF pattern).
+ * Sets withCredentials = true on all API Gateway requests so that the secure HttpOnly
+ * session cookie ('ewp_access_token') is automatically attached by the browser,
+ * preventing token exfiltration via XSS.
+ */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  const authService = inject(AuthService);
-  const token = authService.currentToken() || localStorage.getItem('ewp_auth_token');
+  const isGatewayTarget =
+    req.url.startsWith(environment.gatewayUrl) ||
+    req.url.startsWith('/api') ||
+    req.url.startsWith('/auth') ||
+    req.url.startsWith('/workflows') ||
+    req.url.startsWith('/templates') ||
+    req.url.startsWith('/analytics');
 
-  // Do not attach Authorization header to dev-token endpoint itself
-  if (req.url.includes('/auth/dev-token')) {
-    return next(req);
-  }
-
-  if (token) {
-    const cloned = req.clone({
-      setHeaders: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-    return next(cloned);
+  if (isGatewayTarget && !req.withCredentials) {
+    return next(req.clone({ withCredentials: true }));
   }
 
   return next(req);

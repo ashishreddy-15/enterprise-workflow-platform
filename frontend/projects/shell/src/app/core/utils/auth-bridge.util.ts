@@ -5,7 +5,7 @@ export interface PersonaChangedDetail {
     roles: string[];
     description?: string;
   };
-  token: string;
+  token?: string;
 }
 
 export function dispatchPersonaChanged(detail: PersonaChangedDetail): void {

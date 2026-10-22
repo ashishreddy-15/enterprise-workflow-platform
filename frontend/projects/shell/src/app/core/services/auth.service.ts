@@ -75,7 +75,7 @@ export class AuthService {
       roles: resolvedRoles
     };
 
-    return this.http.post<LoginResponse>(`${this.gatewayBaseUrl}/auth/login`, payload, { withCredentials: true }).pipe(
+    return this.http.post<LoginResponse>(`${this.gatewayBaseUrl}/auth/dev-token`, payload, { withCredentials: true }).pipe(
       tap(() => {
         const user: AuthenticatedUser = {
           userId: payload.userId,

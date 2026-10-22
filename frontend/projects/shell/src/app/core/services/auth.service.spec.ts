@@ -40,7 +40,7 @@ describe('AuthService', () => {
   it('should authenticate user and store roles upon login', () => {
     service.login('ashish', ['ROLE_EMPLOYEE']).subscribe();
 
-    const req = httpMock.expectOne(`${environment.gatewayUrl}/auth/login`);
+    const req = httpMock.expectOne(`${environment.gatewayUrl}/auth/dev-token`);
     expect(req.request.method).toBe('POST');
     expect(req.request.withCredentials).toBe(true);
     expect(req.request.body).toEqual({ userId: 'ashish', roles: ['ROLE_EMPLOYEE'] });
@@ -55,7 +55,7 @@ describe('AuthService', () => {
   it('should identify administrator role when authenticated with ROLE_ADMIN', () => {
     service.login('admin.sys', ['ROLE_ADMIN', 'ROLE_EMPLOYEE']).subscribe();
 
-    const req = httpMock.expectOne(`${environment.gatewayUrl}/auth/login`);
+    const req = httpMock.expectOne(`${environment.gatewayUrl}/auth/dev-token`);
     req.flush({ token: 'admin-jwt', status: 'authenticated', userId: 'admin.sys', roles: 'ROLE_ADMIN,ROLE_EMPLOYEE' });
 
     expect(service.isAuthenticated()).toBe(true);

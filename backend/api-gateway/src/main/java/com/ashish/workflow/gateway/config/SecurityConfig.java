@@ -44,7 +44,7 @@ public class SecurityConfig {
                         .pathMatchers(
                                 "/actuator/**",
                                 "/health",
-                                "/auth/dev-token",
+                                "/auth/**",
                                 "/auth/logout",
                                 "/auth/me",
                                 "/scalar",

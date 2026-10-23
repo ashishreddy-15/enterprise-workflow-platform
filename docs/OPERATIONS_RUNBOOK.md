@@ -1,75 +1,89 @@
-# Operations & Deployment Runbook
+# Operations & Production Runbook — Enterprise Workflow Platform
 
-This runbook provides complete operational instructions for running, monitoring, and troubleshooting the Enterprise Workflow Platform.
+## 1. Prerequisites & Environment Configuration
 
----
-
-## 1. Prerequisites
-
+### 1.1 Host Requirements
 | Component | Minimum Version | Verification Command |
 |---|---|---|
-| **Docker Engine & Compose** | `v26.0+` | `docker --version` |
+| **Docker Engine & Compose** | `v26.0+` | `docker --version; docker compose version` |
 | **Java JDK** | `21.0+` (Eclipse Adoptium) | `java -version` |
 | **Apache Maven** | `3.9+` | `mvn -v` |
 | **Node.js & npm** | `v20.0+` (Node 22 recommended) | `node -v; npm -v` |
 
----
-
-## 2. Deployment Modes
-
-### Mode A: Full Containerized Stack (Single Command) ⭐
-
-Builds and starts all infrastructure, backend microservices, and Nginx frontend MFEs directly in Docker using multi-stage builds (no local Java or Node installation required):
-
-```powershell
-docker compose -f docker/docker-compose.full.yml up -d --build
+### 1.2 Environment Variables (`.env`)
+Before launching the platform, verify your `.env` file exists (copied from `.env.example`):
+```bash
+cp .env.example .env
+cp .env.example docker/.env
 ```
 
-To tail live aggregated logs:
+Key environment properties:
+- `POSTGRES_USER=ewp_user`, `POSTGRES_PASSWORD=ewp_secret_pass_2026`, `POSTGRES_DB=workflow_db`
+- `MONGO_INITDB_ROOT_USERNAME=admin`, `MONGO_INITDB_ROOT_PASSWORD=mongo_secret_pass_2026`
+- `REDIS_PASSWORD=ewp_redis_pass_2026`
+- `KEYCLOAK_ADMIN=admin`, `KEYCLOAK_ADMIN_PASSWORD=admin`
+- `JWT_SECRET=super-secret-jwt-key-for-workflow-platform-2026-min-32-chars`
+- `SESSION_IDLE_TIMEOUT_MINUTES=60`, `SESSION_MAX_LIFESPAN_HOURS=8`, `SESSION_RENEW_THRESHOLD_MINUTES=15`
+- `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` (Optional: for Microsoft SSO)
+
+---
+
+## 2. Complete Port Allocation Matrix
+
+| Service | Container Name | Host Port | Protocol / Transport | Purpose & Health Check Command |
+|---|---|---|---|---|
+| **Frontend Nginx** | `ewp-frontend` | `80`, `4200`-`4203` | HTTP | Unified Proxy (`:80`), Shell (`:4200`), Workflow MFE (`:4201`), Analytics MFE (`:4202`), Template MFE (`:4203`) |
+| **API Gateway (BFF)** | `ewp-api-gateway` | `8080` | HTTP / WebFlux | Gateway & Session Manager; `curl http://localhost:8080/actuator/health` |
+| **Workflow Engine** | `ewp-workflow-service` | `8081` | HTTP / Spring MVC | Core workflow aggregate; `curl http://localhost:8081/workflows/actuator/health` |
+| **Audit Analytics** | `ewp-audit-analytics-service` | `8082` | HTTP / Spring MVC | CQRS consumer; `curl http://localhost:8082/analytics/actuator/health` |
+| **Template Service** | `ewp-template-service` | `8083` | HTTP / Spring MVC | Form schema catalog; `curl http://localhost:8083/templates/actuator/health` |
+| **Keycloak IAM** | `ewp-keycloak` | `8085` | HTTP OIDC | Enterprise IdP; Console at `http://localhost:8085` (`admin`/`admin`) |
+| **PostgreSQL 16** | `ewp-postgres` | `5432` | TCP JDBC | Relational store; `pg_isready -U ewp_user -d workflow_db` |
+| **MongoDB 7.0** | `ewp-mongodb` | `27017` | TCP MongoDB | Document store; `mongosh --eval "db.adminCommand('ping')"` |
+| **Redis 7.2** | `ewp-redis` | `6379` | TCP Redis | Distributed cache; `redis-cli -a ewp_redis_pass_2026 ping` |
+| **Apache Kafka 3.8** | `ewp-kafka` | `9092`, `29092` | KRaft PLAINTEXT | Event broker; `9092` (host listener), `29092` (inter-container network) |
+| **Prometheus 2.51** | `ewp-prometheus` | `9090` | HTTP | Time-series scraper; Target status at `http://localhost:9090/targets` |
+| **Grafana 10.4.1** | `ewp-grafana` | `3000` | HTTP | Telemetry console; `http://localhost:3000` (`admin`/`admin`) |
+| **Jaeger All-in-One** | `ewp-jaeger` | `16686`, `4317`, `4318` | HTTP/gRPC | UI (`:16686`), OTLP gRPC (`:4317`), OTLP HTTP span receiver (`:4318`) |
+
+---
+
+## 3. Deployment Modes
+
+### Mode A: Full Containerized Stack (Single Command) ⭐
+Builds and starts all 10 containers in the isolated Docker bridge network `ewp-network`:
+
 ```powershell
+# Build and launch all services in background
+docker compose -f docker/docker-compose.full.yml up -d --build
+
+# Verify all containers are Up and Healthy
+docker compose -f docker/docker-compose.full.yml ps
+
+# Tail aggregated logs
 docker compose -f docker/docker-compose.full.yml logs -f
 ```
 
-To stop all containers:
-```powershell
-docker compose -f docker/docker-compose.full.yml down
-```
-
-To stop and wipe all persisted databases/volumes:
-```powershell
-docker compose -f docker/docker-compose.full.yml down -v
-```
-
----
-
 ### Mode B: Hybrid Local Development Mode
-
-Runs databases and Kafka in Docker while running Spring Boot microservices and Angular dev servers locally:
+Runs databases, Kafka, and telemetry in Docker while running Spring Boot microservices and Angular dev servers directly on your host machine:
 
 #### 1. Start Backing Infrastructure:
 ```powershell
 docker compose -f docker/docker-compose.infra.yml up -d
 ```
 
-#### 2. Start Microservices:
-In 4 separate terminals:
+#### 2. Start Backend Microservices (Separate Terminals):
 ```powershell
-# Terminal 1: Template Service (:8083)
-cd backend; mvn -pl template-service spring-boot:run
-
-# Terminal 2: Workflow Service (:8081)
-cd backend; mvn -pl workflow-service spring-boot:run
-
-# Terminal 3: Audit Analytics Service (:8082)
-cd backend; mvn -pl audit-analytics-service spring-boot:run
-
-# Terminal 4: API Gateway (:8080)
-cd backend; mvn -pl api-gateway spring-boot:run
+cd backend
+mvn -pl template-service spring-boot:run        # Port 8083
+mvn -pl workflow-service spring-boot:run        # Port 8081
+mvn -pl audit-analytics-service spring-boot:run # Port 8082
+mvn -pl api-gateway spring-boot:run             # Port 8080
 ```
 
-#### 3. Start Frontend MFEs:
-In 4 separate terminals (from `frontend/` directory):
+#### 3. Start Frontend MFEs (Separate Terminals from `frontend/`):
 ```powershell
+cd frontend
 npm run start:shell       # Port 4200
 npm run start:workflow    # Port 4201
 npm run start:analytics   # Port 4202
@@ -78,102 +92,114 @@ npm run start:template    # Port 4203
 
 ---
 
-## 3. Port Allocations & Endpoints
+## 4. Observability & Distributed Tracing Operations
 
-| Service | Port | Endpoint URL | Health Check |
-|---|---|---|---|
-| **Shell Application** | `4200` / `80` | `http://localhost:4200` or `http://localhost` | Browser HTTP 200 |
-| **Workflow MFE** | `4201` | `http://localhost:4201/remoteEntry.json` | JSON Manifest |
-| **Analytics MFE** | `4202` | `http://localhost:4202/remoteEntry.json` | JSON Manifest |
-| **Template MFE** | `4203` | `http://localhost:4203/remoteEntry.json` | JSON Manifest |
-| **API Gateway** | `8080` | `http://localhost:8080` | `http://localhost:8080/actuator/health` |
-| **Scalar API Console** | `8080` / `80` | `http://localhost:8080/scalar` | Interactive UI |
-| **Workflow Engine** | `8081` | `http://localhost:8081/workflows` | `http://localhost:8081/workflows/actuator/health` |
-| **Audit Analytics** | `8082` | `http://localhost:8082/analytics` | `http://localhost:8082/analytics/actuator/health` |
-| **Template Service** | `8083` | `http://localhost:8083/templates` | `http://localhost:8083/templates/actuator/health` |
-| **PostgreSQL 16** | `5432` | `localhost:5432` | `pg_isready -U ewp_user -d workflow_db` |
-| **MongoDB 7.0** | `27017` | `localhost:27017` | `mongosh --eval "db.adminCommand('ping')"` |
-| **Redis 7.2** | `6379` | `localhost:6379` | `redis-cli -a ewp_redis_pass ping` |
-| **Kafka (KRaft)** | `9092` / `29092` | `localhost:9092` (host) | Native KRaft broker listener |
-| **Prometheus** | `9090` | `http://localhost:9090` | Time-series metrics engine |
-| **Grafana** | `3000` | `http://localhost:3000` (`admin`/`admin`) | Visual dashboard console |
-| **Jaeger Tracing** | `16686` | `http://localhost:16686` | Distributed waterfall trace UI |
-| **Jaeger OTLP HTTP** | `4318` | `http://localhost:4318/v1/traces` | OpenTelemetry span ingest |
+### 4.1 Prometheus Metric Verification (`http://localhost:9090`)
+- Navigate to **Status $\rightarrow$ Targets** (`http://localhost:9090/targets`).
+- All 4 scrape endpoints must display state **UP (1/1)**:
+  - `api-gateway` (`api-gateway:8080/actuator/prometheus`)
+  - `workflow-service` (`workflow-service:8081/workflows/actuator/prometheus`)
+  - `template-service` (`template-service:8083/templates/actuator/prometheus`)
+  - `audit-analytics-service` (`audit-analytics-service:8082/analytics/actuator/prometheus`)
 
----
+### 4.2 Grafana Pre-Provisioned Dashboards (`http://localhost:3000`)
+Log in with credentials `admin` / `admin`. Open the **Platform Overview** dashboard under the **Platform** folder to monitor:
+1. **Throughput (RPS by Application)**: Real-time request velocity per microservice.
+2. **p95 / p99 Latency**: Detects tail latency spikes and slow downstream database queries.
+3. **HTTP 4xx / 5xx Error Rates**: Identifies authentication failures or server errors.
+4. **Active JVM Virtual Threads**: Tracks Project Loom carrier thread mounting and concurrency utilization.
+5. **JVM Heap Utilization %**: Monitors GC pressure across all Spring Boot containers.
 
-## 4. Troubleshooting & Diagnostics
-
-### Q: Kafka broker connection timeout on startup
-* **Symptom**: `Connection to node -1 (localhost/127.0.0.1:9092) could not be established. Broker may not be available.`
-* **Solution**: Ensure the Kafka container is healthy via `docker ps`. If the volume metadata was corrupted by an abrupt shutdown, reset the Kafka volume:
-  ```powershell
-  docker compose -f docker/docker-compose.full.yml stop kafka
-  docker volume rm docker_kafka_data
-  docker compose -f docker/docker-compose.full.yml up -d kafka
-  ```
-
-### Q: CORS error when fetching from `http://localhost`
-* **Symptom**: `Access to fetch ... has been blocked by CORS policy: Response to preflight request doesn't pass access control check`
-* **Solution**: Ensure `api-gateway` has recompiled with the updated `allowedOriginPatterns` (`http://localhost`, `http://localhost:*`, `http://127.0.0.1:*`). Rebuild the gateway container:
-  ```powershell
-  docker compose -f docker/docker-compose.full.yml up -d --build api-gateway
-  ```
-
-### Q: Spotless formatting failure during Maven build
-* **Symptom**: `Execution of spotless failed: The following files had format violations`
-* **Solution**: Run Spotless automated formatting before compiling:
-  ```powershell
-  cd backend; mvn spotless:apply; cd ..
-  ```
+### 4.3 Jaeger Distributed Tracing Walkthrough (`http://localhost:16686`)
+To trace an end-to-end request across network and broker boundaries:
+1. Open **[http://localhost:16686](http://localhost:16686)**.
+2. In the **Service** dropdown, select `api-gateway` or `workflow-service`.
+3. Click **Find Traces**.
+4. Click on any trace to inspect the waterfall breakdown:
+   - **Span 1 (`api-gateway`)**: Spring Cloud Gateway routing filter and auth verification.
+   - **Span 2 (`workflow-service`)**: HTTP execution of `transitionWorkflow()` and PostgreSQL transaction commit.
+   - **Span 3 (`workflow-service`)**: `OutboxScheduler` Kafka producer send.
+   - **Span 4 (`audit-analytics-service`)**: `WorkflowEventConsumer` Kafka consumer execution, MongoDB idempotency check, and CQRS view update.
 
 ---
 
-## 5. CI/CD & GitHub Container Registry (GHCR)
+## 5. Kafka Topic & Event Stream Operations
 
-The repository includes enterprise-grade GitHub Actions workflows:
-
-### Workflows Catalog:
-1. **CI Pipeline (`.github/workflows/ci.yml`)**:
-   - Triggers on pull requests and pushes to `main`.
-   - Uses path filtering to run only affected stacks.
-   - Enforces `mvn spotless:check` and Java 21 compilation on backend changes.
-   - Enforces TypeScript typechecking and production builds on frontend changes (`npm run build:all`).
-2. **Security & Vulnerability Scan (`.github/workflows/security.yml`)**:
-   - Runs **Gitleaks** to detect leaked credentials or secret tokens.
-   - Runs **Aqua Trivy** to scan dependencies for known CVEs (Critical & High).
-   - Scheduled weekly every Monday at 00:00 UTC.
-3. **OCI Container Delivery (`.github/workflows/docker-publish.yml`)**:
-   - Triggers on merge to `main`.
-   - Builds multi-stage Docker images using BuildKit caching.
-   - Publishes versioned images to **GitHub Container Registry** (`ghcr.io`):
-     - `ghcr.io/<owner>/ewp-api-gateway:latest` & `sha-<commit>`
-     - `ghcr.io/<owner>/ewp-workflow-service:latest` & `sha-<commit>`
-     - `ghcr.io/<owner>/ewp-template-service:latest` & `sha-<commit>`
-     - `ghcr.io/<owner>/ewp-audit-analytics-service:latest` & `sha-<commit>`
-     - `ghcr.io/<owner>/ewp-frontend:latest` & `sha-<commit>`
-
-### Pulling Pre-built Images from GHCR:
+### 5.1 Inspect Active Kafka Topics
 ```powershell
-# Authenticate to GHCR (using your GitHub Personal Access Token or GITHUB_TOKEN)
-echo $CR_PAT | docker login ghcr.io -u <your-github-username> --password-stdin
+docker exec -it ewp-kafka /opt/kafka/bin/kafka-topics.sh \
+  --bootstrap-server localhost:9092 --list
+```
+*Expected Topics*: `workflow-events`, `workflow-events-retry-1000`, `workflow-events-retry-2000`, `workflow-events-dlt`, `workflow-sla-alerts`.
 
-# Pull the latest gateway image
-docker pull ghcr.io/<owner>/ewp-api-gateway:latest
+### 5.2 Monitor Consumer Group Lag
+```powershell
+docker exec -it ewp-kafka /opt/kafka/bin/kafka-consumer-groups.sh \
+  --bootstrap-server localhost:9092 \
+  --describe --group audit-analytics-group
+```
+Verify `LAG` is `0` or near zero during steady-state processing.
+
+### 5.3 Dead-Letter Queue (DLT) Replay & Remediation
+When messages land in `workflow-events-dlt`, inspect them via consumer console:
+```powershell
+docker exec -it ewp-kafka /opt/kafka/bin/kafka-console-consumer.sh \
+  --bootstrap-server localhost:9092 \
+  --topic workflow-events-dlt \
+  --from-beginning
+```
+To re-queue failed outbox events from the database:
+```bash
+curl -X POST http://localhost:8080/workflows/api/v1/admin/outbox/replay-failed \
+  -H "Authorization: Bearer <ADMIN_JWT>"
 ```
 
 ---
 
-## 6. Observability, Metrics & Tracing
+## 6. Keycloak IAM Administration (`http://localhost:8085`)
 
-### Accessing the Consoles:
-- **Grafana Dashboard**: `http://localhost:3000` (Default credentials: `admin` / `admin`)
-  - Automatically loads the **Enterprise Workflow Platform - Observability** dashboard.
-  - Monitors throughput (RPS), p95 latency, 4xx/5xx error rates, JVM Virtual Threads, and CPU/heap usage.
-- **Jaeger Distributed Tracing**: `http://localhost:16686`
-  - Select service (e.g. `api-gateway`, `workflow-service`, or `audit-analytics-service`).
-  - Inspect end-to-end waterfall spans across HTTP, database, and Kafka boundaries.
-- **Prometheus Targets**: `http://localhost:9090/targets`
-  - Verifies healthy scraping status across all 4 microservices.
+1. Open **`http://localhost:8085`** and sign in with `admin` / `admin`.
+2. Select the **`ewp`** realm from the top-left dropdown.
+3. **Users & Credentials**:
+   - Navigate to **Users** to inspect existing accounts: `ashish`, `admin.sys`, `meera.legal`, `rahul.finance`.
+   - Click any user $\rightarrow$ **Role mapping** to view or modify assigned enterprise roles.
+4. **Sessions**:
+   - Navigate to **Sessions** to view active user sessions, token life, and revoke access on demand.
 
+---
 
+## 7. Disaster Recovery: Backup & Restore
+
+### 7.1 PostgreSQL Backup & Restore (`workflow_db`)
+```powershell
+# Create backup
+docker exec -t ewp-postgres pg_dump -U ewp_user workflow_db > backup_workflow_db.sql
+
+# Restore from backup
+cat backup_workflow_db.sql | docker exec -i ewp-postgres psql -U ewp_user -d workflow_db
+```
+
+### 7.2 MongoDB Backup & Restore (`template_db` & `audit_db`)
+```powershell
+# Create backup archive
+docker exec -t ewp-mongodb mongodump -u admin -p mongo_secret_pass_2026 --authenticationDatabase admin --archive=/data/db_backup.archive
+
+# Copy archive to host
+docker cp ewp-mongodb:/data/db_backup.archive ./mongo_backup.archive
+
+# Restore archive
+docker exec -i ewp-mongodb mongorestore -u admin -p mongo_secret_pass_2026 --authenticationDatabase admin --archive=/data/db_backup.archive --drop
+```
+
+---
+
+## 8. Troubleshooting Guide
+
+| Symptom | Probable Cause | Corrective Action |
+|---|---|---|
+| **No services appear in Jaeger UI** | OpenTelemetry base endpoint misconfigured or missing starter. | Verify `spring-boot-starter-opentelemetry` is in POMs and `OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318` in `docker-compose.full.yml`. |
+| **HTTP 409 Conflict on Step Approval** | Optimistic lock collision (concurrent update) or editing a published template. | In UI, refresh task details to obtain the latest `@Version` and retry. Published templates cannot be modified directly; branch a new draft version. |
+| **Kafka Connection Refused in Local Mode** | Microservice attempting to connect to internal container listener `kafka:29092`. | In local dev mode, set `SPRING_KAFKA_BOOTSTRAP_SERVERS: localhost:9092`. |
+| **Spotless Check Fails in CI** | Unformatted Java code committed. | Run `mvn spotless:apply` from `backend/` directory, commit changes, and push. |
+| **CORS Error on Micro-Frontend Fetch** | Request origin not matched in Gateway `allowedOriginPatterns`. | Ensure caller origin is listed under `spring.cloud.gateway.server.webflux.globalcors` in `api-gateway/src/main/resources/application.yml`. |
+| **401 Unauthorized Redirect to Login** | Session expired due to 60-minute idle inactivity or 8-hour max lifespan cutoff. | Re-authenticate via Keycloak SSO or select a developer persona on the login screen. |

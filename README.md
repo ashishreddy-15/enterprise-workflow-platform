@@ -1,249 +1,214 @@
-# Enterprise Workflow Platform
+# Enterprise Event-Driven Workflow Platform
 
-An event-driven microservices platform built with **Java 21**, **Spring Boot**, **Apache Kafka**, and **Angular 22 Federated Micro-Frontends** designed to manage multi-stage, data-driven enterprise approval workflows (e.g. vendor onboarding, procurement, capital expenditure approvals) with transactional integrity, fault-tolerant event streaming, and polyglot persistence.
+[![Java 21](https://img.shields.io/badge/Java-21%20Virtual%20Threads-blue?logo=openjdk&logoColor=white)](https://openjdk.org/projects/loom/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-green?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Apache Kafka](https://img.shields.io/badge/Apache%20Kafka-3.8%20KRaft-red?logo=apachekafka&logoColor=white)](https://kafka.apache.org/)
+[![Angular](https://img.shields.io/badge/Angular-22%20Zoneless%20MFE-dd0031?logo=angular&logoColor=white)](https://angular.dev/)
+[![Keycloak](https://img.shields.io/badge/Keycloak-26.1%20OIDC-blue?logo=keycloak&logoColor=white)](https://www.keycloak.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20ACID-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-7.0%20CQRS-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-Jaeger%20Tracing-4B5563?logo=opentelemetry&logoColor=white)](https://opentelemetry.io/)
+[![CI/CD](https://img.shields.io/badge/GitHub%20Actions-DevSecOps%20CI%2FCD-black?logo=githubactions&logoColor=white)](https://github.com/ashishreddy-15/enterprise-workflow-platform/actions)
 
-Workflows are **fully data-driven** — state graphs, required roles, payload requirements, and transition rules are defined in versioned MongoDB templates, allowing new business processes to be modeled without application code changes.
+An enterprise-grade, event-driven microservices platform designed for high-concurrency business process automation, multi-tier approvals, dynamic form authoring, and immutable audit trails.
+
+The platform is **100% data-driven** — state machines, required roles, dynamic form payload schemas, and transition paths are authored as versioned MongoDB templates, enabling new business workflows to be launched without writing or deploying new code.
 
 ---
 
-## 📚 Platform Documentation
+## 📚 Master Documentation Hub
 
-* [**Architecture Deep Dive (`docs/ARCHITECTURE.md`)**](file:///d:/ashish/enterprise-workflow-platform/docs/ARCHITECTURE.md): Complete high/low level architecture, MFE Native Federation, Outbox pattern, and polyglot persistence.
-* [**Interactive API Reference (`docs/API_REFERENCE.md`)**](file:///d:/ashish/enterprise-workflow-platform/docs/API_REFERENCE.md): Interactive Scalar API console (`http://localhost:8080/scalar`), Swagger endpoints, and complete REST catalog.
-* [**Security & Authentication Guide (`docs/SECURITY_GUIDE.md`)**](file:///d:/ashish/enterprise-workflow-platform/docs/SECURITY_GUIDE.md): BFF architecture, HttpOnly cookies, RBAC persona matrix, and Keycloak/OIDC migration blueprint.
-* [**Operations & Runbook (`docs/OPERATIONS_RUNBOOK.md`)**](file:///d:/ashish/enterprise-workflow-platform/docs/OPERATIONS_RUNBOOK.md): Unified Docker Compose, hybrid local dev mode, port matrix, and troubleshooting.
-* [**Master Handbook (`docs/PROJECT_HANDBOOK.md`)**](file:///d:/ashish/enterprise-workflow-platform/docs/PROJECT_HANDBOOK.md): Architectural Decision Records (ADR-001 through ADR-010) and interview flashcards.
+| Document | Primary Focus | Key Contents |
+| :--- | :--- | :--- |
+| [**Architecture Deep Dive (`docs/ARCHITECTURE.md`)**](file:///d:/ashish/enterprise-workflow-platform/docs/ARCHITECTURE.md) | System Design & Topology | C4 container model, Native Federation MFEs, Polyglot storage, Transactional Outbox, Kafka multi-topic retry, and Distributed Tracing. |
+| [**REST API Reference (`docs/API_REFERENCE.md`)**](file:///d:/ashish/enterprise-workflow-platform/docs/API_REFERENCE.md) | Endpoint Specifications | Interactive Scalar explorer (`:8080/scalar`), Swagger endpoints, RFC 7807 problem details, request/response JSON schemas, and cURL commands. |
+| [**Security & Identity Guide (`docs/SECURITY_GUIDE.md`)**](file:///d:/ashish/enterprise-workflow-platform/docs/SECURITY_GUIDE.md) | Zero-Trust & Identity | BFF pattern, HttpOnly SameSite cookie sessions, Sliding Session window, Keycloak 26 OIDC, Microsoft Entra ID (Azure AD), and RBAC personas. |
+| [**Operations & Runbook (`docs/OPERATIONS_RUNBOOK.md`)**](file:///d:/ashish/enterprise-workflow-platform/docs/OPERATIONS_RUNBOOK.md) | Deployment & Ops | Single-command Docker Compose, hybrid local dev mode, port allocation matrix, Prometheus scraping, Grafana dashboards, Jaeger walkthrough, and disaster recovery. |
+| [**Master Project Handbook (`docs/PROJECT_HANDBOOK.md`)**](file:///d:/ashish/enterprise-workflow-platform/docs/PROJECT_HANDBOOK.md) | Architectural Decisions | Elevator pitch, Stage Tracker (1–8), Architectural Decision Records (ADR-001 through ADR-014), and interview Q&A flashcards. |
+| [**Implementation Roadmap (`docs/TODO.md`)**](file:///d:/ashish/enterprise-workflow-platform/docs/TODO.md) | Milestone Tracker | Comprehensive historical checklist of completed phases and upcoming roadmap (Testcontainers, SLA auto-escalation, Kubernetes manifests). |
 
 ---
 
 ## 🌟 Interactive API Console (Scalar)
 
-Test all microservice endpoints interactively in the browser with live request execution and auto-generated code snippets in 15+ languages:
+Test and explore all platform APIs interactively in your browser with automatic schema validation, live execution, and code generators in 15+ languages:
 
-👉 **`http://localhost:8080/scalar`** (or **`http://localhost/scalar`** via Nginx)
+👉 **URL**: **`http://localhost:8080/scalar`** (or **`http://localhost/scalar`** via Nginx)
 
 ---
 
-## Architecture Overview
+## 🏗️ High-Level System Architecture
 
-```text
-                               ┌─────────────────────────┐
-                               │     Client / Gateway    │
-                               └────────────┬────────────┘
-                                            │
-               ┌────────────────────────────┼────────────────────────────┐
-               │ REST (:8083)               │ REST (:8081)               │ REST (:8082)
-               ▼                            ▼                            ▼
-    ┌──────────────────────┐     ┌──────────────────────┐     ┌────────────────────────┐
-    │   template-service   │◄────┤   workflow-service   │     │ audit-analytics-service│
-    └──────────┬───────────┘HTTP └──────────┬───────────┘     └───────────▲────────────┘
-               │ (Blueprints)               │ (Core Engine)               │
-               │                            │                             │ Kafka Consumer
-               ▼                            ▼                             │ (workflow-events)
-        ┌─────────────┐            ┌──────────────────┐                   │
-        │   MongoDB   │            │    PostgreSQL    │                   │
-        │(template_db)│            │  (workflow_db)   │                   │
-        └─────────────┘            └────────┬─────────┘                   │
-                                            │                             │
-                                            ▼ (Outbox Poller every 2s)    │
-                                   ┌──────────────────┐                   │
-                                   │   Apache Kafka   ├───────────────────┘
-                                   │  (KRaft Mode)    │
-                                   └──────────────────┘
+```mermaid
+flowchart TD
+    subgraph Client ["Client Layer (Angular 22 Zoneless Micro-Frontends)"]
+        Shell["Host Shell (:4200 / :80)<br/>Persona Switcher & Navigation"]
+        WF_MFE["Workflow MFE (:4201)<br/>Task Inbox & Dynamic Stepper"]
+        TMPL_MFE["Template MFE (:4203)<br/>Visual 2D DAG Designer"]
+        AUD_MFE["Analytics MFE (:4202)<br/>SLA Monitor & Audit Ledger"]
+    end
+
+    subgraph Edge ["Edge & Security Boundary"]
+        Nginx["Nginx Reverse Proxy (:80)<br/>Unified Single-Port Ingress"]
+        Gateway["Spring Cloud Gateway (:8080)<br/>Reactive WebFlux BFF, CORS & Anti-Spoofing"]
+        Keycloak["Keycloak 26.1 OIDC (:8085)<br/>Custom zinc-900 'ewp' Theme"]
+        EntraID["Microsoft Entra ID (Azure AD)<br/>Enterprise SSO Provider"]
+    end
+
+    subgraph Microservices ["Backend Microservices (Java 21 Virtual Threads)"]
+        TmplSvc["Template Service (:8083)<br/>Spring Data MongoDB"]
+        WfSvc["Workflow Engine (:8081)<br/>Spring Data JPA + Outbox Poller"]
+        AuditSvc["Audit & Analytics (:8082)<br/>Idempotent Kafka Consumer + CQRS"]
+    end
+
+    subgraph Messaging ["Distributed Event Broker"]
+        Kafka["Apache Kafka 3.8 (KRaft Mode)<br/>Topics: workflow-events, -retry-1000, -retry-2000, -dlt"]
+    end
+
+    subgraph Storage ["Polyglot Persistence Layer"]
+        PG[("PostgreSQL 16 (:5432)<br/>workflow_db (ACID State & Outbox)")]
+        Mongo[("MongoDB 7.0 (:27017)<br/>template_db & audit_db")]
+        Redis[("Redis 7.2 (:6379)<br/>Distributed Cache & Rate Limiting")]
+    end
+
+    subgraph Observability ["Full-Stack Observability"]
+        Prometheus["Prometheus 2.51 (:9090)<br/>5s Scrape Interval"]
+        Grafana["Grafana 10.4.1 (:3000)<br/>Pre-Provisioned Dashboards"]
+        Jaeger["Jaeger All-in-One 1.56 (:16686 / :4318)<br/>OTLP Distributed Tracing"]
+    end
+
+    Shell --> Nginx
+    WF_MFE --> Nginx
+    TMPL_MFE --> Nginx
+    AUD_MFE --> Nginx
+
+    Nginx --> Gateway
+    Gateway -->|OAuth2 / OIDC| Keycloak
+    Keycloak -.->|Federation| EntraID
+
+    Gateway -->|/templates/**| TmplSvc
+    Gateway -->|/workflows/**| WfSvc
+    Gateway -->|/analytics/**| AuditSvc
+    Gateway --> Redis
+
+    WfSvc --> PG
+    WfSvc -->|Sync Snapshot| TmplSvc
+    TmplSvc --> Mongo
+    AuditSvc --> Mongo
+
+    WfSvc -->|Transactional Outbox Poller| Kafka
+    Kafka -->|Non-blocking Retry / DLT| AuditSvc
+
+    Gateway -.->|OTLP Spans| Jaeger
+    WfSvc -.->|OTLP Spans| Jaeger
+    TmplSvc -.->|OTLP Spans| Jaeger
+    AuditSvc -.->|OTLP Spans| Jaeger
+
+    Prometheus -.->|Scrape /prometheus| Gateway
+    Prometheus -.->|Scrape /prometheus| WfSvc
+    Prometheus -.->|Scrape /prometheus| TmplSvc
+    Prometheus -.->|Scrape /prometheus| AuditSvc
+
+    Grafana --> Prometheus
+    Grafana --> Jaeger
 ```
 
 ---
 
-## Core Distributed Systems & Design Patterns
+## ⚡ Core Distributed Systems Patterns
 
-* **Transactional Outbox Pattern:** Eliminates the dual-write problem between PostgreSQL and Apache Kafka. Workflow state transitions and `outbox_events` are committed within a single local ACID transaction. A background scheduler polls pending events using `SELECT ... FOR UPDATE SKIP LOCKED` and a partial index (`WHERE status = 'PENDING'`).
-* **Data-Driven Dynamic State Machine:** Workflows are orchestrated based on template graphs defined in MongoDB rather than hardcoded logic. Each step configures actor scope (`REQUESTER`, `ROLE`, or `ANY`), permitted actions, and target states.
-* **Frozen Template Snapshots:** When an instance is created, a complete JSONB snapshot of the template definition is frozen on the workflow instance (`template_snapshot`). Publishing a new template version never breaks in-flight workflows.
-* **Segregation of Duties (SoD) & RBAC:** Enforced in transition logic. A user who initiated a workflow cannot action `ROLE`-scoped approval tasks on their own workflow, preventing unauthorized self-approvals.
-* **Optimistic Locking:** Managed via JPA `@Version` on `workflow_instances`. Prevents lost updates under concurrent transitions; concurrent conflicts throw `OptimisticLockException` and return an HTTP `409 Conflict` ProblemDetail response.
-* **CQRS (Command Query Responsibility Segregation):** Write operations are handled by `workflow-service` with normalized PostgreSQL storage; read analytics and audit trails are projected into MongoDB by `audit-analytics-service` as pre-aggregated documents (`workflow_analytics_views`).
-* **Idempotent Consumer:** Kafka consumer verifies `eventId` in MongoDB before processing. Duplicate deliveries under at-least-once semantics are discarded safely.
-* **Non-Blocking Retry & Dead-Letter Topic (DLT):** Configured via Spring Kafka `@RetryableTopic` with exponential backoff (1s -> 2s -> 4s). Unrecoverable messages land on `workflow-events-dlt` and trigger alerting via `@DltHandler`.
-* **Java 21 Virtual Threads:** Enabled across all services (`spring.threads.virtual.enabled=true`) for high concurrent I/O throughput.
-
----
-
-## Project Structure & Modules
-
-The repository is structured as a multi-module Maven project:
-
-```text
-enterprise-workflow-platform/
-├── backend/
-│   ├── pom.xml                        # Root parent POM (Spring Boot 4.1.1, Spotless, Java 21)
-│   ├── common-contracts/              # Shared records: events & cross-service DTOs
-│   ├── api-gateway/                   # Port 8080: Edge reverse proxy, JWT/BFF auth & unified Scalar UI
-│   ├── template-service/              # Port 8083: Workflow blueprint authoring & versioning (MongoDB)
-│   ├── workflow-service/              # Port 8081: Core workflow state machine & Outbox (PostgreSQL)
-│   └── audit-analytics-service/       # Port 8082: Kafka event consumer & CQRS read views (MongoDB)
-├── frontend/
-│   ├── projects/shared-theme/         # Single source of truth: ewp-theme.css & Tailwind @theme
-│   ├── projects/shell/                # Port 4200: Host container & persona switcher
-│   ├── projects/workflow-mfe/         # Port 4201: Task Inbox, approvals, stepper
-│   ├── projects/analytics-mfe/        # Port 4202: SLA monitoring & metrics
-│   └── projects/template-mfe/         # Port 4203: Visual workflow designer
-└── docker/
-    ├── Dockerfile.frontend            # Multi-stage Node 22 build -> Nginx Alpine runtime
-    ├── Dockerfile.jvm                 # Optimized Java 21 container image
-    ├── docker-compose.infra.yml       # Backing stores: Postgres 16, Mongo 7, Kafka 3.8, Redis 7
-    └── docker-compose.full.yml        # Full-stack orchestrator (Infra + Services + Frontend)
-```
-
-| Module / Service | Port | Technology / Storage | Responsibility |
-|---|---|---|---|
-| [`api-gateway`](file:///d:/ashish/enterprise-workflow-platform/backend/api-gateway) | 8080 | Spring Cloud Gateway WebFlux | Edge reverse proxy, CORS preflight, HttpOnly cookie auth, and unified Scalar API console (`/scalar`). |
-| [`template-service`](file:///d:/ashish/enterprise-workflow-platform/backend/template-service) | 8083 | MongoDB (`template_db`) | Template creation, versioning (`DRAFT` → `PUBLISHED`), and step definitions. |
-| [`workflow-service`](file:///d:/ashish/enterprise-workflow-platform/backend/workflow-service) | 8081 | PostgreSQL (`workflow_db`) | Instance creation, transitions, RBAC & SoD enforcement, task inbox, transactional outbox scheduler. |
-| [`audit-analytics-service`](file:///d:/ashish/enterprise-workflow-platform/backend/audit-analytics-service) | 8082 | MongoDB (`audit_db`) | Consumes `workflow-events`, writes immutable audit logs, maintains pre-joined CQRS analytics views. |
-| **Shell Application** | 4200 / 80 | Angular 22 Native Federation | Host container, lazy routing, persona switcher, error boundaries (`MfeFallbackComponent`). |
-| **Workflow MFE** | 4201 | Angular 22 Remote | Human task inbox, step execution, approval/rejection, SLA badges. |
-| **Template MFE** | 4203 | Angular 22 Remote | Visual workflow blueprint studio, step DAG designer, JSON preview. |
-| **Analytics MFE** | 4202 | Angular 22 Remote | Live SLA compliance metrics, throughput graphs, chronological audit trail. |
+1. **Transactional Outbox Pattern**: Eliminates the distributed dual-write hazard between PostgreSQL and Apache Kafka. Workflow state updates and `outbox_events` are committed within a single local ACID transaction. A background poller relays pending events using `SELECT ... FOR UPDATE SKIP LOCKED` and a partial index (`WHERE status = 'PENDING'`).
+2. **Polyglot Persistence**: Isolates transactional state (`PostgreSQL 16`) from flexible dynamic JSON schemas and high-throughput append-only audit logs (`MongoDB 7.0`) and sub-millisecond session caching (`Redis 7.2`).
+3. **Data-Driven Dynamic State Machine**: Workflows are orchestrated based on template graphs defined in MongoDB rather than hardcoded logic. Steps configure actor scopes (`REQUESTER`, `ROLE`, `ANY`), required form keys, SLA hours, and transition targets.
+4. **Frozen Template Snapshots**: When a workflow instance is initiated, a complete JSONB snapshot of the active template definition is frozen on the instance (`template_snapshot`). Publishing a new template version never breaks in-flight workflows.
+5. **Optimistic Locking (`@Version`)**: JPA optimistic locking on `workflow_instances` prevents lost updates during concurrent approvals, failing fast with HTTP `409 Conflict`.
+6. **Idempotent Consumer & CQRS**: The Kafka consumer uses `eventId` as MongoDB's primary key (`_id`), safely deduplicating at-least-once message deliveries. Write state in PostgreSQL is projected into MongoDB read models (`workflow_analytics_views`).
+7. **Non-Blocking Multi-Topic Retries**: Failed Kafka messages route to `-retry-1000` (1s delay), then `-retry-2000` (2s delay), and finally to Dead-Letter Topic `workflow-events-dlt` without blocking partition throughput.
+8. **BFF Security & Sliding Session Window**: Eliminates `localStorage` token theft by issuing signed HMAC-SHA256 JWTs in an `HttpOnly`, `SameSite=Lax` cookie (`ewp_access_token`) with a 60-minute idle inactivity timeout and an 8-hour absolute maximum lifespan.
+9. **Native Federation Micro-Frontends**: Native browser ES module federation powered by Angular 22 Zoneless change detection (`provideZonelessChangeDetection()`), signals, and unified `ewp-theme.css` design tokens.
+10. **Distributed Tracing (W3C TraceContext)**: OpenTelemetry SDK propagates standard `traceparent` headers across WebFlux reactive gateway calls, downstream Spring MVC endpoints, and Kafka message headers, rendering waterfall traces in Jaeger.
 
 ---
 
-## Database Schemas & Collections
-
-### PostgreSQL (`workflow_db`)
-
-Managed via **Flyway migrations** (`backend/workflow-service/src/main/resources/db/migration/`):
-
-* **`workflow_instances`**: Stores running workflows with optimistic locking (`version`), state (`current_state`), requester metadata, frozen blueprint (`template_snapshot` JSONB), and contextual form payload (`context_data` JSONB).
-* **`workflow_tasks`**: Actionable tasks spawned for human actors with `step_name`, `task_type`, `assigned_role`, `completed_by`, `status`, and remarks.
-* **`outbox_events`**: Atomic staging buffer for Kafka messages. Indexed with `status = 'PENDING'` for fast polling; tracks retry attempts and quarantine status (`FAILED`).
-
-### MongoDB
-
-* **`template_db.workflow_templates`**: Holds workflow templates with compound unique indexing on `{ templateKey: 1, version: 1 }`. Contains full graph of steps, validation rules, and valid transitions.
-* **`audit_db.audit_logs`**: Immutable, append-only chronological log of every transition keyed by `eventId`.
-* **`audit_db.workflow_analytics_views`**: Denormalized CQRS read-model containing current state, total transition counts, and complete chronological transition history.
-
----
-
-## API Reference
-
-### 1. Template Service (`:8083`)
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/v1/templates` | Create a draft workflow template (auto-increments version) |
-| `PUT` | `/api/v1/templates/{key}/versions/{version}/publish` | Publish a template version |
-| `GET` | `/api/v1/templates/{key}` | Fetch latest published blueprint |
-| `GET` | `/api/v1/templates/{key}/versions` | List all versions of a template |
-
-### 2. Workflow Service (`:8081`)
-
-*All requests require authentication headers: `X-User-Id` and `X-User-Roles` (comma-separated).*
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/v1/workflows` | Start a new workflow instance from a template key |
-| `POST` | `/api/v1/workflows/{id}/transition` | Trigger a state transition (`action`, `comments`, `payload`) |
-| `GET` | `/api/v1/workflows` | Search workflows (query params: `state`, `priority`, `requesterId`) |
-| `GET` | `/api/v1/tasks/inbox` | List eligible pending tasks for the calling user (evaluated with SoD) |
-| `POST` | `/api/v1/admin/outbox/replay-failed` | Bulk re-queue quarantined `FAILED` outbox events |
-| `POST` | `/api/v1/admin/outbox/events/{id}/replay` | Re-queue a specific failed event |
-
-### 3. Audit & Analytics Service (`:8082`)
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/v1/analytics/workflows/{workflowId}` | Get pre-joined CQRS analytics view and history |
-| `GET` | `/api/v1/analytics/workflows?state=...` | List pre-joined workflow analytics views by state |
-| `GET` | `/api/v1/analytics/audit-logs/{workflowId}` | Fetch raw immutable audit logs for a workflow |
-
----
-
-## Code Formatting & Style
-
-The codebase enforces **Palantir Java Format** via the **Spotless Maven Plugin**. Formatting checks are automatically executed during `mvn compile`.
-
-```bash
-# Auto-format all Java files across all modules
-mvn spotless:apply
-
-# Verify format compliance without modifying files
-mvn spotless:check
-```
-
----
-
-## Getting Started Locally
+## 🚀 Quick Start (< 5 Minutes)
 
 ### Prerequisites
+- Docker Engine & Docker Compose (`v26.0+`)
+- Copy `.env.example` to `.env`:
+  ```bash
+  cp .env.example .env
+  cp .env.example docker/.env
+  ```
 
-* **Java 21** (Eclipse Adoptium JDK recommended)
-* **Maven 3.9+**
-* **Docker & Docker Compose**
-
-### Option A: Full Containerized Stack (Recommended)
-
-To run the complete platform—databases, Kafka, all backend microservices, and all 4 frontend MFEs with Nginx—in a single command without needing local Java or Node installed:
-
+### Launch the Entire Platform
 ```bash
 docker compose -f docker/docker-compose.full.yml up -d --build
 ```
 
-Access the platform:
-* **Application Portal (Shell)**: `http://localhost:4200` or `http://localhost`
-* **API Gateway**: `http://localhost:8080`
-* **Workflow MFE**: `http://localhost:4201`
-* **Analytics MFE**: `http://localhost:4202`
-* **Template MFE**: `http://localhost:4203`
+### Access Points
+| Interface | URL | Default Credentials | Description |
+|---|---|---|---|
+| **Platform Web UI** | `http://localhost:4200` or `http://localhost` | Select persona or SSO | Full Angular Shell + Micro-Frontends |
+| **Interactive API Console** | `http://localhost:8080/scalar` | Public / Session Cookie | Scalar OpenAPI 3.1 Explorer |
+| **Grafana Monitoring** | `http://localhost:3000` | `admin` / `admin` | Throughput, Latency, and JVM Virtual Threads |
+| **Jaeger Distributed Tracing** | `http://localhost:16686` | Open Access | Waterfall trace visualizer |
+| **Prometheus Targets** | `http://localhost:9090/targets` | Open Access | Time-series scraper metrics |
+| **Keycloak IAM Console** | `http://localhost:8085` | `admin` / `admin` | OIDC Realm & User Management |
 
 ---
 
-### Option B: Local Development Mode
+## 👥 Enterprise Personas & Demo Accounts
 
-#### 1. Start Infrastructure Services
+| Persona | User ID | Pre-Configured Roles | Authority & Scope |
+|---|---|---|---|
+| **System Administrator** | `admin.sys` | `ROLE_ADMIN`, `ROLE_MANAGER`, `ROLE_EMPLOYEE` | Blueprint Studio authoring, audit inspection, admin outbox replay. |
+| **Legal Counsel** | `meera.legal` / `sarah.manager` | `ROLE_LEGAL_COUNSEL`, `ROLE_APPROVER` | Task Inbox: Review legal documentation, execute contract approval steps. |
+| **Finance Director** | `rahul.finance` / `alex.finance` | `ROLE_FINANCE_DIRECTOR`, `ROLE_APPROVER` | Task Inbox: Review high-value Capex requests, verify budgets, approve procurement. |
+| **Corporate Employee** | `ashish` / `david.employee` | `ROLE_EMPLOYEE`, `ROLE_SUBMITTER` | Initiation: Launch workflow instances, submit dynamic form payloads. |
 
-Launch PostgreSQL, MongoDB, Apache Kafka (KRaft), and Redis:
+---
+
+## 💻 Tech Stack & Tooling
+
+```
+Backend:           Java 21 (Virtual Threads), Spring Boot 4.1.1, Spring Cloud 2025.1.3, Spring Data JPA,
+                   Spring Data MongoDB, Spring Kafka, Spring Cloud Gateway WebFlux, Flyway, Spotless
+Frontend:          Angular 22, Zoneless Change Detection, Signals, @angular-architects/native-federation,
+                   Tailwind CSS v4, Inter & JetBrains Mono Fonts
+Security:          Keycloak 26.1 OIDC, Microsoft Entra ID (Azure AD), BFF Pattern, HttpOnly SameSite Cookies
+Databases:         PostgreSQL 16, MongoDB 7.0, Redis 7.2
+Message Broker:    Apache Kafka 3.8 (KRaft Mode)
+Observability:     Prometheus 2.51, Grafana 10.4.1, OpenTelemetry (OTel), Jaeger All-in-One 1.56
+DevSecOps:         GitHub Actions, Gitleaks Secret Scanner, Aqua Trivy CVE Scanner, GitHub Container Registry (ghcr.io)
+Containerization:  Multi-stage Docker builds, Alpine Linux JRE, Nginx 1.27
+```
+
+---
+
+## 🧪 Local Hybrid Development Mode
+
+Run databases and telemetry in Docker while running Spring Boot microservices and Angular dev servers locally in your IDE:
 
 ```bash
+# 1. Start Backing Infrastructure (Postgres, Mongo, Redis, Kafka, Jaeger)
 docker compose -f docker/docker-compose.infra.yml up -d
-```
 
-Verify containers are healthy:
-
-```bash
-docker ps
-```
-
-### 2. Build the Platform
-
-From the `backend` directory:
-
-```bash
+# 2. Launch Backend Microservices (Separate Terminals)
 cd backend
-mvn clean install -DskipTests
-```
+mvn -pl template-service spring-boot:run        # Port 8083
+mvn -pl workflow-service spring-boot:run        # Port 8081
+mvn -pl audit-analytics-service spring-boot:run # Port 8082
+mvn -pl api-gateway spring-boot:run             # Port 8080
 
-### 3. Run Microservices
-
-Start each service in a separate terminal:
-
-```bash
-# 1. Template Service (:8083)
-mvn -pl template-service spring-boot:run
-
-# 2. Workflow Service (:8081)
-mvn -pl workflow-service spring-boot:run
-
-# 3. Audit & Analytics Service (:8082)
-mvn -pl audit-analytics-service spring-boot:run
+# 3. Launch Frontend MFEs (Separate Terminals from frontend/)
+cd frontend
+npm run start:shell       # Port 4200
+npm run start:workflow    # Port 4201
+npm run start:analytics   # Port 4202
+npm run start:template    # Port 4203
 ```
 
 ---
 
-## Error Handling & Problem Details
-
-All REST APIs conform to **RFC 7807 (Problem Details for HTTP APIs)**:
-* `403 Forbidden` (`SecurityException`): Triggered by missing authentication headers, role mismatches, or Segregation of Duties violations.
-* `409 Conflict` (`OptimisticLockException` / `ObjectOptimisticLockingFailureException`): Triggered when concurrent requests attempt to mutate the same workflow version simultaneously.
-* `400 Bad Request` (`IllegalArgumentException`): Input or payload validation failure.
-* `500 Internal Server Error`: Generic unhandled exceptions.
+## 📄 License
+This project is licensed under the [Apache License 2.0](LICENSE).

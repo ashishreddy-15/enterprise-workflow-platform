@@ -1,66 +1,68 @@
 # Enterprise Event-Driven Workflow & Audit Platform — Master Handbook
 
-## 1. Project Elevator Pitch (For Interviews)
-"I built an enterprise-grade, event-driven workflow and approval engine using Java 21, Spring Boot 3, Apache Kafka, and Angular 22 Native Federation Micro Frontends. It uses PostgreSQL for ACID-compliant multi-tier approvals, MongoDB for schema-less form templates and immutable audit logs, Redis for caching, and the Transactional Outbox Pattern to guarantee zero message loss between PostgreSQL and Kafka."
+## 1. Project Elevator Pitch (For Technical Interviews)
+> "I architected and built an enterprise-grade, event-driven workflow automation platform using Java 21 Virtual Threads, Spring Boot 4, Apache Kafka in KRaft mode, and Angular 22 Zoneless Native Federation Micro-Frontends. It implements polyglot persistence isolating transactional approval states in PostgreSQL from dynamic form schemas and immutable audit logs in MongoDB. To solve the distributed dual-write hazard between PostgreSQL and Kafka, I implemented the Transactional Outbox Pattern with guaranteed zero message loss. The edge layer uses a Spring Cloud Gateway Backend-For-Frontend (BFF) enforcing HttpOnly SameSite sliding session cookies, federated with Keycloak 26 and Microsoft Entra ID (Azure AD) SSO, with full-stack observability powered by Prometheus, Grafana, and OpenTelemetry distributed tracing in Jaeger."
 
 ---
 
 ## 2. Platform Documentation Index
-- [**ARCHITECTURE.md**](file:///d:/ashish/enterprise-workflow-platform/docs/ARCHITECTURE.md): Complete high/low level architecture, MFE Native Federation, Outbox pattern, and polyglot persistence.
-- [**API_REFERENCE.md**](file:///d:/ashish/enterprise-workflow-platform/docs/API_REFERENCE.md): Interactive Scalar console (`/scalar`), Swagger endpoints, and full REST API catalog with RFC 7807 problem details.
-- [**SECURITY_GUIDE.md**](file:///d:/ashish/enterprise-workflow-platform/docs/SECURITY_GUIDE.md): BFF architecture, HttpOnly cookies, RBAC persona matrix, and Keycloak/OIDC migration blueprint.
-- [**OPERATIONS_RUNBOOK.md**](file:///d:/ashish/enterprise-workflow-platform/docs/OPERATIONS_RUNBOOK.md): Unified Docker Compose, hybrid local dev mode, port matrix, and troubleshooting.
+- [**ARCHITECTURE.md**](file:///d:/ashish/enterprise-workflow-platform/docs/ARCHITECTURE.md): C4 container models, Micro-Frontend Native Federation, Outbox pattern, polyglot storage, and distributed tracing.
+- [**API_REFERENCE.md**](file:///d:/ashish/enterprise-workflow-platform/docs/API_REFERENCE.md): Interactive Scalar console (`/scalar`), Swagger endpoints, RFC 7807 problem details, and REST API catalog.
+- [**SECURITY_GUIDE.md**](file:///d:/ashish/enterprise-workflow-platform/docs/SECURITY_GUIDE.md): BFF architecture, HttpOnly cookies, sliding session window, Keycloak 26 OIDC, and Microsoft Entra ID SSO.
+- [**OPERATIONS_RUNBOOK.md**](file:///d:/ashish/enterprise-workflow-platform/docs/OPERATIONS_RUNBOOK.md): Unified Docker Compose, hybrid local dev mode, port matrix, Grafana dashboards, Jaeger tracing walkthrough, and disaster recovery.
+- [**TODO.md**](file:///d:/ashish/enterprise-workflow-platform/docs/TODO.md): Historical milestone tracker and upcoming roadmap (Testcontainers, SLA auto-escalation, Kubernetes manifests).
 
 ---
 
 ## 3. Architecture & Tech Stack Tracker
+
 - [x] **Stage 1: Domain Modeling & Contracts**
-  - PostgreSQL Schema (Workflows, Approvals, Outbox)
-  - MongoDB Collections (Templates, Audit Logs)
-  - Shared Kafka Event Contracts (`common-contracts`)
+  - PostgreSQL Relational Schema (Workflows, Tasks, Outbox)
+  - MongoDB Collections (Templates, Audit Logs, CQRS Views)
+  - Shared Kafka Event Contracts (`common-contracts` immutable Java records)
 - [x] **Stage 2: Local Cloud Infrastructure**
-  - Docker Compose (Postgres, Mongo, Redis, Kafka KRaft)
-  - Multi-Module Maven Parent Setup (Java 21 Virtual Threads)
-  - Multi-stage Frontend Dockerfile with Nginx Multi-Port Reverse Proxy
-- [x] **Stage 3: Core Workflow Service & Outbox**
-  - Flyway Migrations & JPA Specifications Dynamic Search
-  - Optimistic Locking (`@Version`)
-  - Transactional Outbox Publisher to Kafka
+  - Docker Compose (PostgreSQL 16, MongoDB 7.0, Redis 7.2, Kafka 3.8 KRaft mode)
+  - Multi-Module Maven Parent Setup with Java 21 Virtual Threads (`Project Loom`)
+  - Multi-stage Frontend Dockerfile with Nginx Multi-Virtual Host Reverse Proxy
+- [x] **Stage 3: Core Workflow Engine & Outbox**
+  - Flyway Migrations (`V1`–`V6`) with JPA Criteria API dynamic search
+  - Optimistic Locking (`@Version Long version`) with HTTP 409 conflict handling
+  - Transactional Outbox Publisher relaying events to Kafka topic `workflow-events`
 - [x] **Stage 4: Audit Consumer, DLQ & Resilience**
-  - Idempotent Kafka Consumer + Dead-Letter Topic (DLT)
-  - SLA Compliance & Metric Aggregation Endpoints
+  - Idempotent Kafka Consumer using `eventId` as MongoDB `_id`
+  - Non-blocking retry topics (`-retry-1000`, `-retry-2000`) and Dead-Letter Topic (`-dlt`)
+  - Materialized CQRS view aggregation (`WorkflowAnalyticsView`)
 - [x] **Stage 5: Gateway Security & API Documentation**
   - BFF HttpOnly SameSite Cookie Session Management
-  - CORS configuration with `allowedOriginPatterns`
-  - Interactive Scalar API Console & Springdoc OpenAPI 3
+  - CORS configuration with strict `allowedOriginPatterns`
+  - Interactive Scalar API Console (`/scalar`) & Springdoc OpenAPI 3.1 specs
 - [x] **Stage 6: Federated Angular Micro-Frontends**
   - Native Federation Host (Shell) + 3 Remotes (Workflow, Template, Analytics)
-  - Centralized Design System (`ewp-theme.css`) with Tailwind `@theme` tokens
-  - Cross-MFE Persona Synchronization via `AuthBridge` & BroadcastChannel
+  - Angular 22 Zoneless change detection (`provideZonelessChangeDetection()`)
+  - Centralized Design System (`ewp-theme.css`) with Tailwind v4 `@theme` tokens
+  - Cross-MFE Persona Synchronization via `AuthBridge` DOM event bus
 - [x] **Stage 7: CI/CD & DevSecOps Automation**
   - GitHub Actions Path-Filtered Matrix CI (`ci.yml` for Java 21 & Angular MFEs)
   - Gitleaks Secret Scanning & Aqua Trivy Dependency Vulnerability Scanner (`security.yml`)
   - Automated OCI Container Publishing to GitHub Container Registry (`docker-publish.yml` to `ghcr.io`)
 - [x] **Stage 8: Observability, Metrics & Distributed Tracing**
-  - Prometheus scraping (`/actuator/prometheus`) across all microservices
+  - Prometheus fine-grained 5-second scraping (`/actuator/prometheus`) across all services
   - Pre-provisioned Grafana dashboards (`:3000`) for p95 latency, throughput, and JVM Virtual Threads
-  - OpenTelemetry (OTel) + Micrometer Tracing with Jaeger (`:16686`) for distributed trace visualization across Gateway, Kafka, and MongoDB
-
-
+  - OpenTelemetry (OTel) + Micrometer Tracing with Jaeger (`:16686`) for end-to-end distributed waterfall traces across Gateway, HTTP downstream, and Kafka broker
 
 ---
 
-## 4. Architectural Decision Log (Why This Way?)
+## 4. Architectural Decision Log (ADR)
 
 ### ADR-001: Polyglot Persistence (PostgreSQL + MongoDB)
 - **Problem:** Approval states require strict ACID transactions, while dynamic form templates and high-volume audit logs vary in structure and are write-heavy.
 - **Simpler Alternative:** Put everything in PostgreSQL using `JSONB` columns.
-- **Why We Chose This:** Isolates transactional locking (PostgreSQL) from high-volume append-only audit writes and schema-less form definitions (MongoDB).
+- **Why We Chose This:** Isolates transactional locking and referential integrity (PostgreSQL) from high-volume append-only audit writes and schema-less form definitions (MongoDB).
 
 ### ADR-002: Optimistic Locking (`@Version` column)
 - **Problem:** Two managers approving/rejecting the same workflow at the exact same millisecond can overwrite each other's decision.
-- **Simpler Alternative:** Last-write-wins (unsafe) or Pessimistic Locking (`SELECT FOR UPDATE`, which slows down database throughput).
-- **Why We Chose This:** Optimistic locking checks the row `version` at commit time with zero lock overhead, failing fast if another user modified the record.
+- **Simpler Alternative:** Last-write-wins (data loss) or Pessimistic Locking (`SELECT FOR UPDATE`, which creates DB bottlenecks).
+- **Why We Chose This:** Optimistic locking checks the row `version` at commit time with zero lock overhead, failing fast (`HTTP 409 Conflict`) if another user modified the record.
 
 ### ADR-003: Transactional Outbox Pattern
 - **Problem:** Saving to PostgreSQL and publishing to Kafka in the same method causes a "Dual-Write Bug" if Kafka fails right after the DB commit.
@@ -100,12 +102,44 @@
 - **Problem:** Webpack Module Federation requires heavy build tooling and doesn't natively integrate with modern browser ES Modules.
 - **Why We Chose This:** Uses native browser ES module imports via `@angular-architects/native-federation` and `importmap`, cutting build time and eliminating Webpack runtime overhead.
 
+### ADR-011: Enterprise Keycloak 26 OIDC & Microsoft Entra ID SSO
+- **Problem:** Managing passwords and custom credential databases creates immense security and compliance risk.
+- **Simpler Alternative:** Hardcoded database username/password table.
+- **Why We Chose This:** Integrated Keycloak 26 as the standard OIDC identity broker with a custom branded theme, federated with Microsoft Entra ID (Azure AD), establishing enterprise identity governance.
+
+### ADR-012: Dual-Timeout Sliding Window Session Management
+- **Problem:** Fixed token expiration forcibly disconnects active users in the middle of long approval workflows, while static non-expiring tokens leave inactive workstations vulnerable.
+- **Simpler Alternative:** Static 8-hour access token.
+- **Why We Chose This:** Implemented a 60-minute idle inactivity timeout paired with an 8-hour absolute maximum lifespan ceiling. If a user is active within $\le 15$ minutes of the idle window, the session slides forward automatically.
+
+### ADR-013: DevSecOps Shift-Left Security Scanning
+- **Problem:** Vulnerabilities and leaked credentials are often caught only after production deployment or security audits.
+- **Simpler Alternative:** Manual quarterly penetration testing.
+- **Why We Chose This:** Integrated automated Gitleaks secret scanning and Aqua Trivy CVE scanning directly into GitHub Actions, blocking pull requests with leaked secrets or critical vulnerabilities.
+
+### ADR-014: OpenTelemetry Distributed Tracing & W3C TraceContext
+- **Problem:** Tracking an asynchronous workflow action through the Gateway, database, outbox poller, Kafka topic, and audit consumer is impossible with standard log aggregation.
+- **Simpler Alternative:** Logging timestamp strings across microservices.
+- **Why We Chose This:** Implemented OpenTelemetry with W3C `traceparent` context propagation across WebFlux HTTP calls and Kafka record headers, rendering end-to-end waterfall request spans in Jaeger.
+
 ---
 
-## 5. Revision Flashcards (Q&A for Interviews)
-1. **Q: What happens in your project if Kafka crashes right when a manager clicks Approve?**
-   - *A:* The approval still succeeds! The event is saved safely in the PostgreSQL `outbox_events` table as `PENDING`. Once Kafka comes back online, the scheduler automatically publishes it.
-2. **Q: What happens if the same Kafka message is consumed twice by the Audit Service?**
-   - *A:* Nothing breaks. The consumer is idempotent because it uses the Kafka event's `eventId` as the primary key in MongoDB.
-3. **Q: How are authentication tokens protected against XSS in your Angular frontend?**
-   - *A:* The frontend never handles raw token storage in `localStorage`. The API Gateway sets an `HttpOnly`, `SameSite=Lax` cookie, which the browser attaches automatically to API calls without exposing token bytes to JavaScript.
+## 5. Revision Flashcards (Q&A for Technical Interviews)
+
+1. **Q: What happens in your platform if Kafka crashes right when a manager clicks Approve?**
+   - *A:* The approval succeeds without data loss! The state transition and outbox record are saved atomically in the same PostgreSQL ACID transaction. The event remains in `outbox_events` with status `PENDING`. Once Kafka recovers, the background poller automatically publishes it.
+
+2. **Q: How does the platform prevent duplicate messages if Kafka delivers an event twice?**
+   - *A:* The `audit-analytics-service` implements the Idempotent Consumer pattern. The event's unique UUID (`eventId`) is stored as the MongoDB document `_id`. Before processing, it checks if `existsById(eventId)` is true; if so, it acknowledges the message and discards the duplicate without updating analytics.
+
+3. **Q: How are authentication tokens protected against XSS and token exfiltration?**
+   - *A:* The platform implements the BFF pattern. Tokens are stored in an `HttpOnly`, `SameSite=Lax` cookie (`ewp_access_token`). JavaScript in the Angular frontend cannot read or access the cookie bytes. The browser attaches the cookie automatically to all same-site requests.
+
+4. **Q: How do you prevent identity header spoofing on downstream microservices?**
+   - *A:* The API Gateway includes an `AuthenticationHeaderFilter` that explicitly strips client-supplied `X-User-Id` and `X-User-Roles` headers from incoming requests. It then cryptographically extracts verified claims from the validated JWT and injects sanitized headers downstream.
+
+5. **Q: Why did you choose Angular Native Federation over traditional Webpack Module Federation?**
+   - *A:* Native Federation runs on native browser ES Modules and `importmap` via Vite and esbuild. It removes Webpack build tooling overhead, provides faster compilation, and operates with modern Angular 22 Zoneless change detection.
+
+6. **Q: How does distributed tracing work across an asynchronous Kafka boundary?**
+   - *A:* When the outbox poller publishes an event, Spring Kafka injects the current W3C `traceparent` into the Kafka record headers. When `audit-analytics-service` consumes the message, it extracts the header and resumes the span, producing a single unified waterfall trace in Jaeger spanning HTTP and Kafka.

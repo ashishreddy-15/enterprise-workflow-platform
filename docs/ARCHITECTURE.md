@@ -1,127 +1,351 @@
 # Architecture Guide — Enterprise Event-Driven Workflow Platform
 
-## 1. High-Level System Architecture
+## 1. Executive Architecture Summary
 
-The platform is designed around the **Polyglot Microservices** and **Federated Micro-Frontends (MFE)** patterns, leveraging event-driven state transitions, distributed outbox patterns, and isolated domain storage.
+The **Enterprise Event-Driven Workflow Platform (EWP)** is a cloud-native, distributed microservices system designed for high-concurrency business process automation, multi-tier approvals, dynamic form authoring, and immutable audit trails.
+
+The platform is built on modern industry standards:
+- **Runtime**: **Java 21 (Virtual Threads / Project Loom)** for high-throughput, non-blocking I/O.
+- **Framework**: **Spring Boot 4.1.1** & **Spring Cloud 2025.1.3**.
+- **Frontend**: **Angular 22** running **Zoneless change detection** with **Native Federation** Micro-Frontends.
+- **Identity & Access**: **Keycloak 26.1 OIDC** federated with **Microsoft Entra ID (Azure AD)** and **Backend-For-Frontend (BFF)** `HttpOnly` cookie sessions.
+- **Messaging**: **Apache Kafka 3.8 in KRaft mode** (no Zookeeper) with transactional outbox publishing and non-blocking multi-topic retries.
+- **Persistence**: **Polyglot storage** (PostgreSQL 16 for ACID state, MongoDB 7.0 for flexible schemas and audit logs, Redis 7.2 for distributed caching).
+- **Observability**: **Prometheus 2.51**, **Grafana 10.4.1**, and **OpenTelemetry (OTel)** distributed tracing with **Jaeger 1.56**.
+
+---
+
+## 2. High-Level System Architecture (C4 Container Diagram)
 
 ```mermaid
 flowchart TD
-    subgraph Client["Browser Client (Single Origin / Multi-MFE)"]
-        Shell["Angular Shell (:4200 / :80)<br/>Host Container & Navigation"]
-        WF_MFE["Workflow MFE (:4201)<br/>Task Inbox & Stepper"]
-        TMPL_MFE["Template MFE (:4203)<br/>Visual Workflow Designer"]
-        AUD_MFE["Analytics MFE (:4202)<br/>SLA Dashboard & Audit"]
+    subgraph ClientLayer ["Client & Edge Ingress Layer"]
+        Browser["Enterprise Browser<br/>(Desktop / Mobile)"]
+        Nginx["Nginx Reverse Proxy (:80 / :4200-:4203)<br/>Multi-Virtual Host MFE Container"]
     end
 
-    subgraph Edge["Edge & Reverse Proxy"]
-        Nginx["Nginx Reverse Proxy (:80)<br/>Multi-Port MFE Host"]
-        Gateway["Spring Cloud Gateway (:8080)<br/>WebFlux, CORS, JWT Auth & Scalar UI"]
+    subgraph SecurityBoundary ["Identity & Security Boundary"]
+        Keycloak["Keycloak 26.1 OIDC IdP (:8085)<br/>Custom zinc-900 'ewp' Theme"]
+        EntraID["Microsoft Entra ID (Azure AD)<br/>Cloud Identity Provider"]
     end
 
-    subgraph Services["Core Application Microservices"]
-        TmplSvc["Template Service (:8083)<br/>Spring Boot Web MVC"]
-        WfSvc["Workflow Engine (:8081)<br/>Spring Boot Data JPA"]
-        AuditSvc["Audit Analytics (:8082)<br/>Spring Boot Kafka Consumer"]
+    subgraph GatewayLayer ["API Gateway & BFF (:8080)"]
+        Gateway["Spring Cloud Gateway (WebFlux / Netty)<br/>BFF Cookie Management & Anti-Spoofing"]
+        Scalar["Scalar API Explorer (:8080/scalar)<br/>Interactive OpenAPI 3.1 Aggregator"]
     end
 
-    subgraph Messaging["Distributed Event Bus"]
-        Kafka["Apache Kafka 3.8 (KRaft)<br/>Topic: workflow.transitions.v1"]
+    subgraph CoreServices ["Core Application Microservices (Java 21 Virtual Threads)"]
+        TemplateSvc["Template Service (:8083)<br/>Spring Data MongoDB"]
+        WorkflowSvc["Workflow Engine (:8081)<br/>Spring Data JPA + Outbox Poller"]
+        AuditSvc["Audit & Analytics (:8082)<br/>Idempotent Kafka Consumer + CQRS"]
     end
 
-    subgraph Storage["Polyglot Persistence Layer"]
-        PG[("PostgreSQL 16<br/>workflow_db (ACID State)")]
-        Mongo[("MongoDB 7.0<br/>template_db & audit_db")]
-        Redis[("Redis 7.2<br/>Distributed Cache")]
+    subgraph Messaging ["Distributed Event Bus"]
+        Kafka["Apache Kafka 3.8 (KRaft)<br/>Topics: workflow-events, -retry-1000, -retry-2000, -dlt"]
     end
 
-    Shell --> Nginx
-    WF_MFE --> Nginx
-    TMPL_MFE --> Nginx
-    AUD_MFE --> Nginx
+    subgraph Storage ["Polyglot Persistence Layer"]
+        PG[("PostgreSQL 16 (:5432)<br/>workflow_db (ACID State & Outbox)")]
+        Mongo[("MongoDB 7.0 (:27017)<br/>template_db & audit_db")]
+        Redis[("Redis 7.2 (:6379)<br/>Distributed Session Cache & Rate Limiting")]
+    end
 
-    Nginx --> Gateway
-    Shell --> Gateway
+    subgraph Observability ["Observability & Telemetry"]
+        Prometheus["Prometheus 2.51 (:9090)<br/>5s Scrape Interval"]
+        Grafana["Grafana 10.4.1 (:3000)<br/>Pre-Provisioned Dashboards"]
+        Jaeger["Jaeger All-in-One 1.56 (:16686 / :4318)<br/>OTLP Distributed Tracing"]
+    end
 
-    Gateway -->|/templates/**| TmplSvc
-    Gateway -->|/workflows/**| WfSvc
+    Browser -->|HTTP / REST| Nginx
+    Nginx -->|Route API Requests| Gateway
+    Gateway -->|OAuth2 / OIDC Code Flow| Keycloak
+    Keycloak -.->|OIDC Federation| EntraID
+
+    Gateway -->|/templates/**| TemplateSvc
+    Gateway -->|/workflows/**| WorkflowSvc
     Gateway -->|/analytics/**| AuditSvc
+    Gateway --> Redis
 
-    TmplSvc --> Mongo
-    WfSvc --> PG
-    WfSvc --> Redis
-    WfSvc -->|Publish Outbox| Kafka
-    Kafka -->|Idempotent Consume| AuditSvc
+    WorkflowSvc --> PG
+    WorkflowSvc -->|Sync RestClient Snapshot| TemplateSvc
+    TemplateSvc --> Mongo
     AuditSvc --> Mongo
+
+    WorkflowSvc -->|Transactional Outbox Poller| Kafka
+    Kafka -->|Non-blocking Consumer| AuditSvc
+
+    Gateway -.->|OTLP Spans :4318| Jaeger
+    WorkflowSvc -.->|OTLP Spans :4318| Jaeger
+    TemplateSvc -.->|OTLP Spans :4318| Jaeger
+    AuditSvc -.->|OTLP Spans :4318| Jaeger
+
+    Prometheus -.->|Scrape /actuator/prometheus| Gateway
+    Prometheus -.->|Scrape /actuator/prometheus| WorkflowSvc
+    Prometheus -.->|Scrape /actuator/prometheus| TemplateSvc
+    Prometheus -.->|Scrape /actuator/prometheus| AuditSvc
+
+    Grafana --> Prometheus
+    Grafana --> Jaeger
 ```
 
 ---
 
-## 2. Micro-Frontend Architecture (Native Federation)
+## 3. Micro-Frontend Architecture (Native Federation)
 
-The frontend is divided into independent micro-frontends orchestrated using **Native Federation** without Webpack or Module Federation runtime overhead:
+The client is divided into independent Micro-Frontends (MFEs) running **Angular 22** with **Native Federation** (`@angular-architects/native-federation`), avoiding Webpack and Module Federation runtime bloat by leveraging native browser ES Modules and `importmap`.
 
 ```
 frontend/
 ├── projects/
 │   ├── shared-theme/         ← Single Source of Truth: ewp-theme.css & Tailwind @theme tokens
-│   ├── shell/                ← Host container (Port 4200 / 80)
-│   ├── workflow-mfe/         ← Remote: Task Inbox, approvals, stepper (Port 4201)
-│   ├── analytics-mfe/        ← Remote: SLA monitoring & metrics (Port 4202)
-│   └── template-mfe/         ← Remote: Visual workflow designer (Port 4203)
+│   ├── shell/                ← Host Container & Persona Navigator (Port 4200 / 80)
+│   ├── workflow-mfe/         ← Remote: Task Inbox, approvals, stepper, execution modal (Port 4201)
+│   ├── analytics-mfe/        ← Remote: SLA monitoring, bottleneck breakdown, audit ledger (Port 4202)
+│   └── template-mfe/         ← Remote: Visual workflow & form designer, DAG validation (Port 4203)
 ```
 
-### Key Principles:
-1. **Dynamic Manifest Resolution**: The Shell loads `federation.manifest.json` on initialization, resolving remote entry points dynamically at runtime without rebuilds.
-2. **Resilient Error Boundaries**: If a remote MFE is unreachable, `MfeFallbackComponent` safely captures the error and displays a recovery banner rather than crashing the application.
-3. **Cross-MFE State Synchronization**: Personas and authentication state are broadcast across MFEs using a zero-dependency `BroadcastChannel` with `localStorage` fallback via [`AuthBridge`](file:///d:/ashish/enterprise-workflow-platform/frontend/projects/shell/src/app/core/utils/auth-bridge.util.ts).
-4. **Unified Design System**: All MFEs import [`ewp-theme.css`](file:///d:/ashish/enterprise-workflow-platform/frontend/projects/shared-theme/ewp-theme.css) at build-time, guaranteeing identical design tokens (`--color-ewp-primary`, typography, spacing) and semantic utility classes (`.ewp-card`, `.ewp-counter-pill`, `.ewp-task-item`).
-
----
-
-## 3. Polyglot Persistence & Data Modeling
-
-| Store | Technology | Purpose | Justification |
-|---|---|---|---|
-| **Workflow State** | PostgreSQL 16 | ACID approval tasks, state transitions | Strict transactional consistency, optimistic locking (`@Version`), and relational referential integrity. |
-| **Outbox Events** | PostgreSQL 16 | Transactional Outbox pattern | Atomic writes within the same database transaction as workflow state updates. |
-| **Workflow Blueprints** | MongoDB 7.0 | Dynamic step DAGs, JSON schemas | Schema-less document flexibility allowing arbitrary step definitions, transition rules, and input payload schemas. |
-| **Audit Log** | MongoDB 7.0 | Immutable chronological audit trail | High-volume append-only write throughput with flexible query capabilities over event payloads. |
-| **Distributed Cache** | Redis 7.2 | Template and active session caching | Ultra-low latency access for high-frequency reads. |
-
----
-
-## 4. Transactional Outbox Pattern (Zero Message Loss)
-
-When a workflow transitions or an approval is processed, writing to the database and sending a message to Kafka simultaneously creates a **Dual-Write Hazard**:
+### 3.1 Key Architectural Principles:
+1. **Zoneless Change Detection**: All 4 MFEs use `provideZonelessChangeDetection()`, eliminating `zone.js` monkey-patching and achieving high rendering performance via Angular Signals.
+2. **Dynamic Runtime Manifest**: The Shell initializes via `initFederation('federation.manifest.json')`, dynamically resolving remote entry points at runtime without rebuilding the host.
+3. **Resilient Error Boundaries**: If a remote MFE is unreachable, `MfeFallbackComponent` captures the failure gracefully and displays an inline recovery banner rather than crashing the Shell.
+4. **Cross-MFE State Synchronization (`AuthBridge`)**:
+   - Zero-dependency event bus using standard `window.dispatchEvent(new CustomEvent('ewp:persona-changed'))` with `localStorage` fallback.
+   - Persona switching in the Shell header propagates instantaneously across all mounted MFEs without page refreshes.
+5. **Unified Design System (`ewp-theme.css`)**:
+   - Built on Tailwind CSS v4 `@theme` design tokens.
+   - Centralizes semantic class utilities (`.ewp-card`, `.ewp-btn`, `.ewp-badge`, `.ewp-input`, `.ewp-page-title`).
 
 ```mermaid
 sequenceDiagram
-    participant User as Manager / Submitter
-    participant WfSvc as Workflow Service
-    participant PG as PostgreSQL 16
-    participant Poller as Outbox Relay (Scheduler)
-    participant Kafka as Apache Kafka 3.8
-    participant AuditSvc as Audit Analytics Service
-    participant Mongo as MongoDB 7.0
+    autonumber
+    actor User as Corporate User
+    participant Shell as Shell Host (:4200)
+    participant Bridge as AuthBridge
+    participant Workflow as Workflow MFE (:4201)
+    participant Analytics as Analytics MFE (:4202)
 
-    User->>WfSvc: POST /workflows/{id}/approve
-    Note over WfSvc,PG: Single ACID Transaction
-    WfSvc->>PG: UPDATE workflow_instances (state, version + 1)
-    WfSvc->>PG: INSERT INTO outbox_events (status = PENDING)
-    PG-->>WfSvc: Transaction Committed
-
-    loop Scheduled Every 500ms
-        Poller->>PG: SELECT * FROM outbox_events WHERE status = 'PENDING'
-        Poller->>Kafka: Publish WorkflowTransitionedEvent
-        Kafka-->>Poller: ACK
-        Poller->>PG: UPDATE outbox_events SET status = 'PUBLISHED'
+    User->>Shell: Select Persona (e.g. 'Sarah Manager')
+    Shell->>Bridge: dispatchPersonaChanged({ persona: { id, roles } })
+    Bridge->>window: dispatchEvent('ewp:persona-changed')
+    
+    par Instant Reactive Sync
+        window-->>Workflow: onPersonaChanged() listener triggers
+        Workflow->>Workflow: activeUser.set(newPersona)
+        Workflow->>Workflow: Reload Task Inbox matching ROLE_MANAGER
+    and
+        window-->>Analytics: onPersonaChanged() listener triggers
+        Analytics->>Analytics: activeUser.set(newPersona)
+        Analytics->>Analytics: Refresh SLA Compliance Dashboard
     end
-
-    Kafka->>AuditSvc: Consume WorkflowTransitionedEvent
-    Note over AuditSvc,Mongo: Idempotent Write
-    AuditSvc->>Mongo: UPSERT audit_events (_id = eventId)
 ```
 
-### Guarantees:
-1. **At-Least-Once Delivery**: If the network or Kafka fails, the event remains `PENDING` in PostgreSQL and will be re-attempted on the next poll.
-2. **Idempotent Consumption**: The Audit Service uses `eventId` as MongoDB's primary key (`_id`), safely dropping duplicate messages without corrupting audit logs.
+---
+
+## 4. Polyglot Persistence & Data Modeling
+
+The platform isolates domain data stores to match their operational characteristics:
+
+```mermaid
+erDiagram
+    workflow_instances ||--o{ workflow_tasks : "contains"
+    workflow_instances ||--o{ outbox_events : "generates"
+
+    workflow_instances {
+        UUID id PK
+        VARCHAR template_id
+        INT template_version
+        VARCHAR requester_id
+        VARCHAR title
+        VARCHAR current_state
+        VARCHAR priority
+        BIGINT version "Optimistic Locking @Version"
+        JSONB template_snapshot "Frozen blueprint copy"
+        JSONB context_data "Accumulated step inputs"
+        TIMESTAMPTZ current_step_due_at "Step deadline"
+        BOOLEAN sla_breached "SLA breach flag"
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+    }
+
+    workflow_tasks {
+        UUID id PK
+        UUID workflow_id FK
+        INT step_order
+        VARCHAR step_name
+        VARCHAR task_type
+        VARCHAR assigned_role "Nullable for requester tasks"
+        VARCHAR completed_by "Actor who executed step"
+        VARCHAR status "PENDING, COMPLETED, REJECTED"
+        TEXT comments
+        TIMESTAMPTZ acted_at
+    }
+
+    outbox_events {
+        UUID id PK
+        VARCHAR aggregate_type "WORKFLOW"
+        VARCHAR aggregate_id "workflowId (UUID)"
+        VARCHAR event_type "WorkflowTransitionedEvent"
+        JSONB payload
+        VARCHAR status "PENDING, PUBLISHED, FAILED"
+        INT retry_count
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ processed_at
+    }
+
+    workflow_templates {
+        String id PK "_id"
+        String templateKey "Indexed"
+        int version "Compound Unique Index"
+        String name
+        String description
+        String status "'DRAFT' or 'PUBLISHED'"
+        String initialState
+        Map steps "Step DAG definition map"
+    }
+
+    audit_logs {
+        String eventId PK "_id (Idempotency Key)"
+        UUID workflowId "Indexed"
+        String templateId
+        String previousState
+        String newState
+        String actorId
+        Instant occurredAt
+        Instant processedAt
+    }
+
+    workflow_analytics_views {
+        String workflowId PK "_id"
+        String templateId "Indexed"
+        String currentState "Indexed"
+        int transitionCount
+        String lastActorId
+        Instant lastUpdatedAt
+        List history "Chronological steps array"
+    }
+```
+
+### 4.1 Storage Selection Matrix
+
+| Domain Store | Technology | Storage Schema | Justification |
+|---|---|---|---|
+| **Workflow State** | PostgreSQL 16 | Relational Tables (`workflow_instances`, `workflow_tasks`) | ACID compliance, multi-user concurrency control, optimistic locking (`@Version`), and complex relational filtering. |
+| **Outbox Events** | PostgreSQL 16 | Relational Table (`outbox_events`) | Enables atomic database transactions combining state updates and event emission in a single commit. |
+| **Workflow Templates** | MongoDB 7.0 | Document Collection (`workflow_templates`) | Schema-less flexibility for authoring arbitrary step graphs, form input schemas, and transition rules with compound uniqueness on `{templateKey, version}`. |
+| **Audit Logs** | MongoDB 7.0 | Document Collection (`audit_logs`) | High-volume append-only audit trail with `eventId` serving as the immutable idempotency key. |
+| **CQRS Read Views** | MongoDB 7.0 | Document Collection (`workflow_analytics_views`) | Denormalized, pre-joined read model optimized for instantaneous dashboard queries without expensive SQL joins. |
+| **Distributed Cache** | Redis 7.2 | In-Memory Key-Value | Microsecond session token validation, sliding window expiration, and rate-limiting buckets. |
+
+---
+
+## 5. Event-Driven Architecture & Transactional Outbox Pattern
+
+Simultaneously updating a database and publishing to an event broker creates a **Dual-Write Hazard**: if the broker is unreachable, the database commits while the event is lost; if the broker succeeds but the database fails, ghost events circulate.
+
+The **Transactional Outbox Pattern** eliminates this failure mode:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Approver as Manager / Approver
+    participant Gateway as API Gateway
+    participant WfSvc as Workflow Service
+    participant PG as PostgreSQL (workflow_db)
+    participant Poller as OutboxScheduler
+    participant Kafka as Apache Kafka Broker
+    participant AuditSvc as Audit Analytics Service
+    participant Mongo as MongoDB (audit_db)
+
+    Approver->>Gateway: POST /workflows/api/v1/workflows/{id}/transition
+    Gateway->>WfSvc: Forward with X-User-Id, X-User-Roles
+    
+    rect rgb(240, 248, 255)
+        Note over WfSvc,PG: Single Database Transaction Boundary (@Transactional)
+        WfSvc->>PG: UPDATE workflow_instances (state, version++)
+        WfSvc->>PG: UPDATE workflow_tasks (status=COMPLETED, completed_by=actor)
+        WfSvc->>PG: INSERT workflow_tasks (next pending step)
+        WfSvc->>PG: INSERT outbox_events (status='PENDING', payload=JSON)
+        PG-->>WfSvc: Transaction Committed Atomically
+    end
+    WfSvc-->>Gateway: 200 OK (WorkflowResponse)
+    Gateway-->>Approver: 200 OK
+
+    rect rgb(255, 250, 240)
+        Note over Poller,Kafka: Async Relay Poller (@Scheduled fixedDelay=2000)
+        Poller->>PG: SELECT * FROM outbox_events WHERE status='PENDING' FOR UPDATE SKIP LOCKED
+        PG-->>Poller: Batch of up to 50 OutboxEvent entities
+        loop For each event
+            Poller->>Kafka: send("workflow-events", aggregateId, payload).get(5s)
+            alt Kafka ACK Received
+                Poller->>PG: UPDATE outbox_events SET status='PUBLISHED', processed_at=now
+            else Broker Timeout / Error
+                Poller->>PG: UPDATE outbox_events SET retry_count=retry_count+1, status=(retry>=3 ? 'FAILED' : 'PENDING')
+            end
+        end
+    end
+
+    rect rgb(245, 255, 245)
+        Note over Kafka,Mongo: Asynchronous Idempotent Consumer
+        Kafka->>AuditSvc: Deliver record from 'workflow-events'
+        AuditSvc->>Mongo: Check if audit_logs.existsById(eventId)
+        alt New Event
+            AuditSvc->>Mongo: INSERT audit_logs (eventId, workflowId, states...)
+            AuditSvc->>Mongo: UPSERT workflow_analytics_views (increment counter, append history)
+        else Duplicate Event
+            AuditSvc->>AuditSvc: Discard duplicate safely (Idempotent ACK)
+        end
+    end
+```
+
+### 5.1 Kafka Non-Blocking Multi-Topic Retry & DLT Strategy
+
+Transient database or network errors in consumers must not block the entire partition. The platform implements Spring Kafka's `@RetryableTopic`:
+
+```mermaid
+flowchart LR
+    Main["Topic: workflow-events"] -->|"Attempt 1 Fails"| Retry1["Topic: workflow-events-retry-1000<br/>(1,000ms Backoff)"]
+    Retry1 -->|"Attempt 2 Fails"| Retry2["Topic: workflow-events-retry-2000<br/>(2,000ms Backoff)"]
+    Retry2 -->|"Attempt 3 Fails"| DLT["Topic: workflow-events-dlt<br/>(Dead-Letter Topic)"]
+    DLT --> Handler["@DltHandler<br/>Alerts Ops & Quarantines Payload"]
+```
+
+---
+
+## 6. Observability & Distributed Tracing Architecture
+
+The platform implements unified telemetry across metrics, logs, and distributed tracing.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Browser
+    participant Gateway as API Gateway (Netty WebFlux :8080)
+    participant Workflow as Workflow Service (Spring MVC :8081)
+    participant Kafka as Apache Kafka Broker (:9092)
+    participant Audit as Audit Analytics Service (:8082)
+    participant Jaeger as Jaeger OTLP Collector (:4318)
+
+    Browser->>Gateway: POST /workflows/api/v1/workflows
+    Note over Gateway: Injects W3C TraceContext:<br/>traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
+    Gateway->>Workflow: Forward HTTP Request with traceparent header
+    Workflow->>Jaeger: Export Span: HTTP POST /workflows
+    Workflow->>Kafka: Publish Outbox Event<br/>[Headers: traceparent, b3]
+    Kafka->>Audit: Consume Message
+    Note over Audit: Spring Kafka extracts traceparent from headers
+    Audit->>Audit: Process CQRS update
+    Audit->>Jaeger: Export Span: Kafka Consumer Process
+    Gateway->>Jaeger: Export Span: Gateway Proxy Route
+```
+
+### 6.1 Telemetry Components:
+1. **OpenTelemetry SDK & Micrometer Tracing**:
+   - Integrated via `spring-boot-starter-opentelemetry`.
+   - Exports spans via HTTP Protobuf to `http://jaeger:4318/v1/traces`.
+   - Context propagation carries across reactive Netty boundaries (`Hooks.enableAutomaticContextPropagation()`) and asynchronous Kafka message headers.
+2. **Jaeger All-in-One (`:16686`)**:
+   - Visualizes end-to-end waterfall request spans correlating HTTP Gateway requests, database queries, outbox polling, and Kafka consumer processing under a single unified `traceId`.
+3. **Prometheus Scraping (`:9090`)**:
+   - Scrapes `/actuator/prometheus` across all microservices at 5-second intervals.
+   - Monitors JVM Virtual Threads, GC pauses, HTTP throughput, and latency percentiles (p95/p99).
+4. **Grafana Dashboards (`:3000`)**:
+   - Pre-provisioned telemetry dashboards (`Platform Overview`) querying Prometheus and Jaeger datasources automatically upon startup.

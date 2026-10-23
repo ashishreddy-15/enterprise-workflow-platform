@@ -315,6 +315,19 @@ services:
     networks:
       - ewp-network
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: ewp-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://frontend:80
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    depends_on:
+      - frontend
+    networks:
+      - ewp-network
+
 volumes:
   postgres_data:
   mongo_data:

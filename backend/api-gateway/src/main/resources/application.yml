@@ -37,6 +37,8 @@ spring:
             user-name-attribute: sub
   cloud:
     gateway:
+      observability:
+        enabled: true
       globalcors:
         cors-configurations:
           '[/**]':
@@ -94,10 +96,12 @@ management:
     health:
       show-details: always
   tracing:
+    enabled: true
     sampling:
       probability: 1.0
   otlp:
     tracing:
+      transport: http
       endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
 
 springdoc:

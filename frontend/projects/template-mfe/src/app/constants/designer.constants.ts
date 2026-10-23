@@ -11,6 +11,7 @@ export interface ActorScopeOption {
 export const AVAILABLE_STEP_TYPES: StepTypeOption[] = [
   { value: 'DOCUMENT_SUBMISSION', label: 'Form / Document Submission' },
   { value: 'APPROVAL', label: 'Approval Step' },
+  { value: 'PARALLEL_APPROVAL', label: 'Parallel / Multi-Party Approval' },
   { value: 'MANUAL_TASK', label: 'Manual Task' },
   { value: 'AUTOMATED_TASK', label: 'Automated System Step' },
   { value: 'TERMINAL', label: 'End Step' }
@@ -18,6 +19,7 @@ export const AVAILABLE_STEP_TYPES: StepTypeOption[] = [
 
 export const AVAILABLE_ACTOR_SCOPES: ActorScopeOption[] = [
   { value: 'ROLE', label: 'Specific Role' },
+  { value: 'PARALLEL_ROLES', label: 'Multiple Parallel Roles (Fork-Join)' },
   { value: 'REQUESTER', label: 'Original Requester' },
   { value: 'ANY', label: 'Anyone' },
   { value: 'SYSTEM', label: 'Automated System' }
@@ -25,8 +27,11 @@ export const AVAILABLE_ACTOR_SCOPES: ActorScopeOption[] = [
 
 export const AVAILABLE_ROLES: string[] = [
   'ROLE_EMPLOYEE',
+  'ROLE_MANAGER',
+  'ROLE_VP',
   'ROLE_LEGAL_COUNSEL',
   'ROLE_FINANCE_MANAGER',
+  'ROLE_FINANCE_DIRECTOR',
   'ROLE_IT_ADMIN',
   'ROLE_PROCUREMENT',
   'ROLE_HR_ADMIN',

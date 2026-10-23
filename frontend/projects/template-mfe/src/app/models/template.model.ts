@@ -79,6 +79,13 @@ export interface TransitionBuilderItem {
   targetState: string;
 }
 
+export interface ConditionalTransitionItem {
+  action: string;
+  condition: string;
+  targetState: string;
+  priority: number;
+}
+
 export interface StateBuilderItem {
   id: string;
   stateKey: string;
@@ -86,12 +93,14 @@ export interface StateBuilderItem {
   stepType: string;
   actorScope: string;
   requiredRole?: string | null;
+  requiredRoles?: string[];
   slaHours?: number | null;
   isInitial: boolean;
   isTerminal: boolean;
   requiredPayloadKeys: string[];
   payloadKeysInput: string;
   transitions: TransitionBuilderItem[];
+  conditionalTransitions: ConditionalTransitionItem[];
 }
 
 export interface BlueprintPreset {

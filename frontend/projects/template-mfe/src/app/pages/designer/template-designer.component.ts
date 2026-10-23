@@ -9,6 +9,7 @@ import {
   CanvasNode,
   CanvasEdge,
   TransitionBuilderItem,
+  ConditionalTransitionItem,
   StateBuilderItem,
   BlueprintPreset
 } from '../../models/template.model';
@@ -153,16 +154,32 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
         ? s.payloadKeysInput.split(',').map(k => k.trim()).filter(Boolean)
         : (!s.isTerminal ? s.requiredPayloadKeys || [] : []);
 
+      const condList = !s.isTerminal && s.conditionalTransitions && s.conditionalTransitions.length > 0
+        ? s.conditionalTransitions
+            .filter(c => c.action && c.targetState && c.condition)
+            .map((c, cIdx) => ({
+              action: c.action.trim().toUpperCase(),
+              condition: c.condition.trim(),
+              targetState: c.targetState,
+              priority: c.priority || (cIdx + 1)
+            }))
+        : [];
+
+      const isParallel = s.actorScope === 'PARALLEL_ROLES' || s.stepType === 'PARALLEL_APPROVAL';
+      const reqRoles = isParallel ? (s.requiredRoles || []) : [];
+
       stepsMap[s.stateKey] = {
         stepOrder: idx + 1,
         stepName: s.stepName,
         stepType: s.isTerminal ? 'TERMINAL' : s.stepType,
         actorScope: s.isTerminal ? 'ANY' : s.actorScope,
         requiredRole: !s.isTerminal && s.actorScope === 'ROLE' ? (s.requiredRole || null) : null,
+        requiredRoles: reqRoles,
         requiredPayloadKeys: payloadKeys,
         isTerminal: s.isTerminal,
         slaHours: !s.isTerminal && s.slaHours ? +s.slaHours : null,
-        transitions: transMap
+        transitions: transMap,
+        conditionalTransitions: condList
       };
     });
 
@@ -543,6 +560,18 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
           }
         }
 
+        const condTrans: ConditionalTransitionItem[] = [];
+        if (step.conditionalTransitions) {
+          for (const ct of step.conditionalTransitions) {
+            condTrans.push({
+              action: ct.action || 'APPROVE',
+              condition: ct.condition || '',
+              targetState: ct.targetState,
+              priority: ct.priority ?? (condTrans.length + 1)
+            });
+          }
+        }
+
         const payloadKeys = step.requiredPayloadKeys || [];
 
         items.push({
@@ -552,12 +581,14 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
           stepType: step.stepType || (step.isTerminal ? 'TERMINAL' : 'APPROVAL'),
           actorScope: step.actorScope || (step.isTerminal ? 'ANY' : 'ROLE'),
           requiredRole: step.requiredRole || null,
+          requiredRoles: step.requiredRoles ? [...step.requiredRoles] : [],
           slaHours: step.slaHours ?? null,
           isInitial: key === tpl.initialState,
           isTerminal: !!step.isTerminal,
           requiredPayloadKeys: payloadKeys,
           payloadKeysInput: payloadKeys.join(', '),
-          transitions: trans
+          transitions: trans,
+          conditionalTransitions: condTrans
         });
       }
     }
@@ -578,12 +609,14 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
       stepType: 'APPROVAL',
       actorScope: 'ROLE',
       requiredRole: 'ROLE_EMPLOYEE',
+      requiredRoles: [],
       slaHours: 24,
       isInitial: states.length === 0,
       isTerminal: false,
       requiredPayloadKeys: [],
       payloadKeysInput: '',
-      transitions: []
+      transitions: [],
+      conditionalTransitions: []
     };
 
     if (states.length === 0) {
@@ -602,6 +635,9 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
       }
       states.forEach(s => {
         s.transitions = s.transitions.filter(t => t.targetState !== removed.stateKey);
+        if (s.conditionalTransitions) {
+          s.conditionalTransitions = s.conditionalTransitions.filter(t => t.targetState !== removed.stateKey);
+        }
       });
     }
     this.builderStates.set(states);
@@ -634,6 +670,13 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
           t.targetState = sanitized;
         }
       });
+      if (s.conditionalTransitions) {
+        s.conditionalTransitions.forEach(t => {
+          if (t.targetState === oldKey) {
+            t.targetState = sanitized;
+          }
+        });
+      }
     });
 
     this.builderStates.set(states);
@@ -653,9 +696,11 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
       states[index].stepType = 'TERMINAL';
       states[index].actorScope = 'ANY';
       states[index].requiredRole = null;
+      states[index].requiredRoles = [];
       states[index].requiredPayloadKeys = [];
       states[index].payloadKeysInput = '';
       states[index].transitions = [];
+      states[index].conditionalTransitions = [];
       states[index].slaHours = null;
     } else {
       if (states[index].stepType === 'TERMINAL') {
@@ -714,6 +759,69 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     const states = [...this.builderStates()];
     states[stateIndex].transitions.splice(transIndex, 1);
     this.builderStates.set(states);
+  }
+
+  addConditionalTransition(stateIndex: number): void {
+    const states = [...this.builderStates()];
+    const current = states[stateIndex];
+    if (current.isTerminal) return;
+
+    const otherTarget = states.find(s => s.stateKey !== current.stateKey);
+    const defaultTarget = (otherTarget || current).stateKey;
+    const ruleNum = (current.conditionalTransitions?.length || 0) + 1;
+
+    if (!current.conditionalTransitions) {
+      current.conditionalTransitions = [];
+    }
+
+    current.conditionalTransitions.push({
+      action: 'APPROVE',
+      condition: '#amount > 10000',
+      targetState: defaultTarget,
+      priority: ruleNum
+    });
+
+    this.builderStates.set(states);
+  }
+
+  removeConditionalTransition(stateIndex: number, condIndex: number): void {
+    const states = [...this.builderStates()];
+    if (states[stateIndex].conditionalTransitions) {
+      states[stateIndex].conditionalTransitions.splice(condIndex, 1);
+      this.builderStates.set(states);
+    }
+  }
+
+  toggleParallelRole(state: StateBuilderItem, role: string): void {
+    if (!state.requiredRoles) {
+      state.requiredRoles = [];
+    }
+    const idx = state.requiredRoles.indexOf(role);
+    if (idx >= 0) {
+      state.requiredRoles.splice(idx, 1);
+    } else {
+      state.requiredRoles.push(role);
+    }
+    this.builderStates.update(s => [...s]);
+  }
+
+  isParallelRoleSelected(state: StateBuilderItem, role: string): boolean {
+    return !!state.requiredRoles && state.requiredRoles.includes(role);
+  }
+
+  addCustomParallelRole(state: StateBuilderItem, inputElement: HTMLInputElement): void {
+    const role = (inputElement.value || '').trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+    if (role) {
+      const fullRole = role.startsWith('ROLE_') ? role : `ROLE_${role}`;
+      if (!state.requiredRoles) {
+        state.requiredRoles = [];
+      }
+      if (!state.requiredRoles.includes(fullRole)) {
+        state.requiredRoles.push(fullRole);
+        this.builderStates.update(s => [...s]);
+      }
+      inputElement.value = '';
+    }
   }
 
   switchBuilderMode(mode: 'visual' | 'dsl'): void {

@@ -85,4 +85,106 @@ describe('graph-layout.util', () => {
       expect(edge.pathD).toContain('C ');
     }
   });
+
+  it('should include conditional transitions and parallel multi-role badges in DAG layout', () => {
+    const template: WorkflowTemplate = {
+      templateKey: 'CAPEX_V2',
+      name: 'CapEx Dynamic & Parallel',
+      description: 'Test template',
+      version: 1,
+      status: 'DRAFT',
+      initialState: 'SUBMISSION',
+      steps: {
+        SUBMISSION: {
+          stepOrder: 1,
+          stepName: 'Submit CapEx',
+          stepType: 'DOCUMENT_SUBMISSION',
+          actorScope: 'REQUESTER',
+          requiredPayloadKeys: ['amount'],
+          isTerminal: false,
+          transitions: {
+            SUBMIT: 'MANAGER_REVIEW'
+          }
+        },
+        MANAGER_REVIEW: {
+          stepOrder: 2,
+          stepName: 'Manager Review',
+          stepType: 'APPROVAL',
+          actorScope: 'ROLE',
+          requiredRole: 'ROLE_MANAGER',
+          requiredPayloadKeys: [],
+          isTerminal: false,
+          transitions: {
+            REJECT: 'REJECTED'
+          },
+          conditionalTransitions: [
+            { action: 'APPROVE', condition: '#amount > 50000', targetState: 'VP_APPROVAL', priority: 1 },
+            { action: 'APPROVE', condition: '#amount <= 50000', targetState: 'JOINT_REVIEW', priority: 2 }
+          ]
+        },
+        VP_APPROVAL: {
+          stepOrder: 3,
+          stepName: 'VP Approval',
+          stepType: 'APPROVAL',
+          actorScope: 'ROLE',
+          requiredRole: 'ROLE_VP',
+          requiredPayloadKeys: [],
+          isTerminal: false,
+          transitions: {
+            APPROVE: 'JOINT_REVIEW',
+            REJECT: 'REJECTED'
+          }
+        },
+        JOINT_REVIEW: {
+          stepOrder: 4,
+          stepName: 'Joint Review',
+          stepType: 'PARALLEL_APPROVAL',
+          actorScope: 'PARALLEL_ROLES',
+          requiredRoles: ['ROLE_LEGAL_COUNSEL', 'ROLE_FINANCE_DIRECTOR'],
+          requiredPayloadKeys: [],
+          isTerminal: false,
+          transitions: {
+            APPROVE: 'APPROVED',
+            REJECT: 'REJECTED'
+          }
+        },
+        APPROVED: {
+          stepOrder: 5,
+          stepName: 'Approved',
+          stepType: 'TERMINAL',
+          actorScope: 'ANY',
+          requiredPayloadKeys: [],
+          isTerminal: true,
+          transitions: {}
+        },
+        REJECTED: {
+          stepOrder: 6,
+          stepName: 'Rejected',
+          stepType: 'TERMINAL',
+          actorScope: 'ANY',
+          requiredPayloadKeys: [],
+          isTerminal: true,
+          transitions: {}
+        }
+      }
+    };
+
+    const dagNodes = buildDagNodes(template);
+    const mgrNode = dagNodes.find(n => n.stateKey === 'MANAGER_REVIEW')!;
+
+    // Verify conditional transitions were parsed as outgoing edges with condition label
+    expect(mgrNode.outgoingTransitions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ action: 'REJECT', targetState: 'REJECTED' }),
+        expect.objectContaining({ action: 'APPROVE [#amount > 50000]', targetState: 'VP_APPROVAL' }),
+        expect.objectContaining({ action: 'APPROVE [#amount <= 50000]', targetState: 'JOINT_REVIEW' })
+      ])
+    );
+
+    const layout = computeCanvasLayout(dagNodes);
+    const jointNode = layout.nodes.find(n => n.stateKey === 'JOINT_REVIEW')!;
+
+    // Verify multi-role display concatenation
+    expect(jointNode.roleDisplay).toBe('LEGAL_COUNSEL + FINANCE_DIRECTOR');
+  });
 });

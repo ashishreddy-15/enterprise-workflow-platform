@@ -22,6 +22,13 @@ release.properties
 .env.*
 !.env.example
 
+# Node & Frontend
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.angular/
+
 /backend/common-contracts/target/
 /backend/workflow-service/target/
 /backend/audit-analytics-service/target/

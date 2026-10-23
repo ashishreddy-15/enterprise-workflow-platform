@@ -13,6 +13,13 @@ export function buildDagNodes(tpl: WorkflowTemplate | null): DAGNode[] {
         outgoing.push({ action, targetState: target });
       }
     }
+    if (step.conditionalTransitions) {
+      for (const ct of step.conditionalTransitions) {
+        if (!outgoing.some(o => o.action === ct.action && o.targetState === ct.targetState)) {
+          outgoing.push({ action: `${ct.action} [${ct.condition}]`, targetState: ct.targetState });
+        }
+      }
+    }
 
     nodes.push({
       stateKey,
@@ -167,7 +174,10 @@ export function computeCanvasLayout(rawNodes: DAGNode[]): {
     group.forEach((node, rowIdx) => {
       const nodeY = Math.max(PADDING_Y, startY + rowIdx * (NODE_HEIGHT + VERTICAL_GAP));
       const isReject = ['REJECTED', 'CANCELLED'].includes(node.stateKey.toUpperCase());
-      const roleDisplay = node.requiredRole ? node.requiredRole.replace(/^ROLE_/, '') : '';
+      let roleDisplay = node.requiredRole ? node.requiredRole.replace(/^ROLE_/, '') : '';
+      if (!roleDisplay && node.rawStep?.requiredRoles && node.rawStep.requiredRoles.length > 0) {
+        roleDisplay = node.rawStep.requiredRoles.map(role => role.replace(/^ROLE_/, '')).join(' + ');
+      }
       const cNode: CanvasNode = {
         ...node,
         x: colX,

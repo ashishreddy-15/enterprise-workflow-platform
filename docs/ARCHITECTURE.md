@@ -349,3 +349,58 @@ sequenceDiagram
    - Monitors JVM Virtual Threads, GC pauses, HTTP throughput, and latency percentiles (p95/p99).
 4. **Grafana Dashboards (`:3000`)**:
    - Pre-provisioned telemetry dashboards (`Platform Overview`) querying Prometheus and Jaeger datasources automatically upon startup.
+
+---
+
+## 7. Advanced Workflow Orchestration Engine
+
+Beyond linear deterministic transitions, the platform supports enterprise-grade workflow orchestration:
+
+### 7.1 Dynamic Conditional Branching (Rules Engine)
+
+Workflows can route dynamically at runtime based on form payloads and context data using **Spring Expression Language (SpEL)**:
+
+- **Sandboxed Evaluation Context**: Uses `SimpleEvaluationContext.forPropertyAccessors(DataBindingPropertyAccessor.forReadOnlyAccess(), new MapAccessor())`.
+  - Disables method execution, Java class reflection, and OS process spawning (`ProcessBuilder`, `Runtime`).
+  - Restricts operations exclusively to read-only property inspection and dictionary lookups.
+- **Flexible Syntax**:
+  - `#amount > 10000` or `amount > 10000`
+  - `#payload['department'] == 'FINANCE'`
+  - `#urgent == true && #amount > 50000`
+- **Priority Evaluation & Determinism**:
+  - Conditional rules are evaluated in ascending order of `priority`.
+  - First matching condition determines the target state.
+  - If no conditional rule matches, the engine falls back gracefully to the step's static `transitions` map.
+
+### 7.2 Parallel / Multi-Party Approvals (Fork-Join)
+
+Enterprise governance often demands dual or multi-sign-off steps (e.g., both Legal Counsel and Finance Director must sign off on a contract before onboarding):
+
+```mermaid
+flowchart TD
+    Init["Step 1: Request Submitted"] -->|"Fork"| Fork["Parallel Approval Step<br/>(PARALLEL_ROLES)"]
+    Fork --> TaskLegal["Task 1: ROLE_LEGAL_COUNSEL<br/>(Status: PENDING)"]
+    Fork --> TaskFinance["Task 2: ROLE_FINANCE_DIRECTOR<br/>(Status: PENDING)"]
+    
+    TaskLegal -->|"Approved"| PartialCheck{"Join Check:<br/>All Roles Done?"}
+    TaskFinance -->|"Approved"| PartialCheck
+    
+    PartialCheck -->|"No (1 pending)"| WaitState["Keep State: PARALLEL_REVIEW<br/>Emit Partial Outbox Event"]
+    PartialCheck -->|"Yes (0 pending)"| AdvanceState["Join Satisfied:<br/>Advance to APPROVED"]
+    
+    TaskLegal -.->|"Reject"| RejectionJoin["Cancel Sibling Tasks<br/>Advance immediately to REJECTED"]
+    TaskFinance -.->|"Reject"| RejectionJoin
+```
+
+1. **Fork (Task Generation)**:
+   - When entering a step with multiple `requiredRoles`, the engine spawns an independent `WorkflowTask` for each role with status `PENDING`.
+2. **Targeted Role Matching**:
+   - When a user logs in, `TaskService` identifies the specific pending task matching the user's role.
+   - Once signed off, the user's specific task transitions to `COMPLETED`.
+3. **Join Barrier**:
+   - The workflow state remains in the parallel step until all sibling tasks are completed.
+   - An intermediate `WorkflowTransitionedEvent` is staged with `parallelJoinStatus = "PARTIAL"` to update audit ledgers and analytics without advancing the state machine prematurely.
+4. **Fast-Fail Rejection**:
+   - If any participant rejects, all other pending tasks for that step are marked `CANCELLED`, and the workflow advances immediately to the rejection target state.
+5. **Segregation of Duties Enforcement**:
+   - Requesters cannot approve their own requests on parallel steps, even if they hold one of the required approval roles.

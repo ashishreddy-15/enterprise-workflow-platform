@@ -12,7 +12,9 @@ import com.ashish.workflow.repository.WorkflowRepository;
 import com.ashish.workflow.security.UserContext;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -30,16 +32,19 @@ public class WorkflowService {
     private final OutboxRepository outboxRepository;
     private final TemplateServiceClient templateServiceClient;
     private final ObjectMapper objectMapper;
+    private final SpelRuleEvaluator spelRuleEvaluator;
 
     public WorkflowService(
             WorkflowRepository workflowRepository,
             OutboxRepository outboxRepository,
             TemplateServiceClient templateServiceClient,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            SpelRuleEvaluator spelRuleEvaluator) {
         this.workflowRepository = workflowRepository;
         this.outboxRepository = outboxRepository;
         this.templateServiceClient = templateServiceClient;
         this.objectMapper = objectMapper;
+        this.spelRuleEvaluator = spelRuleEvaluator;
     }
 
     @Transactional
@@ -74,17 +79,19 @@ public class WorkflowService {
         workflow.setCreatedAt(OffsetDateTime.now());
         workflow.setUpdatedAt(OffsetDateTime.now());
 
-        // 2. Spawn initial generic WorkflowTask
+        // 2. Spawn initial generic or parallel WorkflowTasks
         StepDefinitionDto initialStep = template.steps().get(template.initialState());
         calculateAndApplySla(workflow, initialStep);
         if (initialStep != null && !initialStep.isTerminal()) {
-            WorkflowTask initialTask = buildTaskFromStep(initialStep);
-            workflow.addTask(initialTask);
-            log.debug(
-                    "Spawned initial task '{}' (scope: {}, requiredRole: {})",
-                    initialStep.stepName(),
-                    initialStep.actorScope(),
-                    initialStep.requiredRole());
+            List<WorkflowTask> initialTasks = spawnTasksForStep(initialStep);
+            for (WorkflowTask t : initialTasks) {
+                workflow.addTask(t);
+                log.debug(
+                        "Spawned initial task '{}' (order: {}, assignedRole: {})",
+                        t.getStepName(),
+                        t.getStepOrder(),
+                        t.getAssignedRole());
+            }
         }
 
         WorkflowInstance saved = workflowRepository.save(workflow);
@@ -152,14 +159,31 @@ public class WorkflowService {
         }
 
         if (currentStep.isTerminal()
-                || currentStep.transitions() == null
-                || currentStep.transitions().isEmpty()) {
+                || (currentStep.transitions().isEmpty()
+                        && currentStep.conditionalTransitions().isEmpty())) {
             throw new IllegalStateException("Workflow is already in a terminal state: " + previousState);
         }
 
-        // --- STRICT SCOPE, RBAC & SEGREGATION OF DUTIES CHECK ---
+        // Active pending tasks check
+        List<WorkflowTask> pendingTasks = workflow.getTasks().stream()
+                .filter(t -> "PENDING".equalsIgnoreCase(t.getStatus()))
+                .toList();
+
+        if (pendingTasks.isEmpty()) {
+            throw new IllegalStateException("No pending tasks available for workflow in state: " + previousState);
+        }
+
+        // --- STRICT SCOPE, RBAC, FORK-JOIN & SEGREGATION OF DUTIES CHECK ---
         String scope =
                 currentStep.actorScope() != null ? currentStep.actorScope().toUpperCase() : "ANY";
+        boolean isInitialStep =
+                (snapshot.initialState() != null && previousState.equalsIgnoreCase(snapshot.initialState()))
+                        || currentStep.stepOrder() == 1;
+        boolean isApprovalStep = currentStep.stepType() == null
+                || "APPROVAL".equalsIgnoreCase(currentStep.stepType())
+                || "PARALLEL_APPROVAL".equalsIgnoreCase(currentStep.stepType());
+
+        WorkflowTask taskToComplete = null;
 
         if ("REQUESTER".equals(scope)) {
             if (!workflow.getRequesterId().equalsIgnoreCase(actorId)) {
@@ -171,6 +195,45 @@ public class WorkflowService {
                         actorId);
                 throw new SecurityException("Access Denied: Step '" + previousState
                         + "' can only be performed by the requester (" + workflow.getRequesterId() + ").");
+            }
+            taskToComplete = pendingTasks.get(0);
+        } else if ("PARALLEL_ROLES".equals(scope)
+                || (!currentStep.requiredRoles().isEmpty()
+                        && currentStep.requiredRoles().size() > 1)) {
+            // Segregation of Duties: Requester cannot approve their own request on approval steps
+            if (isApprovalStep && !isInitialStep && workflow.getRequesterId().equalsIgnoreCase(actorId)) {
+                log.warn(
+                        "Segregation of Duties violation on workflow {}: Requester '{}' cannot approve their own request on step '{}'",
+                        workflowId,
+                        actorId,
+                        previousState);
+                throw new SecurityException("Segregation of Duties violation: Requester (" + actorId
+                        + ") cannot approve their own request on step '" + previousState + "'.");
+            }
+
+            // Match pending task with caller's assigned roles
+            for (WorkflowTask pending : pendingTasks) {
+                if (pending.getAssignedRole() != null && caller.hasRole(pending.getAssignedRole())) {
+                    taskToComplete = pending;
+                    break;
+                }
+            }
+
+            if (taskToComplete == null) {
+                List<String> remainingRoles = pendingTasks.stream()
+                        .map(WorkflowTask::getAssignedRole)
+                        .filter(r -> r != null && !r.isBlank())
+                        .toList();
+                log.warn(
+                        "Access Denied on workflow {}: Step '{}' requires sign-off from pending roles {}, but caller '{}' holds {}",
+                        workflowId,
+                        previousState,
+                        remainingRoles,
+                        actorId,
+                        caller.roles());
+                throw new SecurityException("Access Denied: Step '" + previousState
+                        + "' requires sign-off from pending roles " + remainingRoles
+                        + ", but caller holds " + caller.roles());
             }
         } else if ("ROLE".equals(scope)) {
             // 1. Role Enforcement: Caller must hold the step's requiredRole
@@ -188,12 +251,6 @@ public class WorkflowService {
             }
 
             // 2. Segregation of Duties: Requester cannot approve their own request on approval steps
-            boolean isInitialStep =
-                    (snapshot.initialState() != null && previousState.equalsIgnoreCase(snapshot.initialState()))
-                            || currentStep.stepOrder() == 1;
-            boolean isApprovalStep =
-                    currentStep.stepType() == null || "APPROVAL".equalsIgnoreCase(currentStep.stepType());
-
             if (isApprovalStep && !isInitialStep && workflow.getRequesterId().equalsIgnoreCase(actorId)) {
                 log.warn(
                         "Segregation of Duties violation on workflow {}: Requester '{}' cannot approve their own request on step '{}'",
@@ -203,8 +260,13 @@ public class WorkflowService {
                 throw new SecurityException("Segregation of Duties violation: Requester (" + actorId
                         + ") cannot approve their own request on step '" + previousState + "'.");
             }
+
+            taskToComplete = pendingTasks.get(0);
+        } else {
+            // "ANY" scope
+            taskToComplete = pendingTasks.get(0);
         }
-        // --------------------------------------------------------
+        // -------------------------------------------------------------------
 
         // Required Payload Validation
         if (currentStep.requiredPayloadKeys() != null
@@ -230,9 +292,125 @@ public class WorkflowService {
             workflow.getContextData().putAll(payload);
         }
 
-        // Resolve next state
+        // Variables map for SpEL condition evaluation
+        Map<String, Object> evaluationVariables = new HashMap<>();
+        if (workflow.getContextData() != null) {
+            evaluationVariables.putAll(workflow.getContextData());
+        }
+        if (payload != null) {
+            evaluationVariables.putAll(payload);
+        }
+
         String normalizedAction = action.trim().toUpperCase();
-        String newState = currentStep.transitions().get(normalizedAction);
+        boolean isRejection = normalizedAction.contains("REJECT")
+                || normalizedAction.contains("CANCEL")
+                || normalizedAction.contains("DECLINE");
+
+        // Complete caller's assigned task
+        taskToComplete.complete(normalizedAction, actorId, comments);
+        log.info(
+                "Completed task '{}' (order: {}, role: {}) by '{}' with action '{}'",
+                taskToComplete.getStepName(),
+                taskToComplete.getStepOrder(),
+                taskToComplete.getAssignedRole(),
+                actorId,
+                normalizedAction);
+
+        // CASE 1: REJECTION (Immediately cancels any sibling pending tasks and advances to terminal/rejection state)
+        if (isRejection) {
+            for (WorkflowTask sibling : pendingTasks) {
+                if (sibling != taskToComplete && "PENDING".equalsIgnoreCase(sibling.getStatus())) {
+                    sibling.complete("CANCELLED", actorId, "Cancelled due to rejection by " + actorId);
+                    log.info("Cancelled sibling task id={} for role '{}'", sibling.getId(), sibling.getAssignedRole());
+                }
+            }
+
+            String newState = spelRuleEvaluator.resolveNextState(currentStep, normalizedAction, evaluationVariables);
+            if (newState == null) {
+                throw new IllegalArgumentException(
+                        "Action '" + normalizedAction + "' not allowed from '" + previousState + "'. Allowed: "
+                                + currentStep.transitions().keySet());
+            }
+
+            log.info("Workflow {} rejected from '{}' -> '{}'", workflowId, previousState, newState);
+            workflow.setCurrentState(newState);
+            workflow.setUpdatedAt(OffsetDateTime.now());
+            workflow.setCurrentStepDueAt(null);
+            workflow.setSlaBreached(false);
+
+            WorkflowInstance saved = workflowRepository.save(workflow);
+
+            Map<String, String> eventMetadata = new HashMap<>();
+            eventMetadata.put("action", normalizedAction);
+            eventMetadata.put("stepType", currentStep.stepType() != null ? currentStep.stepType() : "STANDARD");
+            eventMetadata.put("version", String.valueOf(saved.getVersion()));
+            if (payload != null) {
+                payload.forEach((k, v) -> eventMetadata.put("payload_" + k, String.valueOf(v)));
+            }
+
+            WorkflowTransitionedEvent event = new WorkflowTransitionedEvent(
+                    UUID.randomUUID(),
+                    saved.getId(),
+                    saved.getTemplateId(),
+                    previousState,
+                    newState,
+                    actorId,
+                    comments,
+                    Instant.now(),
+                    eventMetadata);
+            saveOutboxEvent(saved, event);
+            return saved;
+        }
+
+        // CASE 2: FORK-JOIN CHECK - Check if other parallel tasks are still PENDING for this step
+        List<WorkflowTask> remainingPending = workflow.getTasks().stream()
+                .filter(t -> "PENDING".equalsIgnoreCase(t.getStatus()))
+                .toList();
+
+        if (!remainingPending.isEmpty()) {
+            List<String> awaitingRoles = remainingPending.stream()
+                    .map(WorkflowTask::getAssignedRole)
+                    .filter(r -> r != null && !r.isBlank())
+                    .toList();
+
+            log.info(
+                    "Workflow {} fork-join step '{}': sign-off recorded by role '{}'. Awaiting remaining roles: {}",
+                    workflowId,
+                    previousState,
+                    taskToComplete.getAssignedRole(),
+                    awaitingRoles);
+
+            workflow.setUpdatedAt(OffsetDateTime.now());
+            WorkflowInstance saved = workflowRepository.save(workflow);
+
+            Map<String, String> eventMetadata = new HashMap<>();
+            eventMetadata.put("action", normalizedAction);
+            eventMetadata.put(
+                    "role", taskToComplete.getAssignedRole() != null ? taskToComplete.getAssignedRole() : "UNKNOWN");
+            eventMetadata.put("parallelJoinStatus", "PARTIAL");
+            eventMetadata.put("remainingRoles", String.join(",", awaitingRoles));
+            if (payload != null) {
+                payload.forEach((k, v) -> eventMetadata.put("payload_" + k, String.valueOf(v)));
+            }
+
+            WorkflowTransitionedEvent event = new WorkflowTransitionedEvent(
+                    UUID.randomUUID(),
+                    saved.getId(),
+                    saved.getTemplateId(),
+                    previousState,
+                    previousState, // Stays in current state awaiting remaining sign-offs
+                    actorId,
+                    comments != null && !comments.isBlank()
+                            ? comments
+                            : "Partial sign-off completed by " + taskToComplete.getAssignedRole(),
+                    Instant.now(),
+                    eventMetadata);
+            saveOutboxEvent(saved, event);
+            return saved;
+        }
+
+        // CASE 3: JOIN SATISFIED (or single-party step) - Resolve next state via SpEL rules or static transitions
+        String newState = spelRuleEvaluator.resolveNextState(currentStep, normalizedAction, evaluationVariables);
         if (newState == null) {
             throw new IllegalArgumentException("Action '" + normalizedAction + "' not allowed from '" + previousState
                     + "'. Allowed: " + currentStep.transitions().keySet());
@@ -245,36 +423,25 @@ public class WorkflowService {
                 newState,
                 normalizedAction);
 
-        // Complete the active pending task
-        workflow.getTasks().stream()
-                .filter(t -> "PENDING".equals(t.getStatus()))
-                .findFirst()
-                .ifPresent(task -> {
-                    task.complete(normalizedAction, actorId, comments);
-                    log.debug(
-                            "Completed task '{}' (order: {}) for workflow {}",
-                            task.getStepName(),
-                            task.getStepOrder(),
-                            workflowId);
-                });
-
-        // Spawn next task if non-terminal
+        // Spawn next tasks if non-terminal
         StepDefinitionDto nextStepDef = snapshot.steps().get(newState);
         calculateAndApplySla(workflow, nextStepDef);
         boolean isNextTerminal = nextStepDef == null
                 || nextStepDef.isTerminal()
-                || nextStepDef.transitions() == null
-                || nextStepDef.transitions().isEmpty();
+                || (nextStepDef.transitions().isEmpty()
+                        && nextStepDef.conditionalTransitions().isEmpty());
 
         if (!isNextTerminal) {
-            WorkflowTask nextTask = buildTaskFromStep(nextStepDef);
-            workflow.addTask(nextTask);
-            log.debug(
-                    "Spawned next task '{}' (order: {}, requiredRole: {}) for workflow {}",
-                    nextStepDef.stepName(),
-                    nextStepDef.stepOrder(),
-                    nextStepDef.requiredRole(),
-                    workflowId);
+            List<WorkflowTask> nextTasks = spawnTasksForStep(nextStepDef);
+            for (WorkflowTask nextTask : nextTasks) {
+                workflow.addTask(nextTask);
+                log.debug(
+                        "Spawned next task '{}' (order: {}, requiredRole: {}) for workflow {}",
+                        nextTask.getStepName(),
+                        nextTask.getStepOrder(),
+                        nextTask.getAssignedRole(),
+                        workflowId);
+            }
         } else {
             log.info("Workflow {} has reached terminal state '{}'", workflowId, newState);
         }
@@ -296,9 +463,9 @@ public class WorkflowService {
                 UUID.randomUUID(),
                 saved.getId(),
                 saved.getTemplateId(),
-                previousState, // previousState
-                newState, // nextState
-                actorId, // actorId
+                previousState,
+                newState,
+                actorId,
                 comments,
                 Instant.now(),
                 eventMetadata);
@@ -311,14 +478,40 @@ public class WorkflowService {
         return saved;
     }
 
-    private WorkflowTask buildTaskFromStep(StepDefinitionDto step) {
-        WorkflowTask task = new WorkflowTask();
-        task.setStepOrder(step.stepOrder());
-        task.setStepName(step.stepName());
-        task.setTaskType(step.stepType() != null ? step.stepType() : "APPROVAL");
-        task.setAssignedRole("ROLE".equalsIgnoreCase(step.actorScope()) ? step.requiredRole() : null);
-        task.setStatus("PENDING");
-        return task;
+    private List<WorkflowTask> spawnTasksForStep(StepDefinitionDto step) {
+        List<WorkflowTask> tasks = new ArrayList<>();
+        List<String> requiredRoles = step.requiredRoles();
+
+        if (requiredRoles != null && requiredRoles.size() > 1) {
+            // Fork: Spawn a separate WorkflowTask for each required approver role
+            for (String role : requiredRoles) {
+                WorkflowTask task = new WorkflowTask();
+                task.setStepOrder(step.stepOrder());
+                task.setStepName(step.stepName());
+                task.setTaskType(step.stepType() != null ? step.stepType() : "PARALLEL_APPROVAL");
+                task.setAssignedRole(role);
+                task.setStatus("PENDING");
+                tasks.add(task);
+            }
+        } else {
+            // Standard single task
+            WorkflowTask task = new WorkflowTask();
+            task.setStepOrder(step.stepOrder());
+            task.setStepName(step.stepName());
+            task.setTaskType(step.stepType() != null ? step.stepType() : "APPROVAL");
+            String assignedRole = null;
+            if (requiredRoles != null && requiredRoles.size() == 1) {
+                assignedRole = requiredRoles.get(0);
+            } else if ("ROLE".equalsIgnoreCase(step.actorScope())
+                    || "PARALLEL_ROLES".equalsIgnoreCase(step.actorScope())) {
+                assignedRole = step.requiredRole();
+            }
+            task.setAssignedRole(assignedRole);
+            task.setStatus("PENDING");
+            tasks.add(task);
+        }
+
+        return tasks;
     }
 
     private void calculateAndApplySla(WorkflowInstance instance, StepDefinitionDto nextStep) {

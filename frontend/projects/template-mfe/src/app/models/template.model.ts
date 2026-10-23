@@ -1,3 +1,10 @@
+export interface ConditionalTransition {
+  action: string;
+  condition: string;
+  targetState: string;
+  priority?: number;
+}
+
 export interface StepDefinition {
   stepOrder: number;
   stepName: string;
@@ -8,6 +15,8 @@ export interface StepDefinition {
   isTerminal: boolean;
   slaHours?: number | null;
   transitions: Record<string, string>;
+  conditionalTransitions?: ConditionalTransition[];
+  requiredRoles?: string[];
 }
 
 export interface WorkflowTemplate {

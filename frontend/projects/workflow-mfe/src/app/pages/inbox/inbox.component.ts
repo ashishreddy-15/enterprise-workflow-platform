@@ -115,13 +115,26 @@ export class InboxComponent implements OnInit, OnDestroy {
     if (!task) return [];
 
     const step = this.currentStep();
-    if (step && step.transitions && Object.keys(step.transitions).length > 0) {
-      return Object.entries(step.transitions).map(([key, targetState]) => ({
-        key,
-        label: this.formatActionLabel(key),
-        variant: this.getActionVariant(key),
-        targetState: String(targetState)
-      }));
+    if (step) {
+      const actionsMap = new Map<string, string>();
+      if (step.transitions) {
+        Object.entries(step.transitions).forEach(([k, tgt]) => actionsMap.set(k, String(tgt)));
+      }
+      if (step.conditionalTransitions) {
+        step.conditionalTransitions.forEach(ct => {
+          if (!actionsMap.has(ct.action)) {
+            actionsMap.set(ct.action, ct.targetState);
+          }
+        });
+      }
+      if (actionsMap.size > 0) {
+        return Array.from(actionsMap.entries()).map(([key, targetState]) => ({
+          key,
+          label: this.formatActionLabel(key),
+          variant: this.getActionVariant(key),
+          targetState
+        }));
+      }
     }
 
     // Generic fallback actions if template transitions not populated
@@ -207,7 +220,7 @@ export class InboxComponent implements OnInit, OnDestroy {
 
     if (scope === 'REQUESTER') {
       return user.id.toLowerCase() === task.requesterId?.toLowerCase();
-    } else if (scope === 'ROLE') {
+    } else if (scope === 'ROLE' || scope === 'PARALLEL_ROLES') {
       // Must not be requester (Separation of Duties) ONLY for approval steps (non-initial)
       if (isApprovalStep && !isInitialStep && user.id.toLowerCase() === task.requesterId?.toLowerCase()) {
         return false;

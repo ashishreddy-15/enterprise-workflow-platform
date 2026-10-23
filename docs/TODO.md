@@ -144,27 +144,41 @@
 
 ---
 
+### Phase 12: Advanced Workflow Orchestration Engine
+- [x] **Dynamic Conditional Branching (Rules Engine)**:
+  - Sandboxed Spring Expression Language (SpEL) runtime evaluator (`SpelRuleEvaluator`).
+  - Read-only property access via `SimpleEvaluationContext` preventing code execution, reflection, or OS process spawning.
+  - Priority-ordered conditional transition evaluation based on form payload & context data (e.g., `#amount > 10000` $\rightarrow$ `PENDING_VP_APPROVAL`; else $\rightarrow$ `PENDING_MANAGER_APPROVAL`).
+  - Deterministic fallback to static transition mapping.
+- [x] **Parallel / Multi-Party Approvals (Fork-Join)**:
+  - Multi-party approval steps (`PARALLEL_ROLES`, `requiredRoles: [...]`).
+  - **Fork**: Spawns independent `WorkflowTask` entries for each required role (e.g. Legal Counsel + Finance Director).
+  - **Join**: Retains current state with partial sign-off events (`parallelJoinStatus = "PARTIAL"`) until all required roles approve.
+  - **Fast-Fail Rejection**: Rejection by any approver immediately cancels sibling tasks and advances to terminal rejected state.
+  - **Segregation of Duties**: Enforced across parallel tasks—requesters cannot approve their own requests.
+- [x] **Full Automated Test Coverage**:
+  - `SpelRuleEvaluatorTest`: Unit tests for expressions, number coercion, dictionaries, priorities, and sandbox security.
+  - `WorkflowServiceEngineTest`: Integration tests for high/low amount conditional routing, fork-join dual approval lifecycle, rejection cascades, and Segregation of Duties.
+
+---
+
 ## 🚀 Future Roadmap & Planned Enhancements
 
-### Phase 12: Automated Testing Suite & Quality Gates
+### Phase 13: Automated Testing Suite & Quality Gates
 - [ ] **Testcontainers Integration Tests**:
   - Spin up real PostgreSQL 16, MongoDB 7, and Kafka KRaft containers in JUnit 5.
-  - End-to-end integration tests for `WorkflowService.transitionWorkflow()` and outbox publishing.
   - Contract testing for REST endpoints.
 - [ ] **End-to-End Browser Tests (Playwright / Cypress)**:
   - Automated UI tests logging in, authoring templates, initiating workflows, and verifying approvals across MFEs.
 - [ ] **Performance & Load Benchmarks (k6 / Gatling)**:
   - Benchmark outbox poller throughput and database concurrency under 1,000+ RPS.
 
-### Phase 13: Advanced Workflow Engine Features
+### Phase 14: SLA Auto-Escalation Engine
 - [ ] **SLA Auto-Escalation Engine**:
   - Background scheduler executing transition actions automatically when an approval task expires past its SLA deadline.
-- [ ] **Dynamic Conditional Branching (Rules Engine)**:
-  - Spring Expression Language (SpEL) predicate evaluation on form payloads (e.g. `amount > 10000` routes to VP; else routes to Manager).
-- [ ] **Parallel / Multi-Party Approvals (Fork-Join)**:
-  - Steps requiring concurrent approval from multiple roles before advancing.
+  - Auto-reassignment to higher-tier roles upon breach.
 
-### Phase 14: Cloud-Native Kubernetes & GitOps
+### Phase 15: Cloud-Native Kubernetes & GitOps
 - [ ] **Helm Charts & Kubernetes Manifests**:
   - Deployments, Services, ConfigMaps, Secrets, and PersistentVolumeClaims for all microservices.
 - [ ] **Ingress Controller & TLS**:

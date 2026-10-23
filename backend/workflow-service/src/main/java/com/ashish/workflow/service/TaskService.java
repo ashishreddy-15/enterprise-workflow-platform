@@ -80,38 +80,59 @@ public class TaskService {
 
             String scope =
                     currentStep.actorScope() != null ? currentStep.actorScope().toUpperCase() : "ANY";
-            boolean isEligible = false;
 
             boolean isInitialStep =
                     (snapshot.initialState() != null && currentState.equalsIgnoreCase(snapshot.initialState()))
                             || currentStep.stepOrder() == 1;
-            boolean isApprovalStep =
-                    currentStep.stepType() == null || "APPROVAL".equalsIgnoreCase(currentStep.stepType());
+            boolean isApprovalStep = currentStep.stepType() == null
+                    || "APPROVAL".equalsIgnoreCase(currentStep.stepType())
+                    || "PARALLEL_APPROVAL".equalsIgnoreCase(currentStep.stepType());
 
-            if ("REQUESTER".equals(scope)) {
-                if (workflow.getRequesterId().equalsIgnoreCase(caller.userId())) {
-                    isEligible = true;
-                }
-            } else if ("ROLE".equals(scope)) {
-                if (isApprovalStep
-                        && !isInitialStep
-                        && workflow.getRequesterId().equalsIgnoreCase(caller.userId())) {
-                    log.debug(
-                            "SoD: user '{}' is the requester of workflow {} and cannot approve role-restricted task",
-                            caller.userId(),
-                            workflow.getId());
-                } else {
-                    String requiredRole = currentStep.requiredRole();
-                    if (requiredRole == null || requiredRole.isBlank() || caller.hasRole(requiredRole)) {
-                        isEligible = true;
-                    }
-                }
-            } else {
-                isEligible = true;
+            // Segregation of Duties: requester cannot approve role-restricted approval steps
+            if (isApprovalStep && !isInitialStep && workflow.getRequesterId().equalsIgnoreCase(caller.userId())) {
+                log.debug(
+                        "SoD: user '{}' is the requester of workflow {} and cannot approve role-restricted task",
+                        caller.userId(),
+                        workflow.getId());
+                continue;
             }
 
-            if (isEligible) {
-                inbox.add(mapToInboxItem(workflow, currentStep));
+            List<WorkflowTask> pendingTasks = workflow.getTasks() != null
+                    ? workflow.getTasks().stream()
+                            .filter(t -> "PENDING".equalsIgnoreCase(t.getStatus()))
+                            .toList()
+                    : List.of();
+
+            if (pendingTasks.isEmpty()) {
+                continue;
+            }
+
+            WorkflowTask matchedTask = null;
+            if ("REQUESTER".equals(scope)) {
+                if (workflow.getRequesterId().equalsIgnoreCase(caller.userId())) {
+                    matchedTask = pendingTasks.get(0);
+                }
+            } else if ("PARALLEL_ROLES".equals(scope)
+                    || (!currentStep.requiredRoles().isEmpty()
+                            && currentStep.requiredRoles().size() > 1)) {
+                // Fork-join: user is eligible if any pending task is assigned to a role they hold
+                for (WorkflowTask pending : pendingTasks) {
+                    if (pending.getAssignedRole() != null && caller.hasRole(pending.getAssignedRole())) {
+                        matchedTask = pending;
+                        break;
+                    }
+                }
+            } else if ("ROLE".equals(scope)) {
+                String requiredRole = currentStep.requiredRole();
+                if (requiredRole == null || requiredRole.isBlank() || caller.hasRole(requiredRole)) {
+                    matchedTask = pendingTasks.get(0);
+                }
+            } else {
+                matchedTask = pendingTasks.get(0);
+            }
+
+            if (matchedTask != null) {
+                inbox.add(mapToInboxItem(workflow, currentStep, matchedTask.getAssignedRole()));
             }
         }
 
@@ -156,16 +177,17 @@ public class TaskService {
         if (snapshot != null && snapshot.steps() != null) {
             currentStep = snapshot.steps().get(workflow.getCurrentState());
         }
-        return mapToInboxItem(workflow, currentStep);
+        return mapToInboxItem(workflow, currentStep, null);
     }
 
     private TaskInboxItem mapToInboxItem(
-            WorkflowInstance workflow, TemplateDefinitionResponse.StepDefinitionDto currentStep) {
+            WorkflowInstance workflow, TemplateDefinitionResponse.StepDefinitionDto currentStep, String effectiveRole) {
         String currentState = workflow.getCurrentState();
         String currentStepName =
                 currentStep != null && currentStep.stepName() != null ? currentStep.stepName() : currentState;
         String scope = currentStep != null && currentStep.actorScope() != null ? currentStep.actorScope() : "ANY";
-        String requiredRole = currentStep != null ? currentStep.requiredRole() : null;
+        String requiredRole =
+                effectiveRole != null ? effectiveRole : (currentStep != null ? currentStep.requiredRole() : null);
 
         List<TaskActivity> history = workflow.getTasks() != null
                 ? workflow.getTasks().stream()

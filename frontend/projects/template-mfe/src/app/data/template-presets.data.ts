@@ -115,7 +115,11 @@ export const BLUEPRINT_PRESETS: BlueprintPreset[] = [
           transitions: {
             APPROVE: 'FINANCE_CONTROLLER_REVIEW',
             REJECT: 'REJECTED'
-          }
+          },
+          conditionalTransitions: [
+            { action: 'APPROVE', condition: '#amount > 10000', targetState: 'FINANCE_CONTROLLER_REVIEW', priority: 1 },
+            { action: 'APPROVE', condition: '#amount <= 10000', targetState: 'FUNDS_DISBURSED', priority: 2 }
+          ]
         },
         FINANCE_CONTROLLER_REVIEW: {
           stepOrder: 3,
@@ -182,10 +186,11 @@ export const BLUEPRINT_PRESETS: BlueprintPreset[] = [
         },
         LEGAL_COMPLIANCE_REVIEW: {
           stepOrder: 2,
-          stepName: 'Legal Counsel Review',
-          stepType: 'APPROVAL',
-          actorScope: 'ROLE',
-          requiredRole: 'ROLE_LEGAL_COUNSEL',
+          stepName: 'Legal & Finance Joint Review',
+          stepType: 'PARALLEL_APPROVAL',
+          actorScope: 'PARALLEL_ROLES',
+          requiredRole: null,
+          requiredRoles: ['ROLE_LEGAL_COUNSEL', 'ROLE_FINANCE_MANAGER'],
           requiredPayloadKeys: [],
           isTerminal: false,
           slaHours: 48,

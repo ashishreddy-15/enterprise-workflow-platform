@@ -58,6 +58,11 @@ public class SlaMonitoringScheduler {
                 TemplateDefinitionResponse.StepDefinitionDto currentStep =
                         snapshot.steps().get(workflow.getCurrentState());
                 String role = currentStep != null ? currentStep.requiredRole() : null;
+                if (role == null
+                        && currentStep != null
+                        && !currentStep.requiredRoles().isEmpty()) {
+                    role = String.join(", ", currentStep.requiredRoles());
+                }
 
                 // 1. Mark workflow as breached to avoid duplicate notifications
                 workflow.setSlaBreached(true);

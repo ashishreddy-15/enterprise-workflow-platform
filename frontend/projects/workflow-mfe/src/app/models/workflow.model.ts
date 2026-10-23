@@ -32,6 +32,13 @@ export interface WorkflowAction {
   targetState?: string;
 }
 
+export interface ConditionalTransition {
+  action: string;
+  condition: string;
+  targetState: string;
+  priority?: number;
+}
+
 export interface TemplateStepDefinition {
   stepOrder: number;
   stepName: string;
@@ -42,6 +49,8 @@ export interface TemplateStepDefinition {
   isTerminal: boolean;
   slaHours?: number | null;
   transitions: Record<string, string>;
+  conditionalTransitions?: ConditionalTransition[];
+  requiredRoles?: string[];
 }
 
 export interface WorkflowTemplate {

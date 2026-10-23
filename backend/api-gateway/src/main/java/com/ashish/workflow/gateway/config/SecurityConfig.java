@@ -25,7 +25,8 @@ public class SecurityConfig {
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(
             ServerHttpSecurity http,
-            OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler) {
+            OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler,
+            OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler) {
         return http.csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeExchange(exchanges -> exchanges
@@ -50,8 +51,8 @@ public class SecurityConfig {
                         .permitAll()
                         .anyExchange()
                         .authenticated())
-                .oauth2Login(oauth2 ->
-                        oauth2.authenticationSuccessHandler(oAuth2AuthenticationSuccessHandler))
+                .oauth2Login(oauth2 -> oauth2.authenticationSuccessHandler(oAuth2AuthenticationSuccessHandler)
+                        .authenticationFailureHandler(oAuth2AuthenticationFailureHandler))
                 .oauth2ResourceServer(oauth2 ->
                         oauth2.jwt(Customizer.withDefaults()).bearerTokenConverter(cookieOrHeaderBearerTokenConverter))
                 .build();

@@ -11,14 +11,14 @@ spring:
       client:
         registration:
           keycloak:
-            client-id: ${OAUTH2_CLIENT_ID:ewp-gateway}
-            client-secret: ${OAUTH2_CLIENT_SECRET:ewp-client-secret-2026}
+            client-id: ${OAUTH2_CLIENT_ID}
+            client-secret: ${OAUTH2_CLIENT_SECRET}
             scope: openid,profile,email,roles
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
           azure:
-            client-id: ${AZURE_CLIENT_ID:ewp-azure-client-id}
-            client-secret: ${AZURE_CLIENT_SECRET:ewp-azure-client-secret}
+            client-id: ${AZURE_CLIENT_ID}
+            client-secret: ${AZURE_CLIENT_SECRET}
             scope: openid,profile,email
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
@@ -30,11 +30,11 @@ spring:
             jwk-set-uri: ${OAUTH2_JWKS_URI:http://localhost:8085/realms/ewp/protocol/openid-connect/certs}
             user-name-attribute: preferred_username
           azure:
-            authorization-uri: https://login.microsoftonline.com/${AZURE_TENANT_ID:common}/oauth2/v2.0/authorize
-            token-uri: https://login.microsoftonline.com/${AZURE_TENANT_ID:common}/oauth2/v2.0/token
+            authorization-uri: https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/authorize
+            token-uri: https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token
             user-info-uri: https://graph.microsoft.com/oidc/userinfo
-            jwk-set-uri: https://login.microsoftonline.com/${AZURE_TENANT_ID:common}/discovery/v2.0/keys
-            user-name-attribute: preferred_username
+            jwk-set-uri: https://login.microsoftonline.com/${AZURE_TENANT_ID}/discovery/v2.0/keys
+            user-name-attribute: sub
   cloud:
     gateway:
       globalcors:
@@ -86,3 +86,15 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+jwt:
+  secret: ${JWT_SECRET}
+  issuer: ${JWT_ISSUER:enterprise-workflow-platform}
+
+ewp:
+  auth:
+    frontend-url: ${FRONTEND_URL:http://localhost/}
+    session:
+      idle-timeout-minutes: ${SESSION_IDLE_TIMEOUT_MINUTES:60}
+      max-lifespan-hours: ${SESSION_MAX_LIFESPAN_HOURS:8}
+      renew-threshold-minutes: ${SESSION_RENEW_THRESHOLD_MINUTES:15}

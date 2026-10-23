@@ -6,16 +6,18 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: ewp-postgres
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: ewp_user
-      POSTGRES_PASSWORD: ewp_password
-      POSTGRES_DB: workflow_db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ewp_user -d workflow_db"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -25,9 +27,11 @@ services:
   mongodb:
     image: mongo:7.0
     container_name: ewp-mongodb
+    env_file:
+      - .env
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ewp_admin
-      MONGO_INITDB_ROOT_PASSWORD: ewp_password
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     ports:
       - "27017:27017"
     volumes:
@@ -43,13 +47,15 @@ services:
   redis:
     image: redis:7.2-alpine
     container_name: ewp-redis
-    command: redis-server --appendonly yes --requirepass ewp_redis_pass
+    env_file:
+      - .env
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "ewp_redis_pass", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -92,8 +98,10 @@ services:
     container_name: ewp-template-service
     ports:
       - "8083:8083"
+    env_file:
+      - .env
     environment:
-      SPRING_MONGODB_URI: mongodb://ewp_admin:ewp_password@mongodb:27017/template_db?authSource=admin&uuidRepresentation=standard
+      SPRING_MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/${MONGO_TEMPLATE_DB:-template_db}?authSource=admin&uuidRepresentation=standard
     depends_on:
       mongodb:
         condition: service_healthy
@@ -109,11 +117,13 @@ services:
     container_name: ewp-workflow-service
     ports:
       - "8081:8081"
+    env_file:
+      - .env
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/workflow_db
-      SPRING_DATASOURCE_USERNAME: ewp_user
-      SPRING_DATASOURCE_PASSWORD: ewp_password
-      SPRING_MONGODB_URI: mongodb://ewp_admin:ewp_password@mongodb:27017/template_db?authSource=admin&uuidRepresentation=standard
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/${MONGO_TEMPLATE_DB:-template_db}?authSource=admin&uuidRepresentation=standard
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       SERVICES_TEMPLATE_SERVICE_URL: http://template-service:8083/templates
     depends_on:
@@ -137,8 +147,10 @@ services:
     container_name: ewp-audit-analytics-service
     ports:
       - "8082:8082"
+    env_file:
+      - .env
     environment:
-      SPRING_MONGODB_URI: mongodb://ewp_admin:ewp_password@mongodb:27017/audit_db?authSource=admin&uuidRepresentation=standard
+      SPRING_MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/${MONGO_AUDIT_DB:-audit_db}?authSource=admin&uuidRepresentation=standard
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     depends_on:
       mongodb:
@@ -157,6 +169,8 @@ services:
     container_name: ewp-api-gateway
     ports:
       - "8080:8080"
+    env_file:
+      - .env
     environment:
       SPRING_CLOUD_GATEWAY_SERVER_WEBFLUX_ROUTES_0_ID: template-service-route
       SPRING_CLOUD_GATEWAY_SERVER_WEBFLUX_ROUTES_0_URI: http://template-service:8083
@@ -171,9 +185,16 @@ services:
       OAUTH2_TOKEN_URI: http://keycloak:8085/realms/ewp/protocol/openid-connect/token
       OAUTH2_JWKS_URI: http://keycloak:8085/realms/ewp/protocol/openid-connect/certs
       OAUTH2_USERINFO_URI: http://keycloak:8085/realms/ewp/protocol/openid-connect/userinfo
-      AZURE_CLIENT_ID: ${AZURE_CLIENT_ID:-ewp-azure-client-id}
-      AZURE_CLIENT_SECRET: ${AZURE_CLIENT_SECRET:-ewp-azure-client-secret}
-      AZURE_TENANT_ID: ${AZURE_TENANT_ID:-common}
+      OAUTH2_CLIENT_ID: ${OAUTH2_CLIENT_ID}
+      OAUTH2_CLIENT_SECRET: ${OAUTH2_CLIENT_SECRET}
+      AZURE_CLIENT_ID: ${AZURE_CLIENT_ID}
+      AZURE_CLIENT_SECRET: ${AZURE_CLIENT_SECRET}
+      AZURE_TENANT_ID: ${AZURE_TENANT_ID}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER}
+      SESSION_IDLE_TIMEOUT_MINUTES: ${SESSION_IDLE_TIMEOUT_MINUTES}
+      SESSION_MAX_LIFESPAN_HOURS: ${SESSION_MAX_LIFESPAN_HOURS}
+      SESSION_RENEW_THRESHOLD_MINUTES: ${SESSION_RENEW_THRESHOLD_MINUTES}
     depends_on:
       - template-service
       - workflow-service
@@ -189,9 +210,11 @@ services:
     image: quay.io/keycloak/keycloak:26.1
     container_name: ewp-keycloak
     command: start-dev --import-realm
+    env_file:
+      - .env
     environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       KC_HEALTH_ENABLED: "true"
       KC_HTTP_PORT: 8085
       KC_HOSTNAME: http://localhost:8085

@@ -1,20 +1,12 @@
 package com.ashish.workflow.gateway.controller;
 
 import com.ashish.workflow.gateway.api.AuthApi;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
+import com.ashish.workflow.gateway.config.SessionTokenService;
 import java.util.List;
 import java.util.Map;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
-import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtClaimsSet;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
-import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,18 +21,16 @@ import reactor.core.publisher.Mono;
 @ConditionalOnProperty(name = "jwt.dev-token.enabled", matchIfMissing = true, havingValue = "true")
 public class DevAuthController implements AuthApi {
 
-    public static final String COOKIE_NAME = "ewp_access_token";
-    private final JwtEncoder jwtEncoder;
+    public static final String COOKIE_NAME = SessionTokenService.COOKIE_NAME;
+    private final SessionTokenService sessionTokenService;
 
-    public DevAuthController(JwtEncoder jwtEncoder) {
-        this.jwtEncoder = jwtEncoder;
+    public DevAuthController(SessionTokenService sessionTokenService) {
+        this.sessionTokenService = sessionTokenService;
     }
 
     @Override
     @PostMapping({"/dev-token", "/login"})
     public Mono<Map<String, String>> generateToken(@RequestBody TokenRequest request, ServerWebExchange exchange) {
-        Instant now = Instant.now();
-
         String resolvedUserId = request.userId() != null && !request.userId().isBlank()
                 ? request.userId().trim()
                 : "anonymous_user";
@@ -48,28 +38,7 @@ public class DevAuthController implements AuthApi {
         List<String> resolvedRoles =
                 request.roles() != null && !request.roles().isEmpty() ? request.roles() : List.of("ROLE_EMPLOYEE");
 
-        JwtClaimsSet claims = JwtClaimsSet.builder()
-                .issuer("https://auth.ewp.ashish.com")
-                .issuedAt(now)
-                .expiresAt(now.plus(8, ChronoUnit.HOURS))
-                .subject(resolvedUserId)
-                .claim("roles", resolvedRoles)
-                .build();
-
-        JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
-        String token =
-                jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
-
-        // Attach secure HttpOnly cookie for production-grade browser session management
-        ResponseCookie cookie = ResponseCookie.from(COOKIE_NAME, token)
-                .httpOnly(true)
-                .secure(false) // localhost dev; in production HTTPS this is true
-                .path("/")
-                .sameSite("Lax")
-                .maxAge(Duration.ofHours(8))
-                .build();
-
-        exchange.getResponse().addCookie(cookie);
+        String token = sessionTokenService.createSessionToken(resolvedUserId, resolvedRoles, exchange);
 
         return Mono.just(Map.of(
                 "token",
@@ -85,16 +54,7 @@ public class DevAuthController implements AuthApi {
     @Override
     @PostMapping("/logout")
     public Mono<Map<String, String>> logout(ServerWebExchange exchange) {
-        ResponseCookie cookie = ResponseCookie.from(COOKIE_NAME, "")
-                .httpOnly(true)
-                .secure(false)
-                .path("/")
-                .sameSite("Lax")
-                .maxAge(0)
-                .build();
-
-        exchange.getResponse().addCookie(cookie);
-
+        sessionTokenService.clearSessionCookie(exchange);
         return Mono.just(Map.of("status", "logged_out"));
     }
 

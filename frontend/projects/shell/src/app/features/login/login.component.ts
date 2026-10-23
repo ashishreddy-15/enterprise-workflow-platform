@@ -64,9 +64,11 @@ export class LoginComponent implements OnInit {
       return;
     }
 
-    // Check for SSO failure error parameter
+    // Check for error parameters (SSO failure or inactivity timeout)
     const errorParam = this.route.snapshot.queryParamMap.get('error');
-    if (errorParam) {
+    if (errorParam === 'session_expired') {
+      this.errorMessage.set('Your session expired due to inactivity. Please sign in again to continue.');
+    } else if (errorParam) {
       this.errorMessage.set('Enterprise Single Sign-On failed or was cancelled. You can retry or use direct login below.');
     }
 

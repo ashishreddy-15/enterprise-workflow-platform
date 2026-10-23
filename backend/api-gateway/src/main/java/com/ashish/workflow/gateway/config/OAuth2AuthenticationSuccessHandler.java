@@ -1,10 +1,6 @@
 package com.ashish.workflow.gateway.config;
 
-import com.ashish.workflow.gateway.controller.DevAuthController;
 import java.net.URI;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -15,15 +11,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
-import org.springframework.security.oauth2.jwt.JwsHeader;
-import org.springframework.security.oauth2.jwt.JwtClaimsSet;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
-import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.security.web.server.WebFilterExchange;
 import org.springframework.security.web.server.authentication.ServerAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -35,13 +25,13 @@ public class OAuth2AuthenticationSuccessHandler implements ServerAuthenticationS
 
     private static final Logger log = LoggerFactory.getLogger(OAuth2AuthenticationSuccessHandler.class);
 
-    private final JwtEncoder jwtEncoder;
+    private final SessionTokenService sessionTokenService;
 
     @Value("${ewp.auth.frontend-url:http://localhost/}")
     private String defaultFrontendUrl;
 
-    public OAuth2AuthenticationSuccessHandler(JwtEncoder jwtEncoder) {
-        this.jwtEncoder = jwtEncoder;
+    public OAuth2AuthenticationSuccessHandler(SessionTokenService sessionTokenService) {
+        this.sessionTokenService = sessionTokenService;
     }
 
     @Override
@@ -53,27 +43,7 @@ public class OAuth2AuthenticationSuccessHandler implements ServerAuthenticationS
 
         log.info("OAuth2 OIDC Authentication Successful for user='{}', resolved roles={}", userId, roles);
 
-        Instant now = Instant.now();
-        JwtClaimsSet claims = JwtClaimsSet.builder()
-                .issuer("https://auth.ewp.ashish.com")
-                .issuedAt(now)
-                .expiresAt(now.plus(8, ChronoUnit.HOURS))
-                .subject(userId)
-                .claim("roles", roles)
-                .build();
-
-        JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
-        String token = jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
-
-        ResponseCookie cookie = ResponseCookie.from(DevAuthController.COOKIE_NAME, token)
-                .httpOnly(true)
-                .secure(false) // in production HTTPS: true
-                .path("/")
-                .sameSite("Lax")
-                .maxAge(Duration.ofHours(8))
-                .build();
-
-        exchange.getResponse().addCookie(cookie);
+        sessionTokenService.createSessionToken(userId, roles, exchange);
 
         URI targetUri = resolveTargetUri(exchange);
         log.info("Redirecting authenticated user to: {}", targetUri);
@@ -92,6 +62,14 @@ public class OAuth2AuthenticationSuccessHandler implements ServerAuthenticationS
             String email = oauth2User.getAttribute("email");
             if (email != null && !email.isBlank()) {
                 return email.trim();
+            }
+            String upn = oauth2User.getAttribute("upn");
+            if (upn != null && !upn.isBlank()) {
+                return upn.trim();
+            }
+            String name = oauth2User.getAttribute("name");
+            if (name != null && !name.isBlank()) {
+                return name.trim();
             }
         }
         return authentication.getName();
@@ -118,7 +96,9 @@ public class OAuth2AuthenticationSuccessHandler implements ServerAuthenticationS
                 if (rObj instanceof Collection<?> col) {
                     for (Object item : col) {
                         String r = item.toString().trim();
-                        if (!r.startsWith("default-roles") && !r.equalsIgnoreCase("offline_access") && !r.equalsIgnoreCase("uma_authorization")) {
+                        if (!r.startsWith("default-roles")
+                                && !r.equalsIgnoreCase("offline_access")
+                                && !r.equalsIgnoreCase("uma_authorization")) {
                             roles.add(r.startsWith("ROLE_") ? r.toUpperCase() : "ROLE_" + r.toUpperCase());
                         }
                     }

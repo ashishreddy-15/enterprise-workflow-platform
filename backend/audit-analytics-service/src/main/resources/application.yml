@@ -12,7 +12,7 @@ spring:
       enabled: true
 
   mongodb:
-    uri: mongodb://ewp_admin:ewp_password@localhost:27017/audit_db?authSource=admin&uuidRepresentation=standard
+    uri: ${SPRING_MONGODB_URI}
     uuid-representation: standard
     auto-index-creation: true
 

@@ -14,11 +14,23 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 
+/**
+ * Production-grade JWT configuration.
+ * Strictly enforces that JWT_SECRET is provided in the environment and meets cryptographic minimums (>= 32 chars).
+ * Zero hardcoded fallback secrets are permitted.
+ */
 @Configuration
 public class JwtConfig {
 
-    @Value("${jwt.secret:ewp-enterprise-super-secret-signing-key-2026-min-32-bytes}")
-    private String jwtSecret;
+    private final String jwtSecret;
+
+    public JwtConfig(@Value("${jwt.secret}") String jwtSecret) {
+        if (jwtSecret == null || jwtSecret.trim().length() < 32) {
+            throw new IllegalStateException(
+                    "FATAL SECURITY CONFIGURATION: 'jwt.secret' / 'JWT_SECRET' environment variable must be provided and contain at least 32 characters (256 bits for HMAC-SHA256). Application refuses to boot with insecure configuration.");
+        }
+        this.jwtSecret = jwtSecret.trim();
+    }
 
     @Bean
     @ConditionalOnProperty(

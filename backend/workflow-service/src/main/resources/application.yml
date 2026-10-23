@@ -13,13 +13,13 @@ spring:
       enabled: true
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/workflow_db
-    username: ewp_user
-    password: ewp_password
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   mongodb:
-    uri: mongodb://ewp_admin:ewp_password@localhost:27017/template_db?authSource=admin&uuidRepresentation=standard
+    uri: ${SPRING_MONGODB_URI}
     uuid-representation: standard
     auto-index-creation: true
 

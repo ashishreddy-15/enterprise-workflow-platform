@@ -3,16 +3,18 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: ewp-postgres
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: ewp_user
-      POSTGRES_PASSWORD: ewp_password
-      POSTGRES_DB: workflow_db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ewp_user -d workflow_db"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -21,9 +23,11 @@ services:
   mongodb:
     image: mongo:7.0
     container_name: ewp-mongodb
+    env_file:
+      - .env
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ewp_admin
-      MONGO_INITDB_ROOT_PASSWORD: ewp_password
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     ports:
       - "27017:27017"
     volumes:
@@ -38,13 +42,15 @@ services:
   redis:
     image: redis:7.2-alpine
     container_name: ewp-redis
-    command: redis-server --appendonly yes --requirepass ewp_redis_pass
+    env_file:
+      - .env
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "ewp_redis_pass", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5

@@ -37,6 +37,11 @@
   - Native Federation Host (Shell) + 3 Remotes (Workflow, Template, Analytics)
   - Centralized Design System (`ewp-theme.css`) with Tailwind `@theme` tokens
   - Cross-MFE Persona Synchronization via `AuthBridge` & BroadcastChannel
+- [x] **Stage 7: CI/CD & DevSecOps Automation**
+  - GitHub Actions Path-Filtered Matrix CI (`ci.yml` for Java 21 & Angular MFEs)
+  - Gitleaks Secret Scanning & Aqua Trivy Dependency Vulnerability Scanner (`security.yml`)
+  - Automated OCI Container Publishing to GitHub Container Registry (`docker-publish.yml` to `ghcr.io`)
+
 
 ---
 

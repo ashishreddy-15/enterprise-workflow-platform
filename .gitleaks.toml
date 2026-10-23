@@ -1,0 +1,11 @@
+# Gitleaks configuration for Enterprise Workflow Platform
+title = "EWP Gitleaks Config"
+
+[allowlist]
+description = "Allowlist documentation and environment templates"
+paths = [
+  '''\.env\.example''',
+  '''docs/.*''',
+  '''README\.md''',
+  '''docker/README\.md'''
+]

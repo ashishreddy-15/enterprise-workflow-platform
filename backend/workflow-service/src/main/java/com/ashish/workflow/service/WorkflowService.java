@@ -188,11 +188,11 @@ public class WorkflowService {
             }
 
             // 2. Segregation of Duties: Requester cannot approve their own request on approval steps
-            boolean isInitialStep = (snapshot.initialState() != null
-                            && previousState.equalsIgnoreCase(snapshot.initialState()))
-                    || currentStep.stepOrder() == 1;
-            boolean isApprovalStep = currentStep.stepType() == null
-                    || "APPROVAL".equalsIgnoreCase(currentStep.stepType());
+            boolean isInitialStep =
+                    (snapshot.initialState() != null && previousState.equalsIgnoreCase(snapshot.initialState()))
+                            || currentStep.stepOrder() == 1;
+            boolean isApprovalStep =
+                    currentStep.stepType() == null || "APPROVAL".equalsIgnoreCase(currentStep.stepType());
 
             if (isApprovalStep && !isInitialStep && workflow.getRequesterId().equalsIgnoreCase(actorId)) {
                 log.warn(

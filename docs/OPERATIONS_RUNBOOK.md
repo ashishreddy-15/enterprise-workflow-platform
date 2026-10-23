@@ -122,3 +122,39 @@ npm run start:template    # Port 4203
   ```powershell
   cd backend; mvn spotless:apply; cd ..
   ```
+
+---
+
+## 5. CI/CD & GitHub Container Registry (GHCR)
+
+The repository includes enterprise-grade GitHub Actions workflows:
+
+### Workflows Catalog:
+1. **CI Pipeline (`.github/workflows/ci.yml`)**:
+   - Triggers on pull requests and pushes to `main`.
+   - Uses path filtering to run only affected stacks.
+   - Enforces `mvn spotless:check` and Java 21 compilation on backend changes.
+   - Enforces TypeScript typechecking and production builds on frontend changes (`npm run build:all`).
+2. **Security & Vulnerability Scan (`.github/workflows/security.yml`)**:
+   - Runs **Gitleaks** to detect leaked credentials or secret tokens.
+   - Runs **Aqua Trivy** to scan dependencies for known CVEs (Critical & High).
+   - Scheduled weekly every Monday at 00:00 UTC.
+3. **OCI Container Delivery (`.github/workflows/docker-publish.yml`)**:
+   - Triggers on merge to `main`.
+   - Builds multi-stage Docker images using BuildKit caching.
+   - Publishes versioned images to **GitHub Container Registry** (`ghcr.io`):
+     - `ghcr.io/<owner>/ewp-api-gateway:latest` & `sha-<commit>`
+     - `ghcr.io/<owner>/ewp-workflow-service:latest` & `sha-<commit>`
+     - `ghcr.io/<owner>/ewp-template-service:latest` & `sha-<commit>`
+     - `ghcr.io/<owner>/ewp-audit-analytics-service:latest` & `sha-<commit>`
+     - `ghcr.io/<owner>/ewp-frontend:latest` & `sha-<commit>`
+
+### Pulling Pre-built Images from GHCR:
+```powershell
+# Authenticate to GHCR (using your GitHub Personal Access Token or GITHUB_TOKEN)
+echo $CR_PAT | docker login ghcr.io -u <your-github-username> --password-stdin
+
+# Pull the latest gateway image
+docker pull ghcr.io/<owner>/ewp-api-gateway:latest
+```
+

@@ -102,7 +102,7 @@ services:
       - .env
     environment:
       SPRING_MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/${MONGO_TEMPLATE_DB:-template_db}?authSource=admin&uuidRepresentation=standard
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     depends_on:
       mongodb:
         condition: service_healthy
@@ -129,7 +129,7 @@ services:
       SPRING_MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/${MONGO_TEMPLATE_DB:-template_db}?authSource=admin&uuidRepresentation=standard
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       SERVICES_TEMPLATE_SERVICE_URL: http://template-service:8083/templates
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     depends_on:
       postgres:
         condition: service_healthy
@@ -158,7 +158,7 @@ services:
     environment:
       SPRING_MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/${MONGO_AUDIT_DB:-audit_db}?authSource=admin&uuidRepresentation=standard
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     depends_on:
       mongodb:
         condition: service_healthy
@@ -204,7 +204,7 @@ services:
       SESSION_IDLE_TIMEOUT_MINUTES: ${SESSION_IDLE_TIMEOUT_MINUTES}
       SESSION_MAX_LIFESPAN_HOURS: ${SESSION_MAX_LIFESPAN_HOURS}
       SESSION_RENEW_THRESHOLD_MINUTES: ${SESSION_RENEW_THRESHOLD_MINUTES}
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     depends_on:
       - template-service
       - workflow-service

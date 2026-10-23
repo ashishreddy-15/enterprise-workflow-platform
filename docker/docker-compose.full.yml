@@ -102,9 +102,12 @@ services:
       - .env
     environment:
       SPRING_MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/${MONGO_TEMPLATE_DB:-template_db}?authSource=admin&uuidRepresentation=standard
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
       mongodb:
         condition: service_healthy
+      jaeger:
+        condition: service_started
     networks:
       - ewp-network
 
@@ -126,6 +129,7 @@ services:
       SPRING_MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/${MONGO_TEMPLATE_DB:-template_db}?authSource=admin&uuidRepresentation=standard
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       SERVICES_TEMPLATE_SERVICE_URL: http://template-service:8083/templates
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
       postgres:
         condition: service_healthy
@@ -134,6 +138,8 @@ services:
       kafka:
         condition: service_started
       template-service:
+        condition: service_started
+      jaeger:
         condition: service_started
     networks:
       - ewp-network
@@ -152,10 +158,13 @@ services:
     environment:
       SPRING_MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/${MONGO_AUDIT_DB:-audit_db}?authSource=admin&uuidRepresentation=standard
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
       mongodb:
         condition: service_healthy
       kafka:
+        condition: service_started
+      jaeger:
         condition: service_started
     networks:
       - ewp-network
@@ -195,10 +204,14 @@ services:
       SESSION_IDLE_TIMEOUT_MINUTES: ${SESSION_IDLE_TIMEOUT_MINUTES}
       SESSION_MAX_LIFESPAN_HOURS: ${SESSION_MAX_LIFESPAN_HOURS}
       SESSION_RENEW_THRESHOLD_MINUTES: ${SESSION_RENEW_THRESHOLD_MINUTES}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318/v1/traces
     depends_on:
       - template-service
       - workflow-service
       - audit-analytics-service
+      - jaeger
+    networks:
+      - ewp-network
     networks:
       - ewp-network
 
@@ -248,11 +261,69 @@ services:
     networks:
       - ewp-network
 
+  # =====================================================================
+  # 4. OBSERVABILITY & DISTRIBUTED TRACING
+  # =====================================================================
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.55
+    container_name: ewp-jaeger
+    ports:
+      - "16686:16686" # Jaeger Web UI
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - ewp-network
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: ewp-prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    depends_on:
+      - api-gateway
+      - workflow-service
+      - audit-analytics-service
+      - template-service
+    networks:
+      - ewp-network
+
+  grafana:
+    image: grafana/grafana:10.4.1
+    container_name: ewp-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - jaeger
+    networks:
+      - ewp-network
+
 volumes:
   postgres_data:
   mongo_data:
   redis_data:
   kafka_data:
+  prometheus_data:
+  grafana_data:
 
 networks:
   ewp-network:

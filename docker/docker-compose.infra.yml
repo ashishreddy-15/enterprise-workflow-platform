@@ -76,6 +76,16 @@ services:
     volumes:
       - kafka_data:/var/lib/kafka/data
 
+  jaeger:
+    image: jaegertracing/all-in-one:1.55
+    container_name: ewp-jaeger
+    ports:
+      - "16686:16686" # Jaeger Web UI
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+
 volumes:
   postgres_data:
   mongo_data:

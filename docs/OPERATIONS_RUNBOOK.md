@@ -95,6 +95,10 @@ npm run start:template    # Port 4203
 | **MongoDB 7.0** | `27017` | `localhost:27017` | `mongosh --eval "db.adminCommand('ping')"` |
 | **Redis 7.2** | `6379` | `localhost:6379` | `redis-cli -a ewp_redis_pass ping` |
 | **Kafka (KRaft)** | `9092` / `29092` | `localhost:9092` (host) | Native KRaft broker listener |
+| **Prometheus** | `9090` | `http://localhost:9090` | Time-series metrics engine |
+| **Grafana** | `3000` | `http://localhost:3000` (`admin`/`admin`) | Visual dashboard console |
+| **Jaeger Tracing** | `16686` | `http://localhost:16686` | Distributed waterfall trace UI |
+| **Jaeger OTLP HTTP** | `4318` | `http://localhost:4318/v1/traces` | OpenTelemetry span ingest |
 
 ---
 
@@ -157,4 +161,19 @@ echo $CR_PAT | docker login ghcr.io -u <your-github-username> --password-stdin
 # Pull the latest gateway image
 docker pull ghcr.io/<owner>/ewp-api-gateway:latest
 ```
+
+---
+
+## 6. Observability, Metrics & Tracing
+
+### Accessing the Consoles:
+- **Grafana Dashboard**: `http://localhost:3000` (Default credentials: `admin` / `admin`)
+  - Automatically loads the **Enterprise Workflow Platform - Observability** dashboard.
+  - Monitors throughput (RPS), p95 latency, 4xx/5xx error rates, JVM Virtual Threads, and CPU/heap usage.
+- **Jaeger Distributed Tracing**: `http://localhost:16686`
+  - Select service (e.g. `api-gateway`, `workflow-service`, or `audit-analytics-service`).
+  - Inspect end-to-end waterfall spans across HTTP, database, and Kafka boundaries.
+- **Prometheus Targets**: `http://localhost:9090/targets`
+  - Verifies healthy scraping status across all 4 microservices.
+
 

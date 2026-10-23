@@ -1,0 +1,34 @@
+# Prometheus Configuration for Enterprise Workflow Platform
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+  scrape_timeout: 4s
+
+scrape_configs:
+  - job_name: 'api-gateway'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['api-gateway:8080']
+        labels:
+          application: 'api-gateway'
+
+  - job_name: 'workflow-service'
+    metrics_path: '/workflows/actuator/prometheus'
+    static_configs:
+      - targets: ['workflow-service:8081']
+        labels:
+          application: 'workflow-service'
+
+  - job_name: 'template-service'
+    metrics_path: '/templates/actuator/prometheus'
+    static_configs:
+      - targets: ['template-service:8083']
+        labels:
+          application: 'template-service'
+
+  - job_name: 'audit-analytics-service'
+    metrics_path: '/analytics/actuator/prometheus'
+    static_configs:
+      - targets: ['audit-analytics-service:8082']
+        labels:
+          application: 'audit-analytics-service'

@@ -41,6 +41,11 @@
   - GitHub Actions Path-Filtered Matrix CI (`ci.yml` for Java 21 & Angular MFEs)
   - Gitleaks Secret Scanning & Aqua Trivy Dependency Vulnerability Scanner (`security.yml`)
   - Automated OCI Container Publishing to GitHub Container Registry (`docker-publish.yml` to `ghcr.io`)
+- [x] **Stage 8: Observability, Metrics & Distributed Tracing**
+  - Prometheus scraping (`/actuator/prometheus`) across all microservices
+  - Pre-provisioned Grafana dashboards (`:3000`) for p95 latency, throughput, and JVM Virtual Threads
+  - OpenTelemetry (OTel) + Micrometer Tracing with Jaeger (`:16686`) for distributed trace visualization across Gateway, Kafka, and MongoDB
+
 
 
 ---

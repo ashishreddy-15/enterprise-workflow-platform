@@ -212,8 +212,6 @@ services:
       - jaeger
     networks:
       - ewp-network
-    networks:
-      - ewp-network
 
   # =====================================================================
   # 2.5 IDENTITY & ACCESS MANAGEMENT (KEYCLOAK OIDC)

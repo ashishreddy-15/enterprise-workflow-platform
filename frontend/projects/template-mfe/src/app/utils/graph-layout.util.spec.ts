@@ -1,4 +1,5 @@
-import { buildDagNodes, computeCanvasLayout } from './graph-layout.util';
+import '@angular/compiler';
+import { buildDagNodes, computeCanvasLayout, computeFlowLayout } from './graph-layout.util';
 import { WorkflowTemplate } from '../models/template.model';
 
 describe('graph-layout.util', () => {
@@ -245,5 +246,75 @@ describe('graph-layout.util', () => {
     expect(s4Node.x).toBeGreaterThan(initNode.x);
     // COMPLETED MUST be downstream of STAGE_4 (x > s4Node.x)
     expect(compNode.x).toBeGreaterThan(s4Node.x);
+  });
+
+  it('computes modern ngx-vflow nodes and edges with Dagre layout', () => {
+    const template: WorkflowTemplate = {
+      templateKey: 'ORDER_FLOW',
+      version: 1,
+      name: 'Order Flow',
+      description: 'Order flow',
+      status: 'PUBLISHED',
+      initialState: 'ORDER_SUBMIT',
+      steps: {
+        ORDER_SUBMIT: {
+          stepOrder: 1,
+          stepName: 'Submit Order',
+          stepType: 'DOCUMENT_SUBMISSION',
+          actorScope: 'REQUESTER',
+          isTerminal: false,
+          transitions: {
+            PROCEED: 'FINANCE_REVIEW'
+          }
+        },
+        FINANCE_REVIEW: {
+          stepOrder: 2,
+          stepName: 'Finance Review',
+          stepType: 'APPROVAL',
+          actorScope: 'ROLE',
+          requiredRole: 'ROLE_FINANCE_MANAGER',
+          isTerminal: false,
+          transitions: {
+            APPROVE: 'FULFILLMENT',
+            REJECT: 'REJECTED'
+          }
+        },
+        FULFILLMENT: {
+          stepOrder: 3,
+          stepName: 'Order Fulfilled',
+          stepType: 'TERMINAL',
+          actorScope: 'ANY',
+          isTerminal: true,
+          transitions: {}
+        },
+        REJECTED: {
+          stepOrder: 4,
+          stepName: 'Order Rejected',
+          stepType: 'TERMINAL',
+          actorScope: 'ANY',
+          isTerminal: true,
+          transitions: {}
+        }
+      }
+    };
+
+    const dag = buildDagNodes(template);
+    const flow = computeFlowLayout(dag);
+
+    expect(flow.nodes.length).toBe(4);
+    expect(flow.edges.length).toBe(3);
+
+    const submitNode = flow.nodes.find(n => n.id === 'ORDER_SUBMIT')!;
+    const financeNode = flow.nodes.find(n => n.id === 'FINANCE_REVIEW')!;
+    const fulfillNode = flow.nodes.find(n => n.id === 'FULFILLMENT')!;
+
+    // Initial node is to the left of downstream steps
+    expect(submitNode.point().x).toBeLessThan(financeNode.point().x);
+    expect(financeNode.point().x).toBeLessThan(fulfillNode.point().x);
+
+    // Edge markers and labels
+    const rejectEdge = flow.edges.find(e => e.target === 'REJECTED')!;
+    expect(rejectEdge.data?.()?.isDanger).toBe(true);
+    expect(rejectEdge.markers?.()?.end?.color).toBe('#e11d48');
   });
 });

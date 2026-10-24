@@ -1,4 +1,138 @@
+import * as dagre from '@dagrejs/dagre';
+import { createNodes, createEdges, Node, Edge } from 'ngx-vflow';
 import { WorkflowTemplate, DAGNode, CanvasNode, CanvasEdge } from '../models/template.model';
+
+export interface FlowCardData {
+  stateKey: string;
+  name: string;
+  type: string;
+  actorScope: string;
+  requiredRole: string | null;
+  requiredRoles: string[];
+  slaHours: number | null;
+  isInitial: boolean;
+  isTerminal: boolean;
+  isRejectTerminal: boolean;
+  roleDisplay: string;
+  order: number;
+  requiredPayloadKeys: string[];
+  outgoingTransitions: { action: string; targetState: string }[];
+}
+
+export interface FlowEdgeData {
+  action: string;
+  isDanger: boolean;
+}
+
+export function computeFlowLayout(rawNodes: DAGNode[]): {
+  nodes: Node<FlowCardData>[];
+  edges: Edge<FlowEdgeData>[];
+} {
+  if (!rawNodes || rawNodes.length === 0) {
+    return { nodes: [], edges: [] };
+  }
+
+  const NODE_WIDTH = 220;
+  const NODE_HEIGHT = 100;
+
+  const g = new dagre.graphlib.Graph();
+  g.setGraph({
+    rankdir: 'LR',
+    align: 'UL',
+    nodesep: 45,
+    ranksep: 90,
+    marginx: 40,
+    marginy: 40
+  });
+  g.setDefaultEdgeLabel(() => ({}));
+
+  for (const node of rawNodes) {
+    g.setNode(node.stateKey, { width: NODE_WIDTH, height: NODE_HEIGHT });
+  }
+
+  for (const node of rawNodes) {
+    for (const trans of node.outgoingTransitions) {
+      if (rawNodes.some(n => n.stateKey === trans.targetState)) {
+        g.setEdge(node.stateKey, trans.targetState);
+      }
+    }
+  }
+
+  dagre.layout(g);
+
+  const staticNodes = rawNodes.map(node => {
+    const dagreNode = g.node(node.stateKey);
+    const x = dagreNode ? Math.max(20, Math.round(dagreNode.x - NODE_WIDTH / 2)) : 50;
+    const y = dagreNode ? Math.max(20, Math.round(dagreNode.y - NODE_HEIGHT / 2)) : 50;
+
+    const isReject = ['REJECTED', 'CANCELLED'].includes(node.stateKey.toUpperCase());
+    let roleDisplay = node.requiredRole ? node.requiredRole.replace(/^ROLE_/, '') : '';
+    if (!roleDisplay && node.rawStep?.requiredRoles && node.rawStep.requiredRoles.length > 0) {
+      roleDisplay = node.rawStep.requiredRoles.map(r => r.replace(/^ROLE_/, '')).join(' + ');
+    }
+
+    const cardData: FlowCardData = {
+      stateKey: node.stateKey,
+      name: node.name,
+      type: node.type,
+      actorScope: node.actorScope,
+      requiredRole: node.requiredRole || null,
+      requiredRoles: node.rawStep?.requiredRoles || [],
+      slaHours: node.slaHours ?? null,
+      isInitial: node.isInitial,
+      isTerminal: node.isTerminal,
+      isRejectTerminal: node.isTerminal && isReject,
+      roleDisplay,
+      order: node.order,
+      requiredPayloadKeys: node.requiredPayloadKeys,
+      outgoingTransitions: node.outgoingTransitions
+    };
+
+    return {
+      id: node.stateKey,
+      point: { x, y },
+      type: 'html-template' as const,
+      width: NODE_WIDTH,
+      height: NODE_HEIGHT,
+      data: cardData
+    };
+  });
+
+  const staticEdges: any[] = [];
+  for (const source of rawNodes) {
+    for (const trans of source.outgoingTransitions) {
+      if (rawNodes.some(n => n.stateKey === trans.targetState)) {
+        const actionUpper = trans.action.toUpperCase();
+        const isDanger = actionUpper.includes('REJECT') || actionUpper.includes('CANCEL');
+
+        staticEdges.push({
+          id: `${source.stateKey}-${trans.action}-${trans.targetState}`,
+          source: source.stateKey,
+          target: trans.targetState,
+          curve: 'bezier',
+          markers: {
+            end: {
+              type: 'arrow-closed',
+              color: isDanger ? '#e11d48' : '#71717a'
+            }
+          },
+          edgeLabels: {
+            center: {
+              type: 'html-template',
+              data: { action: trans.action, isDanger }
+            }
+          },
+          data: { action: trans.action, isDanger }
+        });
+      }
+    }
+  }
+
+  return {
+    nodes: createNodes(staticNodes),
+    edges: createEdges(staticEdges)
+  };
+}
 
 export function buildDagNodes(tpl: WorkflowTemplate | null): DAGNode[] {
   if (!tpl || !tpl.steps) return [];

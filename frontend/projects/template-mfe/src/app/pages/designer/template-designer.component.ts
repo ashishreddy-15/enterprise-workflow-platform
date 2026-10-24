@@ -1,6 +1,7 @@
-import { Component, OnInit, OnDestroy, HostListener, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, ViewChild, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Vflow, VflowComponent, Connection } from 'ngx-vflow';
 import { TemplateService } from '../../services/template.service';
 import {
   WorkflowTemplate,
@@ -13,7 +14,7 @@ import {
   StateBuilderItem,
   BlueprintPreset
 } from '../../models/template.model';
-import { buildDagNodes, computeCanvasLayout } from '../../utils/graph-layout.util';
+import { buildDagNodes, computeCanvasLayout, computeFlowLayout, FlowCardData, FlowEdgeData } from '../../utils/graph-layout.util';
 import { BLUEPRINT_PRESETS } from '../../data/template-presets.data';
 import { onPersonaChanged } from '../../utils/auth-bridge.util';
 import {
@@ -23,7 +24,7 @@ import {
 } from '../../constants/designer.constants';
 
 // Re-export pure helpers & data for external consumers
-export { buildDagNodes, computeCanvasLayout } from '../../utils/graph-layout.util';
+export { buildDagNodes, computeCanvasLayout, computeFlowLayout } from '../../utils/graph-layout.util';
 export { BLUEPRINT_PRESETS } from '../../data/template-presets.data';
 
 // =============================================================================
@@ -33,12 +34,16 @@ export { BLUEPRINT_PRESETS } from '../../data/template-presets.data';
 @Component({
   selector: 'app-template-designer',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, Vflow],
   templateUrl: './template-designer.component.html',
   styleUrls: ['./template-designer.component.css']
 })
 export class TemplateDesignerComponent implements OnInit, OnDestroy {
   private templateService = inject(TemplateService);
+
+  @ViewChild('previewVflow') previewVflow?: VflowComponent;
+  @ViewChild('fullscreenVflow') fullscreenVflow?: VflowComponent;
+  @ViewChild('builderVflow') builderVflow?: VflowComponent;
 
   readonly templates = signal<WorkflowTemplate[]>([]);
   readonly selectedTemplate = signal<WorkflowTemplate | null>(null);
@@ -123,8 +128,13 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
   // Convert selected template's steps map into sorted DAG Nodes
   readonly dagNodes = computed<DAGNode[]>(() => buildDagNodes(this.selectedTemplate()));
 
-  // Dynamically compute 2D Hierarchical Auto-Layout for the visual node graph canvas
+  // Dynamically compute 2D Hierarchical Auto-Layout for the visual node graph canvas (Legacy fallback)
   readonly canvasLayout = computed(() => computeCanvasLayout(this.dagNodes()));
+
+  // Modern ngx-vflow + Dagre Graph Auto-Layout for Production Viewer
+  readonly previewFlow = computed(() => computeFlowLayout(this.dagNodes()));
+  readonly previewFlowNodes = computed(() => this.previewFlow().nodes);
+  readonly previewFlowEdges = computed(() => this.previewFlow().edges);
 
   readonly selectedTemplateDsl = computed<string>(() => {
     const tpl = this.selectedTemplate();
@@ -196,6 +206,11 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
 
   readonly builderDagNodes = computed<DAGNode[]>(() => buildDagNodes(this.builderTemplate()));
   readonly builderCanvasLayout = computed(() => computeCanvasLayout(this.builderDagNodes()));
+
+  // Modern ngx-vflow + Dagre Graph Auto-Layout for Visual Studio Builder
+  readonly builderFlow = computed(() => computeFlowLayout(this.builderDagNodes()));
+  readonly builderFlowNodes = computed(() => this.builderFlow().nodes);
+  readonly builderFlowEdges = computed(() => this.builderFlow().edges);
   readonly builderDslPreview = computed(() => JSON.stringify(this.builderTemplate(), null, 2));
 
   readonly builderValidationErrors = computed<string[]>(() => {
@@ -338,6 +353,61 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     this.selectedNode.set(node);
   }
 
+  selectNodeByKey(key: string): void {
+    const node = this.dagNodes().find(n => n.stateKey === key);
+    if (node) {
+      this.selectNode(node);
+    }
+  }
+
+  getEdgeData(edge: any): FlowEdgeData {
+    if (!edge) return { action: '', isDanger: false };
+    const d = typeof edge.data === 'function' ? edge.data() : edge.data;
+    return d || { action: '', isDanger: false };
+  }
+
+  focusBuilderStep(key: string): void {
+    const el = document.getElementById('step-card-' + key);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      el.classList.add('ring-2', 'ring-indigo-500');
+      setTimeout(() => el.classList.remove('ring-2', 'ring-indigo-500'), 1500);
+    }
+  }
+
+  onBuilderConnect(conn: Connection): void {
+    if (!conn.source || !conn.target || conn.source === conn.target) return;
+    const states = [...this.builderStates()];
+    const sourceState = states.find(s => s.stateKey === conn.source);
+    if (!sourceState || sourceState.isTerminal) return;
+
+    const existing = sourceState.transitions.find(t => t.targetState === conn.target);
+    if (existing) {
+      this.successMessage.set(`Transition from "${conn.source}" to "${conn.target}" already exists (${existing.action}).`);
+      setTimeout(() => this.successMessage.set(null), 3000);
+      return;
+    }
+
+    const isRejectTarget = ['REJECTED', 'CANCELLED'].includes(conn.target.toUpperCase());
+    let defaultAction = 'NEXT';
+    if (sourceState.transitions.length === 0) {
+      defaultAction = isRejectTarget ? 'REJECT' : 'APPROVE';
+    } else if (sourceState.transitions.length === 1) {
+      defaultAction = isRejectTarget ? 'REJECT' : (sourceState.transitions[0].action === 'APPROVE' ? 'REJECT' : 'APPROVE');
+    } else {
+      defaultAction = isRejectTarget ? 'REJECT' : `ACTION_${sourceState.transitions.length + 1}`;
+    }
+
+    sourceState.transitions.push({
+      action: defaultAction,
+      targetState: conn.target
+    });
+
+    this.builderStates.set(states);
+    this.successMessage.set(`Connected "${conn.source}" ➔ "${conn.target}" with action [${defaultAction}].`);
+    setTimeout(() => this.successMessage.set(null), 3500);
+  }
+
   stepDsl(node: DAGNode): string {
     if (!node.rawStep) return '{}';
     return JSON.stringify(node.rawStep, null, 2);
@@ -362,21 +432,41 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     this.isFullscreenCanvas.set(next);
     this.setScrollLock(next);
     if (next) {
-      this.resetZoom();
+      setTimeout(() => this.resetZoom(), 60);
     }
   }
 
   // Interactive 2D Canvas Viewport Controls (Production Canvas)
   zoomIn(): void {
-    this.zoomLevel.update(z => Math.min(1.8, +(z + 0.15).toFixed(2)));
+    const activeFlow = this.isFullscreenCanvas() ? this.fullscreenVflow : this.previewVflow;
+    if (activeFlow) {
+      const cur = activeFlow.viewport().zoom;
+      activeFlow.zoomTo(Math.min(2.0, +(cur + 0.15).toFixed(2)));
+      this.zoomLevel.set(activeFlow.viewport().zoom);
+    } else {
+      this.zoomLevel.update(z => Math.min(2.0, +(z + 0.15).toFixed(2)));
+    }
   }
 
   zoomOut(): void {
-    this.zoomLevel.update(z => Math.max(0.4, +(z - 0.15).toFixed(2)));
+    const activeFlow = this.isFullscreenCanvas() ? this.fullscreenVflow : this.previewVflow;
+    if (activeFlow) {
+      const cur = activeFlow.viewport().zoom;
+      activeFlow.zoomTo(Math.max(0.3, +(cur - 0.15).toFixed(2)));
+      this.zoomLevel.set(activeFlow.viewport().zoom);
+    } else {
+      this.zoomLevel.update(z => Math.max(0.3, +(z - 0.15).toFixed(2)));
+    }
   }
 
   resetZoom(): void {
-    this.zoomLevel.set(1);
+    const activeFlow = this.isFullscreenCanvas() ? this.fullscreenVflow : this.previewVflow;
+    if (activeFlow) {
+      activeFlow.fitView({ padding: 0.15 });
+      this.zoomLevel.set(activeFlow.viewport().zoom);
+    } else {
+      this.zoomLevel.set(1);
+    }
     this.panOffset.set({ x: 30, y: 30 });
   }
 
@@ -432,15 +522,32 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
   }
 
   zoomInBuilder(): void {
-    this.builderZoomLevel.update(z => Math.min(1.6, +(z + 0.15).toFixed(2)));
+    if (this.builderVflow) {
+      const cur = this.builderVflow.viewport().zoom;
+      this.builderVflow.zoomTo(Math.min(2.0, +(cur + 0.15).toFixed(2)));
+      this.builderZoomLevel.set(this.builderVflow.viewport().zoom);
+    } else {
+      this.builderZoomLevel.update(z => Math.min(2.0, +(z + 0.15).toFixed(2)));
+    }
   }
 
   zoomOutBuilder(): void {
-    this.builderZoomLevel.update(z => Math.max(0.3, +(z - 0.15).toFixed(2)));
+    if (this.builderVflow) {
+      const cur = this.builderVflow.viewport().zoom;
+      this.builderVflow.zoomTo(Math.max(0.3, +(cur - 0.15).toFixed(2)));
+      this.builderZoomLevel.set(this.builderVflow.viewport().zoom);
+    } else {
+      this.builderZoomLevel.update(z => Math.max(0.3, +(z - 0.15).toFixed(2)));
+    }
   }
 
   resetBuilderZoom(): void {
-    this.builderZoomLevel.set(1.0);
+    if (this.builderVflow) {
+      this.builderVflow.fitView({ padding: 0.15 });
+      this.builderZoomLevel.set(this.builderVflow.viewport().zoom);
+    } else {
+      this.builderZoomLevel.set(1.0);
+    }
     this.builderPanOffset.set({ x: 30, y: 30 });
   }
 
@@ -494,6 +601,7 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     this.loadPreset('it-procurement');
     this.isCreateModalOpen.set(true);
     this.setScrollLock(true);
+    setTimeout(() => this.resetBuilderZoom(), 100);
   }
 
   openEditDraft(target?: WorkflowTemplate): void {

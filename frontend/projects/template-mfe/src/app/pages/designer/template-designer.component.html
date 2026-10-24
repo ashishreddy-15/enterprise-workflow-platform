@@ -276,7 +276,7 @@
               <div class="flex items-center gap-2 min-w-0">
                 <span class="font-bold text-zinc-800 text-xs whitespace-nowrap">Workflow Flow</span>
                 <span class="font-mono text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/80 whitespace-nowrap shrink-0">
-                  {{ canvasLayout().nodes.length }} steps &bull; {{ canvasLayout().edges.length }} connections
+                  {{ previewFlowNodes().length }} steps &bull; {{ previewFlowEdges().length }} connections
                 </span>
               </div>
 
@@ -1190,7 +1190,7 @@
                   </div>
 
                   <span class="font-mono text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    {{ builderCanvasLayout().nodes.length }} Steps &bull; {{ builderCanvasLayout().edges.length }} Connections
+                    {{ builderFlowNodes().length }} Steps &bull; {{ builderFlowEdges().length }} Connections
                   </span>
                 </div>
 
@@ -1459,7 +1459,7 @@
               </span>
               @if (viewMode() === 'canvas') {
                 <span class="font-mono text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/80 shrink-0">
-                  {{ canvasLayout().nodes.length }} Steps &bull; {{ canvasLayout().edges.length }} Connections
+                  {{ previewFlowNodes().length }} Steps &bull; {{ previewFlowEdges().length }} Connections
                 </span>
               } @else if (viewMode() === 'pipeline') {
                 <span class="font-mono text-[10px] font-semibold text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200/80 shrink-0">

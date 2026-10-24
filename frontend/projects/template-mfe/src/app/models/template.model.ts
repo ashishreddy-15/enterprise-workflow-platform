@@ -37,6 +37,7 @@ export interface DAGNode {
   order: number;
   name: string;
   type: string;
+  stepType?: string;
   actorScope: string;
   requiredRole?: string | null;
   isInitial: boolean;
@@ -46,32 +47,6 @@ export interface DAGNode {
   outgoingTransitions: { action: string; targetState: string }[];
   incomingTransitions: { action: string; sourceState: string }[];
   rawStep?: StepDefinition;
-}
-
-export interface CanvasNode extends DAGNode {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  rank: number;
-  row: number;
-  isRejectTerminal: boolean;
-  roleDisplay: string;
-}
-
-export interface CanvasEdge {
-  id: string;
-  sourceKey: string;
-  targetKey: string;
-  action: string;
-  pathD: string;
-  sourceX: number;
-  sourceY: number;
-  targetX: number;
-  targetY: number;
-  midX: number;
-  midY: number;
-  isDanger: boolean;
 }
 
 export interface TransitionBuilderItem {

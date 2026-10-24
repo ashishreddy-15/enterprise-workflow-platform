@@ -7,14 +7,12 @@ import {
   WorkflowTemplate,
   DAGNode,
   StepDefinition,
-  CanvasNode,
-  CanvasEdge,
   TransitionBuilderItem,
   ConditionalTransitionItem,
   StateBuilderItem,
   BlueprintPreset
 } from '../../models/template.model';
-import { buildDagNodes, computeCanvasLayout, computeFlowLayout, FlowCardData, FlowEdgeData } from '../../utils/graph-layout.util';
+import { buildDagNodes, computeFlowLayout, FlowCardData, FlowEdgeData } from '../../utils/graph-layout.util';
 import { BLUEPRINT_PRESETS } from '../../data/template-presets.data';
 import { onPersonaChanged } from '../../utils/auth-bridge.util';
 import {
@@ -24,7 +22,7 @@ import {
 } from '../../constants/designer.constants';
 
 // Re-export pure helpers & data for external consumers
-export { buildDagNodes, computeCanvasLayout, computeFlowLayout } from '../../utils/graph-layout.util';
+export { buildDagNodes, computeFlowLayout } from '../../utils/graph-layout.util';
 export { BLUEPRINT_PRESETS } from '../../data/template-presets.data';
 
 // =============================================================================
@@ -57,12 +55,7 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
 
   // Interactive 2D Graph Canvas State (Production Viewer)
   readonly zoomLevel = signal<number>(1);
-  readonly panOffset = signal<{ x: number; y: number }>({ x: 30, y: 30 });
-  readonly isPanning = signal<boolean>(false);
   readonly isFullscreenCanvas = signal<boolean>(false);
-  private panStart = { x: 0, y: 0 };
-  readonly hoveredNodeKey = signal<string | null>(null);
-  readonly hoveredEdgeId = signal<string | null>(null);
 
   // Publishing State
   readonly isPublishing = signal<boolean>(false);
@@ -90,9 +83,6 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
   readonly builderInitialState = signal<string>('REQUEST_SUBMISSION');
   readonly builderStates = signal<StateBuilderItem[]>([]);
   readonly builderZoomLevel = signal<number>(1.0);
-  readonly builderPanOffset = signal<{ x: number; y: number }>({ x: 30, y: 30 });
-  readonly isBuilderPanning = signal<boolean>(false);
-  private builderPanStart = { x: 0, y: 0 };
 
   readonly availableStepTypes = AVAILABLE_STEP_TYPES;
   readonly availableActorScopes = AVAILABLE_ACTOR_SCOPES;
@@ -127,9 +117,6 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
 
   // Convert selected template's steps map into sorted DAG Nodes
   readonly dagNodes = computed<DAGNode[]>(() => buildDagNodes(this.selectedTemplate()));
-
-  // Dynamically compute 2D Hierarchical Auto-Layout for the visual node graph canvas (Legacy fallback)
-  readonly canvasLayout = computed(() => computeCanvasLayout(this.dagNodes()));
 
   // Modern ngx-vflow + Dagre Graph Auto-Layout for Production Viewer
   readonly previewFlow = computed(() => computeFlowLayout(this.dagNodes()));
@@ -205,7 +192,6 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
   });
 
   readonly builderDagNodes = computed<DAGNode[]>(() => buildDagNodes(this.builderTemplate()));
-  readonly builderCanvasLayout = computed(() => computeCanvasLayout(this.builderDagNodes()));
 
   // Modern ngx-vflow + Dagre Graph Auto-Layout for Visual Studio Builder
   readonly builderFlow = computed(() => computeFlowLayout(this.builderDagNodes()));
@@ -467,58 +453,6 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     } else {
       this.zoomLevel.set(1);
     }
-    this.panOffset.set({ x: 30, y: 30 });
-  }
-
-  startPan(event: MouseEvent): void {
-    if ((event.target as HTMLElement).closest('.canvas-node-card') ||
-        (event.target as HTMLElement).closest('.canvas-action-pill') ||
-        (event.target as HTMLElement).closest('.canvas-controls')) {
-      return;
-    }
-    this.isPanning.set(true);
-    this.panStart = {
-      x: event.clientX - this.panOffset().x,
-      y: event.clientY - this.panOffset().y
-    };
-  }
-
-  pan(event: MouseEvent): void {
-    if (!this.isPanning()) return;
-    this.panOffset.set({
-      x: event.clientX - this.panStart.x,
-      y: event.clientY - this.panStart.y
-    });
-  }
-
-  endPan(): void {
-    this.isPanning.set(false);
-  }
-
-  // Builder Canvas Panning
-  startBuilderPan(event: MouseEvent): void {
-    if ((event.target as HTMLElement).closest('.canvas-node-card') ||
-        (event.target as HTMLElement).closest('.canvas-action-pill') ||
-        (event.target as HTMLElement).closest('.canvas-controls')) {
-      return;
-    }
-    this.isBuilderPanning.set(true);
-    this.builderPanStart = {
-      x: event.clientX - this.builderPanOffset().x,
-      y: event.clientY - this.builderPanOffset().y
-    };
-  }
-
-  panBuilder(event: MouseEvent): void {
-    if (!this.isBuilderPanning()) return;
-    this.builderPanOffset.set({
-      x: event.clientX - this.builderPanStart.x,
-      y: event.clientY - this.builderPanStart.y
-    });
-  }
-
-  endBuilderPan(): void {
-    this.isBuilderPanning.set(false);
   }
 
   zoomInBuilder(): void {
@@ -548,22 +482,11 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     } else {
       this.builderZoomLevel.set(1.0);
     }
-    this.builderPanOffset.set({ x: 30, y: 30 });
   }
 
   toggleStudioFullscreen(): void {
     this.isStudioFullscreen.update(f => !f);
     setTimeout(() => this.resetBuilderZoom(), 150);
-  }
-
-  @HostListener('window:mouseup')
-  onWindowMouseUp(): void {
-    if (this.isPanning()) {
-      this.isPanning.set(false);
-    }
-    if (this.isBuilderPanning()) {
-      this.isBuilderPanning.set(false);
-    }
   }
 
   publishSelectedTemplate(): void {

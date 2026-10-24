@@ -1,11 +1,12 @@
 import '@angular/compiler';
-import { buildDagNodes, computeCanvasLayout, computeFlowLayout } from './graph-layout.util';
+import { buildDagNodes, computeFlowLayout } from './graph-layout.util';
 import { WorkflowTemplate } from '../models/template.model';
 
 describe('graph-layout.util', () => {
   it('should return empty list when template is null or has no steps', () => {
     expect(buildDagNodes(null)).toEqual([]);
     expect(buildDagNodes({ steps: {} } as any)).toEqual([]);
+    expect(computeFlowLayout([])).toEqual({ nodes: [], edges: [] });
   });
 
   it('should parse steps into ordered DAG nodes with incoming and outgoing transitions', () => {
@@ -74,16 +75,14 @@ describe('graph-layout.util', () => {
     expect(reviewNode.incomingTransitions[0].sourceState).toBe('SUBMISSION');
     expect(reviewNode.outgoingTransitions.length).toBe(2);
 
-    const layout = computeCanvasLayout(dagNodes);
-    expect(layout.nodes.length).toBe(4);
-    expect(layout.edges.length).toBe(3); // SUBMISSION->REVIEW, REVIEW->COMPLETED, REVIEW->REJECTED
-    expect(layout.canvasWidth).toBeGreaterThan(0);
-    expect(layout.canvasHeight).toBeGreaterThan(0);
+    const flow = computeFlowLayout(dagNodes);
+    expect(flow.nodes.length).toBe(4);
+    expect(flow.edges.length).toBe(3); // SUBMISSION->REVIEW, REVIEW->COMPLETED, REVIEW->REJECTED
 
-    // Verify bezier curve connectors are calculated
-    for (const edge of layout.edges) {
-      expect(edge.pathD).toContain('M ');
-      expect(edge.pathD).toContain('C ');
+    // Verify bezier curve connectors with arrow markers
+    for (const edge of flow.edges) {
+      expect(edge.curve?.()).toBe('bezier');
+      expect(edge.markers?.()?.end?.type).toBe('arrow-closed');
     }
   });
 
@@ -182,11 +181,11 @@ describe('graph-layout.util', () => {
       ])
     );
 
-    const layout = computeCanvasLayout(dagNodes);
-    const jointNode = layout.nodes.find(n => n.stateKey === 'JOINT_REVIEW')!;
+    const flow = computeFlowLayout(dagNodes);
+    const jointNode = flow.nodes.find(n => n.id === 'JOINT_REVIEW')!;
 
-    // Verify multi-role display concatenation
-    expect(jointNode.roleDisplay).toBe('LEGAL_COUNSEL + FINANCE_DIRECTOR');
+    // Verify multi-role display concatenation in flow card data
+    expect(jointNode.data?.()?.roleDisplay).toBe('LEGAL_COUNSEL + FINANCE_DIRECTOR');
   });
 
   it('properly layers workflows with feedback cycles without inverting layout', () => {
@@ -234,18 +233,16 @@ describe('graph-layout.util', () => {
     };
 
     const dag = buildDagNodes(cycleTpl);
-    const layout = computeCanvasLayout(dag);
+    const flow = computeFlowLayout(dag);
 
-    const initNode = layout.nodes.find(n => n.stateKey === 'INITIATE')!;
-    const s4Node = layout.nodes.find(n => n.stateKey === 'STAGE_4')!;
-    const compNode = layout.nodes.find(n => n.stateKey === 'COMPLETED')!;
+    const initNode = flow.nodes.find(n => n.id === 'INITIATE')!;
+    const s4Node = flow.nodes.find(n => n.id === 'STAGE_4')!;
+    const compNode = flow.nodes.find(n => n.id === 'COMPLETED')!;
 
-    // INITIATE MUST be at Column 0 (x=50)
-    expect(initNode.x).toBe(50);
-    // STAGE_4 MUST be downstream of INITIATE (x > initNode.x)
-    expect(s4Node.x).toBeGreaterThan(initNode.x);
-    // COMPLETED MUST be downstream of STAGE_4 (x > s4Node.x)
-    expect(compNode.x).toBeGreaterThan(s4Node.x);
+    // INITIATE is upstream of STAGE_4
+    expect(initNode.point().x).toBeLessThan(s4Node.point().x);
+    // STAGE_4 is upstream of COMPLETED
+    expect(s4Node.point().x).toBeLessThan(compNode.point().x);
   });
 
   it('computes modern ngx-vflow nodes and edges with Dagre layout', () => {

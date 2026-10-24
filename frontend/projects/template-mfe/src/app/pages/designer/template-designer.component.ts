@@ -1,47 +1,43 @@
 import { Component, OnInit, OnDestroy, HostListener, ViewChild, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Vflow, VflowComponent, Connection } from 'ngx-vflow';
 import { TemplateService } from '../../services/template.service';
 import {
   WorkflowTemplate,
-  DAGNode,
-  StepDefinition,
-  TransitionBuilderItem,
-  ConditionalTransitionItem,
-  StateBuilderItem,
-  BlueprintPreset
+  DAGNode
 } from '../../models/template.model';
-import { buildDagNodes, computeFlowLayout, FlowCardData, FlowEdgeData } from '../../utils/graph-layout.util';
-import { BLUEPRINT_PRESETS } from '../../data/template-presets.data';
+import { buildDagNodes, computeFlowLayout } from '../../utils/graph-layout.util';
 import { onPersonaChanged } from '../../utils/auth-bridge.util';
-import {
-  AVAILABLE_STEP_TYPES,
-  AVAILABLE_ACTOR_SCOPES,
-  AVAILABLE_ROLES
-} from '../../constants/designer.constants';
+import { WorkflowCanvasComponent } from '../../components/workflow-canvas/workflow-canvas.component';
+import { WorkflowPipelineComponent } from '../../components/workflow-pipeline/workflow-pipeline.component';
+import { WorkflowJsonViewerComponent } from '../../components/workflow-json-viewer/workflow-json-viewer.component';
+import { StepDetailsDrawerComponent } from '../../components/step-details-drawer/step-details-drawer.component';
+import { TemplateStudioModalComponent } from '../../components/template-studio-modal/template-studio-modal.component';
 
 // Re-export pure helpers & data for external consumers
 export { buildDagNodes, computeFlowLayout } from '../../utils/graph-layout.util';
 export { BLUEPRINT_PRESETS } from '../../data/template-presets.data';
 
-// =============================================================================
-// COMPONENT DEFINITION
-// =============================================================================
-
 @Component({
   selector: 'app-template-designer',
   standalone: true,
-  imports: [CommonModule, FormsModule, Vflow],
+  imports: [
+    CommonModule,
+    FormsModule,
+    WorkflowCanvasComponent,
+    WorkflowPipelineComponent,
+    WorkflowJsonViewerComponent,
+    StepDetailsDrawerComponent,
+    TemplateStudioModalComponent
+  ],
   templateUrl: './template-designer.component.html',
   styleUrls: ['./template-designer.component.css']
 })
 export class TemplateDesignerComponent implements OnInit, OnDestroy {
   private templateService = inject(TemplateService);
 
-  @ViewChild('previewVflow') previewVflow?: VflowComponent;
-  @ViewChild('fullscreenVflow') fullscreenVflow?: VflowComponent;
-  @ViewChild('builderVflow') builderVflow?: VflowComponent;
+  @ViewChild('previewCanvas') previewCanvas?: WorkflowCanvasComponent;
+  @ViewChild('fullscreenCanvas') fullscreenCanvas?: WorkflowCanvasComponent;
 
   readonly templates = signal<WorkflowTemplate[]>([]);
   readonly selectedTemplate = signal<WorkflowTemplate | null>(null);
@@ -53,40 +49,17 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
   readonly statusFilter = signal<'ALL' | 'PUBLISHED' | 'DRAFT'>('ALL');
   readonly viewMode = signal<'canvas' | 'pipeline' | 'dsl'>('canvas');
 
-  // Interactive 2D Graph Canvas State (Production Viewer)
-  readonly zoomLevel = signal<number>(1);
+  // Fullscreen Viewer State
   readonly isFullscreenCanvas = signal<boolean>(false);
 
   // Publishing State
   readonly isPublishing = signal<boolean>(false);
 
-  // Modal & Visual Studio State
+  // Studio Modal State
   readonly isCreateModalOpen = signal<boolean>(false);
-  readonly newTemplateJson = signal<string>('');
+  readonly editingTemplate = signal<WorkflowTemplate | null>(null);
   readonly createError = signal<string | null>(null);
   readonly isSubmitting = signal<boolean>(false);
-
-  // Existing Draft Editing & Branching State
-  readonly editingTemplate = signal<WorkflowTemplate | null>(null);
-  readonly isEditingDraft = computed(() => this.editingTemplate()?.status === 'DRAFT');
-  readonly isEditingExisting = computed(() => !!this.editingTemplate());
-
-  // Visual Studio Specific State
-  readonly builderPresets = BLUEPRINT_PRESETS;
-  readonly selectedPresetId = signal<string>('it-procurement');
-  readonly builderMode = signal<'visual' | 'dsl'>('visual');
-  readonly builderPreviewTab = signal<'canvas' | 'dsl'>('canvas');
-  readonly isStudioFullscreen = signal<boolean>(true);
-  readonly builderKey = signal<string>('IT_HARDWARE_PROCUREMENT_V1');
-  readonly builderName = signal<string>('IT Equipment & Hardware Procurement');
-  readonly builderDescription = signal<string>('Employee hardware request with IT approval and procurement fulfillment');
-  readonly builderInitialState = signal<string>('REQUEST_SUBMISSION');
-  readonly builderStates = signal<StateBuilderItem[]>([]);
-  readonly builderZoomLevel = signal<number>(1.0);
-
-  readonly availableStepTypes = AVAILABLE_STEP_TYPES;
-  readonly availableActorScopes = AVAILABLE_ACTOR_SCOPES;
-  readonly availableRoles = AVAILABLE_ROLES;
 
   private destroyPersonaBridge?: () => void;
 
@@ -128,143 +101,6 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     if (!tpl) return '';
     return JSON.stringify(tpl, null, 2);
   });
-
-  // ===========================================================================
-  // VISUAL STUDIO COMPUTED PROPERTIES
-  // ===========================================================================
-
-  readonly builderTemplate = computed<WorkflowTemplate>(() => {
-    const states = this.builderStates();
-    const stepsMap: Record<string, StepDefinition> = {};
-
-    states.forEach((s, idx) => {
-      const transMap: Record<string, string> = {};
-      if (!s.isTerminal) {
-        s.transitions.forEach(t => {
-          if (t.action && t.targetState) {
-            transMap[t.action] = t.targetState;
-          }
-        });
-      }
-
-      const payloadKeys = !s.isTerminal && s.payloadKeysInput
-        ? s.payloadKeysInput.split(',').map(k => k.trim()).filter(Boolean)
-        : (!s.isTerminal ? s.requiredPayloadKeys || [] : []);
-
-      const condList = !s.isTerminal && s.conditionalTransitions && s.conditionalTransitions.length > 0
-        ? s.conditionalTransitions
-            .filter(c => c.action && c.targetState && c.condition)
-            .map((c, cIdx) => ({
-              action: c.action.trim().toUpperCase(),
-              condition: c.condition.trim(),
-              targetState: c.targetState,
-              priority: c.priority || (cIdx + 1)
-            }))
-        : [];
-
-      const isParallel = s.actorScope === 'PARALLEL_ROLES' || s.stepType === 'PARALLEL_APPROVAL';
-      const reqRoles = isParallel ? (s.requiredRoles || []) : [];
-
-      stepsMap[s.stateKey] = {
-        stepOrder: idx + 1,
-        stepName: s.stepName,
-        stepType: s.isTerminal ? 'TERMINAL' : s.stepType,
-        actorScope: s.isTerminal ? 'ANY' : s.actorScope,
-        requiredRole: !s.isTerminal && s.actorScope === 'ROLE' ? (s.requiredRole || null) : null,
-        requiredRoles: reqRoles,
-        requiredPayloadKeys: payloadKeys,
-        isTerminal: s.isTerminal,
-        slaHours: !s.isTerminal && s.slaHours ? +s.slaHours : null,
-        transitions: transMap,
-        conditionalTransitions: condList
-      };
-    });
-
-    return {
-      templateKey: this.builderKey(),
-      version: 1,
-      name: this.builderName(),
-      description: this.builderDescription(),
-      status: 'DRAFT',
-      initialState: this.builderInitialState(),
-      steps: stepsMap
-    };
-  });
-
-  readonly builderDagNodes = computed<DAGNode[]>(() => buildDagNodes(this.builderTemplate()));
-
-  // Modern ngx-vflow + Dagre Graph Auto-Layout for Visual Studio Builder
-  readonly builderFlow = computed(() => computeFlowLayout(this.builderDagNodes()));
-  readonly builderFlowNodes = computed(() => this.builderFlow().nodes);
-  readonly builderFlowEdges = computed(() => this.builderFlow().edges);
-  readonly builderDslPreview = computed(() => JSON.stringify(this.builderTemplate(), null, 2));
-
-  readonly builderValidationErrors = computed<string[]>(() => {
-    const errors: string[] = [];
-    const key = this.builderKey().trim();
-    const name = this.builderName().trim();
-    const states = this.builderStates();
-    const initial = this.builderInitialState();
-
-    if (!key) {
-      errors.push('Workflow ID is required (e.g. INVOICE_V1).');
-    } else if (!/^[A-Z0-9_]+$/.test(key)) {
-      errors.push('Workflow ID must contain only uppercase letters, numbers, and underscores.');
-    }
-
-    if (!name) {
-      errors.push('Workflow Name is required.');
-    }
-
-    if (states.length < 2) {
-      errors.push('Workflow must contain at least 2 steps (e.g. 1 starting step and 1 ending step).');
-    }
-
-    const keySet = new Set<string>();
-    for (const s of states) {
-      if (!s.stateKey || !s.stateKey.trim()) {
-        errors.push('Every step must have a non-empty Step ID.');
-      } else if (keySet.has(s.stateKey)) {
-        errors.push(`Duplicate step ID "${s.stateKey}". Step IDs must be unique.`);
-      } else {
-        keySet.add(s.stateKey);
-      }
-    }
-
-    if (initial && !keySet.has(initial)) {
-      errors.push(`Starting step "${initial}" does not match any defined step ID.`);
-    }
-
-    const hasTerminal = states.some(s => s.isTerminal);
-    if (!hasTerminal) {
-      errors.push('Workflow must have at least one ending step (e.g. COMPLETED or REJECTED).');
-    }
-
-    for (const s of states) {
-      if (s.actorScope === 'ROLE' && (!s.requiredRole || !s.requiredRole.trim())) {
-        errors.push(`Step "${s.stateKey}" is assigned to a role, but no Required Role is specified.`);
-      }
-      if (!s.isTerminal) {
-        if (s.transitions.length === 0) {
-          errors.push(`Step "${s.stateKey}" is not an ending step, but has no next step specified.`);
-        }
-        for (const t of s.transitions) {
-          if (!t.action || !t.action.trim()) {
-            errors.push(`Step "${s.stateKey}" has a next step with an empty action name.`);
-          }
-          if (!t.targetState || !keySet.has(t.targetState)) {
-            errors.push(`Action [${t.action || '?'}] in "${s.stateKey}" leads to non-existent step "${t.targetState}".`);
-          }
-        }
-      }
-    }
-
-    return errors;
-  });
-
-  // ===========================================================================
-  // LIFECYCLE
-  // ===========================================================================
 
   ngOnInit(): void {
     this.loadTemplates();
@@ -319,7 +155,6 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
         } else {
           this.selectedTemplate.set(null);
         }
-        setTimeout(() => this.resetZoom(), 120);
       },
       error: (err: any) => {
         console.error('Failed to load templates:', err);
@@ -332,77 +167,13 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
   selectTemplate(tpl: WorkflowTemplate): void {
     this.selectedTemplate.set(tpl);
     this.selectedNode.set(null);
-    setTimeout(() => this.resetZoom(), 100);
-  }
-
-  selectNode(node: DAGNode): void {
-    this.selectedNode.set(node);
   }
 
   selectNodeByKey(key: string): void {
     const node = this.dagNodes().find(n => n.stateKey === key);
     if (node) {
-      this.selectNode(node);
+      this.selectedNode.set(node);
     }
-  }
-
-  getEdgeData(edge: any): FlowEdgeData {
-    if (!edge) return { action: '', isDanger: false };
-    const d = typeof edge.data === 'function' ? edge.data() : edge.data;
-    return d || { action: '', isDanger: false };
-  }
-
-  focusBuilderStep(key: string): void {
-    const el = document.getElementById('step-card-' + key);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      el.classList.add('ring-2', 'ring-indigo-500');
-      setTimeout(() => el.classList.remove('ring-2', 'ring-indigo-500'), 1500);
-    }
-  }
-
-  onBuilderConnect(conn: Connection): void {
-    if (!conn.source || !conn.target || conn.source === conn.target) return;
-    const states = [...this.builderStates()];
-    const sourceState = states.find(s => s.stateKey === conn.source);
-    if (!sourceState || sourceState.isTerminal) return;
-
-    const existing = sourceState.transitions.find(t => t.targetState === conn.target);
-    if (existing) {
-      this.successMessage.set(`Transition from "${conn.source}" to "${conn.target}" already exists (${existing.action}).`);
-      setTimeout(() => this.successMessage.set(null), 3000);
-      return;
-    }
-
-    const isRejectTarget = ['REJECTED', 'CANCELLED'].includes(conn.target.toUpperCase());
-    let defaultAction = 'NEXT';
-    if (sourceState.transitions.length === 0) {
-      defaultAction = isRejectTarget ? 'REJECT' : 'APPROVE';
-    } else if (sourceState.transitions.length === 1) {
-      defaultAction = isRejectTarget ? 'REJECT' : (sourceState.transitions[0].action === 'APPROVE' ? 'REJECT' : 'APPROVE');
-    } else {
-      defaultAction = isRejectTarget ? 'REJECT' : `ACTION_${sourceState.transitions.length + 1}`;
-    }
-
-    sourceState.transitions.push({
-      action: defaultAction,
-      targetState: conn.target
-    });
-
-    this.builderStates.set(states);
-    this.successMessage.set(`Connected "${conn.source}" ➔ "${conn.target}" with action [${defaultAction}].`);
-    setTimeout(() => this.successMessage.set(null), 3500);
-  }
-
-  stepDsl(node: DAGNode): string {
-    if (!node.rawStep) return '{}';
-    return JSON.stringify(node.rawStep, null, 2);
-  }
-
-  copyStepDsl(node: DAGNode): void {
-    navigator.clipboard.writeText(this.stepDsl(node));
-    this.successMessage.set(`Copied step code to clipboard!`);
-    setTimeout(() => this.successMessage.set(null), 3000);
   }
 
   setStatusFilter(filter: 'ALL' | 'PUBLISHED' | 'DRAFT'): void {
@@ -417,76 +188,6 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     const next = enable !== undefined ? enable : !this.isFullscreenCanvas();
     this.isFullscreenCanvas.set(next);
     this.setScrollLock(next);
-    if (next) {
-      setTimeout(() => this.resetZoom(), 150);
-    }
-  }
-
-  // Interactive 2D Canvas Viewport Controls (Production Canvas)
-  zoomIn(): void {
-    const activeFlow = this.isFullscreenCanvas() ? this.fullscreenVflow : this.previewVflow;
-    if (activeFlow) {
-      const cur = activeFlow.viewport().zoom;
-      activeFlow.zoomTo(Math.min(2.0, +(cur + 0.15).toFixed(2)));
-      this.zoomLevel.set(activeFlow.viewport().zoom);
-    } else {
-      this.zoomLevel.update(z => Math.min(2.0, +(z + 0.15).toFixed(2)));
-    }
-  }
-
-  zoomOut(): void {
-    const activeFlow = this.isFullscreenCanvas() ? this.fullscreenVflow : this.previewVflow;
-    if (activeFlow) {
-      const cur = activeFlow.viewport().zoom;
-      activeFlow.zoomTo(Math.max(0.3, +(cur - 0.15).toFixed(2)));
-      this.zoomLevel.set(activeFlow.viewport().zoom);
-    } else {
-      this.zoomLevel.update(z => Math.max(0.3, +(z - 0.15).toFixed(2)));
-    }
-  }
-
-  resetZoom(): void {
-    const activeFlow = this.isFullscreenCanvas() ? this.fullscreenVflow : this.previewVflow;
-    if (activeFlow) {
-      activeFlow.fitView({ padding: 0.2, duration: 250 });
-      this.zoomLevel.set(activeFlow.viewport().zoom);
-    } else {
-      this.zoomLevel.set(1);
-    }
-  }
-
-  zoomInBuilder(): void {
-    if (this.builderVflow) {
-      const cur = this.builderVflow.viewport().zoom;
-      this.builderVflow.zoomTo(Math.min(2.0, +(cur + 0.15).toFixed(2)));
-      this.builderZoomLevel.set(this.builderVflow.viewport().zoom);
-    } else {
-      this.builderZoomLevel.update(z => Math.min(2.0, +(z + 0.15).toFixed(2)));
-    }
-  }
-
-  zoomOutBuilder(): void {
-    if (this.builderVflow) {
-      const cur = this.builderVflow.viewport().zoom;
-      this.builderVflow.zoomTo(Math.max(0.3, +(cur - 0.15).toFixed(2)));
-      this.builderZoomLevel.set(this.builderVflow.viewport().zoom);
-    } else {
-      this.builderZoomLevel.update(z => Math.max(0.3, +(z - 0.15).toFixed(2)));
-    }
-  }
-
-  resetBuilderZoom(): void {
-    if (this.builderVflow) {
-      this.builderVflow.fitView({ padding: 0.2, duration: 250 });
-      this.builderZoomLevel.set(this.builderVflow.viewport().zoom);
-    } else {
-      this.builderZoomLevel.set(1.0);
-    }
-  }
-
-  toggleStudioFullscreen(): void {
-    this.isStudioFullscreen.update(f => !f);
-    setTimeout(() => this.resetBuilderZoom(), 150);
   }
 
   publishSelectedTemplate(): void {
@@ -511,48 +212,29 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ===========================================================================
-  // VISUAL BLUEPRINT CREATOR ACTIONS
-  // ===========================================================================
-
   openCreateModal(): void {
     this.editingTemplate.set(null);
-    this.builderMode.set('visual');
-    this.builderPreviewTab.set('canvas');
     this.createError.set(null);
-    this.isStudioFullscreen.set(true);
-    this.loadPreset('it-procurement');
     this.isCreateModalOpen.set(true);
     this.setScrollLock(true);
-    setTimeout(() => this.resetBuilderZoom(), 150);
   }
 
   openEditDraft(target?: WorkflowTemplate): void {
     const tpl = target || this.selectedTemplate();
     if (!tpl) return;
     this.editingTemplate.set(tpl);
-    this.builderMode.set('visual');
-    this.builderPreviewTab.set('canvas');
     this.createError.set(null);
-    this.isStudioFullscreen.set(true);
-    this.applyTemplateToBuilder(tpl);
     this.isCreateModalOpen.set(true);
     this.setScrollLock(true);
-    setTimeout(() => this.resetBuilderZoom(), 150);
   }
 
   openNewVersionDraft(target?: WorkflowTemplate): void {
     const tpl = target || this.selectedTemplate();
     if (!tpl) return;
     this.editingTemplate.set(null);
-    this.builderMode.set('visual');
-    this.builderPreviewTab.set('canvas');
     this.createError.set(null);
-    this.isStudioFullscreen.set(true);
-    this.applyTemplateToBuilder(tpl);
     this.isCreateModalOpen.set(true);
     this.setScrollLock(true);
-    setTimeout(() => this.resetBuilderZoom(), 150);
   }
 
   closeCreateModal(): void {
@@ -561,367 +243,15 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     this.setScrollLock(false);
   }
 
-  loadPreset(presetId: string): void {
-    this.selectedPresetId.set(presetId);
-    const preset = this.builderPresets.find(p => p.id === presetId);
-    if (preset) {
-      this.applyTemplateToBuilder(preset.template);
-      this.createError.set(null);
-      setTimeout(() => this.resetBuilderZoom(), 150);
-    }
-  }
-
-  applyTemplateToBuilder(tpl: Partial<WorkflowTemplate>): void {
-    if (!tpl) return;
-    this.builderKey.set(tpl.templateKey || 'NEW_WORKFLOW_V1');
-    this.builderName.set(tpl.name || 'New Enterprise Workflow');
-    this.builderDescription.set(tpl.description || '');
-    this.builderInitialState.set(tpl.initialState || '');
-
-    const items: StateBuilderItem[] = [];
-    if (tpl.steps) {
-      const entries = Object.entries(tpl.steps);
-      entries.sort((a, b) => (a[1].stepOrder || 0) - (b[1].stepOrder || 0));
-
-      for (const [key, step] of entries) {
-        const trans: TransitionBuilderItem[] = [];
-        if (step.transitions) {
-          for (const [act, tgt] of Object.entries(step.transitions)) {
-            trans.push({ action: act, targetState: tgt });
-          }
-        }
-
-        const condTrans: ConditionalTransitionItem[] = [];
-        if (step.conditionalTransitions) {
-          for (const ct of step.conditionalTransitions) {
-            condTrans.push({
-              action: ct.action || 'APPROVE',
-              condition: ct.condition || '',
-              targetState: ct.targetState,
-              priority: ct.priority ?? (condTrans.length + 1)
-            });
-          }
-        }
-
-        const payloadKeys = step.requiredPayloadKeys || [];
-
-        items.push({
-          id: 's_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
-          stateKey: key,
-          stepName: step.stepName || key,
-          stepType: step.stepType || (step.isTerminal ? 'TERMINAL' : 'APPROVAL'),
-          actorScope: step.actorScope || (step.isTerminal ? 'ANY' : 'ROLE'),
-          requiredRole: step.requiredRole || null,
-          requiredRoles: step.requiredRoles ? [...step.requiredRoles] : [],
-          slaHours: step.slaHours ?? null,
-          isInitial: key === tpl.initialState,
-          isTerminal: !!step.isTerminal,
-          requiredPayloadKeys: payloadKeys,
-          payloadKeysInput: payloadKeys.join(', '),
-          transitions: trans,
-          conditionalTransitions: condTrans
-        });
-      }
-    }
-    this.builderStates.set(items);
-    if (!this.builderInitialState() && items.length > 0) {
-      this.builderInitialState.set(items[0].stateKey);
-    }
-  }
-
-  addState(): void {
-    const states = this.builderStates();
-    const count = states.length + 1;
-    const newKey = `STAGE_${count}`;
-    const newState: StateBuilderItem = {
-      id: 's_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
-      stateKey: newKey,
-      stepName: `Stage ${count} Review`,
-      stepType: 'APPROVAL',
-      actorScope: 'ROLE',
-      requiredRole: 'ROLE_EMPLOYEE',
-      requiredRoles: [],
-      slaHours: 24,
-      isInitial: states.length === 0,
-      isTerminal: false,
-      requiredPayloadKeys: [],
-      payloadKeysInput: '',
-      transitions: [],
-      conditionalTransitions: []
-    };
-
-    if (states.length === 0) {
-      this.builderInitialState.set(newKey);
-    }
-
-    this.builderStates.set([...states, newState]);
-  }
-
-  removeState(index: number): void {
-    const states = [...this.builderStates()];
-    const removed = states.splice(index, 1)[0];
-    if (removed) {
-      if (this.builderInitialState() === removed.stateKey && states.length > 0) {
-        this.builderInitialState.set(states[0].stateKey);
-      }
-      states.forEach(s => {
-        s.transitions = s.transitions.filter(t => t.targetState !== removed.stateKey);
-        if (s.conditionalTransitions) {
-          s.conditionalTransitions = s.conditionalTransitions.filter(t => t.targetState !== removed.stateKey);
-        }
-      });
-    }
-    this.builderStates.set(states);
-  }
-
-  moveState(index: number, dir: 'up' | 'down'): void {
-    const states = [...this.builderStates()];
-    const targetIdx = dir === 'up' ? index - 1 : index + 1;
-    if (targetIdx < 0 || targetIdx >= states.length) return;
-    const temp = states[index];
-    states[index] = states[targetIdx];
-    states[targetIdx] = temp;
-    this.builderStates.set(states);
-  }
-
-  updateStateKey(index: number, rawKey: string): void {
-    const sanitized = (rawKey || '').toUpperCase().replace(/[^A-Z0-9_]/g, '_');
-    const states = [...this.builderStates()];
-    const oldKey = states[index].stateKey;
-    states[index].stateKey = sanitized;
-
-    if (this.builderInitialState() === oldKey) {
-      this.builderInitialState.set(sanitized);
-    }
-
-    // Cascade update to any transitions pointing to oldKey
-    states.forEach(s => {
-      s.transitions.forEach(t => {
-        if (t.targetState === oldKey) {
-          t.targetState = sanitized;
-        }
-      });
-      if (s.conditionalTransitions) {
-        s.conditionalTransitions.forEach(t => {
-          if (t.targetState === oldKey) {
-            t.targetState = sanitized;
-          }
-        });
-      }
-    });
-
-    this.builderStates.set(states);
-  }
-
-  setInitialState(key: string): void {
-    this.builderInitialState.set(key);
-    this.builderStates.update(states =>
-      states.map(s => ({ ...s, isInitial: s.stateKey === key }))
-    );
-  }
-
-  toggleTerminal(index: number, isTerminal: boolean): void {
-    const states = [...this.builderStates()];
-    states[index].isTerminal = isTerminal;
-    if (isTerminal) {
-      states[index].stepType = 'TERMINAL';
-      states[index].actorScope = 'ANY';
-      states[index].requiredRole = null;
-      states[index].requiredRoles = [];
-      states[index].requiredPayloadKeys = [];
-      states[index].payloadKeysInput = '';
-      states[index].transitions = [];
-      states[index].conditionalTransitions = [];
-      states[index].slaHours = null;
-    } else {
-      if (states[index].stepType === 'TERMINAL') {
-        states[index].stepType = 'APPROVAL';
-        states[index].actorScope = 'ROLE';
-        states[index].requiredRole = 'ROLE_EMPLOYEE';
-        states[index].slaHours = 24;
-      }
-    }
-    this.builderStates.set(states);
-  }
-
-  isCustomRole(role: string | null | undefined): boolean {
-    if (!role) return false;
-    return !this.availableRoles.includes(role);
-  }
-
-  onRoleSelectChange(state: StateBuilderItem, selectedValue: string): void {
-    if (selectedValue === '__CUSTOM__') {
-      state.requiredRole = state.requiredRole && !this.availableRoles.includes(state.requiredRole)
-        ? state.requiredRole
-        : 'ROLE_CUSTOM';
-    } else {
-      state.requiredRole = selectedValue;
-    }
-    this.builderStates.update(s => [...s]);
-  }
-
-  onCustomRoleInput(state: StateBuilderItem, rawValue: string): void {
-    const sanitized = (rawValue || '').toUpperCase().replace(/[^A-Z0-9_]/g, '_');
-    state.requiredRole = sanitized;
-    this.builderStates.update(s => [...s]);
-  }
-
-  addTransition(stateIndex: number): void {
-    const states = [...this.builderStates()];
-    const current = states[stateIndex];
-    if (current.isTerminal) return;
-
-    const terminalTarget = states.find(s => s.isTerminal && s.stateKey !== current.stateKey);
-    const otherTarget = states.find(s => s.stateKey !== current.stateKey);
-    const defaultTarget = (terminalTarget || otherTarget || current).stateKey;
-
-    const actionNum = current.transitions.length + 1;
-    const defaultAction = actionNum === 1 ? 'APPROVE' : (actionNum === 2 ? 'REJECT' : `ACTION_${actionNum}`);
-
-    current.transitions.push({
-      action: defaultAction,
-      targetState: defaultTarget
-    });
-
-    this.builderStates.set(states);
-  }
-
-  removeTransition(stateIndex: number, transIndex: number): void {
-    const states = [...this.builderStates()];
-    states[stateIndex].transitions.splice(transIndex, 1);
-    this.builderStates.set(states);
-  }
-
-  addConditionalTransition(stateIndex: number): void {
-    const states = [...this.builderStates()];
-    const current = states[stateIndex];
-    if (current.isTerminal) return;
-
-    // Prefer downstream next step or terminal completion step over looping back to step 0
-    let defaultTarget = '';
-    if (stateIndex + 1 < states.length && !states[stateIndex + 1].isTerminal) {
-      defaultTarget = states[stateIndex + 1].stateKey;
-    } else {
-      const terminalState = states.find(s => s.isTerminal && !['REJECTED', 'CANCELLED'].includes(s.stateKey.toUpperCase()))
-        || states.find(s => s.isTerminal)
-        || states.find(s => s.stateKey !== current.stateKey);
-      defaultTarget = terminalState ? terminalState.stateKey : current.stateKey;
-    }
-    const ruleNum = (current.conditionalTransitions?.length || 0) + 1;
-
-    if (!current.conditionalTransitions) {
-      current.conditionalTransitions = [];
-    }
-
-    current.conditionalTransitions.push({
-      action: 'APPROVE',
-      condition: '#amount > 10000',
-      targetState: defaultTarget,
-      priority: ruleNum
-    });
-
-    this.builderStates.set(states);
-  }
-
-  removeConditionalTransition(stateIndex: number, condIndex: number): void {
-    const states = [...this.builderStates()];
-    if (states[stateIndex].conditionalTransitions) {
-      states[stateIndex].conditionalTransitions.splice(condIndex, 1);
-      this.builderStates.set(states);
-    }
-  }
-
-  toggleParallelRole(state: StateBuilderItem, role: string): void {
-    if (!state.requiredRoles) {
-      state.requiredRoles = [];
-    }
-    const idx = state.requiredRoles.indexOf(role);
-    if (idx >= 0) {
-      state.requiredRoles.splice(idx, 1);
-    } else {
-      state.requiredRoles.push(role);
-    }
-    this.builderStates.update(s => [...s]);
-  }
-
-  isParallelRoleSelected(state: StateBuilderItem, role: string): boolean {
-    return !!state.requiredRoles && state.requiredRoles.includes(role);
-  }
-
-  addCustomParallelRole(state: StateBuilderItem, inputElement: HTMLInputElement): void {
-    const role = (inputElement.value || '').trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_');
-    if (role) {
-      const fullRole = role.startsWith('ROLE_') ? role : `ROLE_${role}`;
-      if (!state.requiredRoles) {
-        state.requiredRoles = [];
-      }
-      if (!state.requiredRoles.includes(fullRole)) {
-        state.requiredRoles.push(fullRole);
-        this.builderStates.update(s => [...s]);
-      }
-      inputElement.value = '';
-    }
-  }
-
-  switchBuilderMode(mode: 'visual' | 'dsl'): void {
-    if (mode === 'dsl') {
-      this.newTemplateJson.set(this.builderDslPreview());
-      this.builderMode.set('dsl');
-    } else {
-      try {
-        const parsed = JSON.parse(this.newTemplateJson()) as WorkflowTemplate;
-        if (parsed && typeof parsed === 'object') {
-          this.applyTemplateToBuilder(parsed);
-          this.builderMode.set('visual');
-          this.createError.set(null);
-        } else {
-          this.createError.set('Invalid JSON format: object required.');
-        }
-      } catch (err: any) {
-        this.createError.set('Cannot parse JSON into Visual Studio: ' + err.message);
-      }
-    }
-  }
-
-  copyBuilderDsl(): void {
-    const dsl = this.builderDslPreview();
-    if (dsl && navigator.clipboard) {
-      navigator.clipboard.writeText(dsl);
-      this.successMessage.set('Workflow JSON copied to clipboard!');
-      setTimeout(() => this.successMessage.set(null), 3000);
-    }
-  }
-
-  submitNewTemplate(publishImmediately: boolean): void {
-    let templateToSubmit: WorkflowTemplate;
-
-    if (this.builderMode() === 'visual') {
-      const errors = this.builderValidationErrors();
-      if (errors.length > 0) {
-        this.createError.set(errors[0]);
-        return;
-      }
-      templateToSubmit = this.builderTemplate();
-    } else {
-      try {
-        templateToSubmit = JSON.parse(this.newTemplateJson()) as WorkflowTemplate;
-        if (!templateToSubmit.templateKey || !templateToSubmit.name || !templateToSubmit.initialState || !templateToSubmit.steps) {
-          this.createError.set('Template must define templateKey, name, initialState, and steps map.');
-          return;
-        }
-      } catch (e: any) {
-        this.createError.set('Invalid JSON format: ' + e.message);
-        return;
-      }
-    }
-
+  handleSaveTemplate(event: { template: WorkflowTemplate; publishImmediately: boolean }): void {
+    const { template, publishImmediately } = event;
     this.isSubmitting.set(true);
     this.createError.set(null);
 
-    const isEdit = this.isEditingDraft() && !!this.editingTemplate();
+    const isEdit = this.editingTemplate()?.status === 'DRAFT' && !!this.editingTemplate();
     const saveObservable = isEdit
-      ? this.templateService.updateDraft(this.editingTemplate()!.templateKey, this.editingTemplate()!.version, templateToSubmit)
-      : this.templateService.createDraft(templateToSubmit);
+      ? this.templateService.updateDraft(this.editingTemplate()!.templateKey, this.editingTemplate()!.version, template)
+      : this.templateService.createDraft(template);
 
     saveObservable.subscribe({
       next: (result: WorkflowTemplate) => {
@@ -967,12 +297,8 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     });
   }
 
-  copyDsl(): void {
-    const dsl = this.selectedTemplateDsl();
-    if (dsl && navigator.clipboard) {
-      navigator.clipboard.writeText(dsl);
-      this.successMessage.set('Workflow JSON copied to clipboard!');
-      setTimeout(() => this.successMessage.set(null), 3000);
-    }
+  onJsonCopied(): void {
+    this.successMessage.set('Workflow JSON copied to clipboard!');
+    setTimeout(() => this.successMessage.set(null), 3000);
   }
 }

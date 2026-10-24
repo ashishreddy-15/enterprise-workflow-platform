@@ -1,171 +1,156 @@
-<div class="space-y-4 pb-16 pr-1">
-
-  <!-- =================================================================== -->
-  <!-- TOP HEADER & CONTROLS BAR                                           -->
-  <!-- =================================================================== -->
-  <div class="ewp-card p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+<div class="space-y-4">
+  <!-- TOP HEADER & CONTROLS BAR -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-zinc-200 pb-3">
     <div>
       <div class="flex items-center gap-2">
-        <h1 class="ewp-page-title">Workflows</h1>
-        <span class="ewp-badge ewp-badge-success">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
-          {{ publishedCount() }} Live
+        <h1 class="ewp-page-title">Workflow Templates</h1>
+        <span class="ewp-badge-sm ewp-badge-success">
+          {{ publishedCount() }} Active
         </span>
         @if (draftCount() > 0) {
-          <span class="ewp-badge ewp-badge-warning">
-            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>
+          <span class="ewp-badge-sm ewp-badge-warning">
             {{ draftCount() }} Drafts
           </span>
         }
       </div>
       <p class="ewp-muted mt-0.5">
-        Design, preview, and manage your workflow processes.
+        Define and customize state transitions, required roles, and approval rules.
       </p>
     </div>
 
     <!-- Actions & Filter Inputs -->
-    <div class="flex flex-wrap items-center gap-2.5">
+    <div class="flex items-center gap-2">
       <!-- Search Input -->
-      <div class="relative w-full sm:w-64">
+      <div class="relative">
         <input type="text"
-               [value]="searchQuery()"
-               (input)="searchQuery.set($any($event.target).value)"
-               placeholder="Search workflows..."
-               class="ewp-input">
-        @if (searchQuery()) {
-          <button (click)="searchQuery.set('')"
-                  class="absolute right-2 top-1.5 text-zinc-400 hover:text-zinc-700 text-xs">
-            ✕
-          </button>
-        }
+               [ngModel]="searchQuery()"
+               (ngModelChange)="searchQuery.set($event)"
+               placeholder="Filter templates..."
+               class="ewp-input w-48 sm:w-56 pl-7 font-mono text-xs">
+        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400 text-xs font-mono">
+          🔍
+        </span>
       </div>
 
       <!-- New Workflow Button -->
       <button (click)="openCreateModal()"
+              type="button"
               class="ewp-btn-primary">
         <span>+</span>
-        <span>New Workflow</span>
+        <span class="hidden sm:inline">New Workflow</span>
       </button>
 
       <!-- Refresh Button -->
       <button (click)="loadTemplates()"
               [disabled]="isLoading()"
-              title="Refresh templates"
-              class="ewp-btn-secondary px-2.5 py-1.5 disabled:opacity-50 flex items-center gap-1.5">
+              type="button"
+              title="Refresh templates list"
+              class="ewp-btn-secondary">
         <span [class.animate-spin]="isLoading()">↻</span>
-        <span>Refresh</span>
       </button>
     </div>
   </div>
 
   <!-- Success Alert -->
   @if (successMessage()) {
-    <div class="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between animate-in fade-in duration-150">
-      <div class="flex items-center gap-2">
-        <span class="font-bold">✓</span>
-        <span>{{ successMessage() }}</span>
-      </div>
-      <button (click)="successMessage.set(null)" class="text-emerald-700 hover:text-emerald-950 font-bold cursor-pointer">✕</button>
+    <div class="ewp-alert-info">
+      <span>✓</span>
+      <span class="flex-1">{{ successMessage() }}</span>
+      <button (click)="successMessage.set(null)" type="button" class="text-zinc-500 hover:text-zinc-950 font-bold cursor-pointer">✕</button>
     </div>
   }
 
   <!-- Error Alert -->
   @if (errorMessage()) {
-    <div class="ewp-alert-warning">
-      <span>{{ errorMessage() }}</span>
-      <button (click)="errorMessage.set(null)" class="text-amber-700 hover:text-amber-950 font-bold cursor-pointer">✕</button>
+    <div class="ewp-alert-error">
+      <span>⚠️ {{ errorMessage() }}</span>
+      <button (click)="errorMessage.set(null)" type="button" class="text-rose-800 hover:text-rose-950 font-bold cursor-pointer">✕</button>
     </div>
   }
 
-  <!-- =================================================================== -->
-  <!-- MAIN 2-COLUMN WORKSPACE: TEMPLATES LIST & WORKFLOW INSPECTOR        -->
-  <!-- =================================================================== -->
-  <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-
+  <!-- MAIN 2-COLUMN WORKSPACE: TEMPLATES LIST & WORKFLOW INSPECTOR -->
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+    
     <!-- LEFT COLUMN: Workflow Selection Cards (Span 4) -->
     <div class="md:col-span-4 lg:col-span-4 space-y-3">
-      
       <!-- Templates Header & Status Filter Tabs -->
-      <div class="flex items-center justify-between px-1">
-        <span class="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+      <div class="flex items-center justify-between">
+        <span class="ewp-label">
           Templates ({{ filteredTemplates().length }})
         </span>
 
         <!-- Status Filter Segmented Control -->
-        <div class="ewp-segmented-bar">
+        <div class="ewp-segmented-bar text-[10px]">
           <button (click)="setStatusFilter('ALL')"
-                  class="ewp-segmented-btn text-[10px] py-0.5 px-2"
-                  [ngClass]="statusFilter() === 'ALL' ? 'ewp-segmented-btn-active' : 'ewp-segmented-btn-idle'">
-            All ({{ templates().length }})
+                  type="button"
+                  class="ewp-segmented-btn px-2 py-0.5"
+                  [ngClass]="statusFilter() === 'ALL' ? 'bg-white text-zinc-950 font-bold shadow-2xs' : 'text-zinc-500 hover:text-zinc-900'">
+            All
           </button>
           <button (click)="setStatusFilter('PUBLISHED')"
-                  class="ewp-segmented-btn text-[10px] py-0.5 px-2"
-                  [ngClass]="statusFilter() === 'PUBLISHED' ? 'ewp-segmented-btn-active' : 'ewp-segmented-btn-idle'">
-            Live ({{ publishedCount() }})
+                  type="button"
+                  class="ewp-segmented-btn px-2 py-0.5"
+                  [ngClass]="statusFilter() === 'PUBLISHED' ? 'bg-white text-zinc-950 font-bold shadow-2xs' : 'text-zinc-500 hover:text-zinc-900'">
+            Active
           </button>
           <button (click)="setStatusFilter('DRAFT')"
-                  class="ewp-segmented-btn text-[10px] py-0.5 px-2"
-                  [ngClass]="statusFilter() === 'DRAFT' ? 'ewp-segmented-btn-active' : 'ewp-segmented-btn-idle'">
-            Drafts ({{ draftCount() }})
+                  type="button"
+                  class="ewp-segmented-btn px-2 py-0.5"
+                  [ngClass]="statusFilter() === 'DRAFT' ? 'bg-white text-zinc-950 font-bold shadow-2xs' : 'text-zinc-500 hover:text-zinc-900'">
+            Drafts
           </button>
         </div>
       </div>
 
       <!-- Templates Card List -->
-      <div class="space-y-2">
-        @if (filteredTemplates().length === 0) {
-          <div class="ewp-empty-state ewp-card p-6">
-            <p class="ewp-empty-state-desc">No workflows match the selected filter.</p>
+      <div class="space-y-2 max-h-[calc(100vh-220px)] overflow-y-auto pr-1">
+        @if (isLoading() && templates().length === 0) {
+          <div class="ewp-card p-8 text-center text-xs text-zinc-400">
+            <span class="animate-spin inline-block mr-1">↻</span> Loading templates...
+          </div>
+        } @else if (filteredTemplates().length === 0) {
+          <div class="ewp-card p-8 text-center text-xs text-zinc-400 space-y-2">
+            <p>No templates matching filter criteria.</p>
+            <button (click)="openCreateModal()"
+                    type="button"
+                    class="ewp-btn-secondary mx-auto">
+              Create Workflow
+            </button>
           </div>
         } @else {
           @for (tpl of filteredTemplates(); track tpl.templateKey) {
             <div (click)="selectTemplate(tpl)"
-                 [title]="'ID: ' + tpl.templateKey"
-                 class="ewp-selectable-card p-3.5"
-                 [ngClass]="selectedTemplate()?.templateKey === tpl.templateKey 
-                   ? 'ewp-selectable-card-active' 
-                   : 'ewp-selectable-card-idle'">
+                 class="ewp-card p-3 transition cursor-pointer hover:border-zinc-400 relative"
+                 [ngClass]="{
+                   'border-zinc-950 ring-2 ring-zinc-950 bg-zinc-50/70': selectedTemplate()?.templateKey === tpl.templateKey,
+                   'hover:bg-zinc-50/50': selectedTemplate()?.templateKey !== tpl.templateKey
+                 }">
               
               <div class="flex items-start justify-between gap-2">
-                <h3 class="text-xs font-semibold text-zinc-950 tracking-tight line-clamp-1">
-                  {{ tpl.name }}
-                </h3>
-                <span class="ewp-badge-sm ewp-badge-neutral shrink-0">
-                  v{{ tpl.version }}
+                <div class="min-w-0">
+                  <div class="flex items-center gap-1.5">
+                    <h3 class="text-xs font-bold text-zinc-950 truncate">{{ tpl.name }}</h3>
+                    <span class="px-1.5 py-0.2 rounded font-mono text-[9px] font-semibold bg-zinc-100 text-zinc-700 border border-zinc-200 shrink-0">
+                      v{{ tpl.version }}
+                    </span>
+                  </div>
+                  <span class="text-[10px] font-mono text-zinc-400 block truncate mt-0.5">{{ tpl.templateKey }}</span>
+                </div>
+
+                <!-- Status Badge -->
+                <span class="ewp-badge-sm shrink-0"
+                      [ngClass]="tpl.status === 'PUBLISHED' ? 'ewp-badge-success' : 'ewp-badge-warning'">
+                  {{ tpl.status === 'PUBLISHED' ? 'ACTIVE' : 'DRAFT' }}
                 </span>
               </div>
 
-              @if (tpl.description) {
-                <p class="text-[11px] text-zinc-400 mt-1 line-clamp-2">
-                  {{ tpl.description }}
-                </p>
-              }
+              <p class="text-[11px] text-zinc-500 line-clamp-2 mt-1.5">
+                {{ tpl.description || 'No description provided.' }}
+              </p>
 
-              <div class="mt-3 pt-2 border-t border-zinc-100 flex items-center justify-between text-[10px] font-mono">
-                <!-- Status Badge -->
-                @if (tpl.status === 'PUBLISHED') {
-                  <span class="inline-flex items-center gap-1 text-emerald-700">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                    Live
-                  </span>
-                } @else {
-                  <div class="flex items-center gap-1.5">
-                    <span class="inline-flex items-center gap-1 text-amber-700 font-semibold px-1.5 py-0.2 rounded bg-amber-50 border border-amber-200">
-                      <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                      Draft
-                    </span>
-                    <button (click)="$event.stopPropagation(); openEditDraft(tpl)"
-                            title="Edit draft"
-                            class="px-1.5 py-0.5 rounded text-[10px] font-mono text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 font-semibold transition cursor-pointer flex items-center gap-1 shadow-2xs">
-                      <span>✏️</span>
-                      <span>Edit</span>
-                    </button>
-                  </div>
-                }
-
-                <span class="text-zinc-500">
-                  {{ tpl.steps ? (tpl.steps | keyvalue).length : 0 }} steps
-                </span>
+              <div class="mt-2.5 pt-2 border-t border-zinc-100 flex items-center justify-between text-[10px] font-mono text-zinc-400">
+                <span>Start: <strong class="text-zinc-700">{{ tpl.initialState }}</strong></span>
+                <span>{{ tpl.steps ? (tpl.steps | keyvalue).length : 0 }} Steps</span>
               </div>
             </div>
           }
@@ -175,11 +160,9 @@
 
     <!-- RIGHT COLUMN: DAG Flowchart & State Machine Visualizer (Span 8) -->
     <div class="md:col-span-8 lg:col-span-8 space-y-4">
-      
       @if (selectedTemplate()) {
         <!-- Selected Template Header Card -->
-        <div class="bg-white border border-zinc-200 rounded-lg p-4 shadow-xs">
-          
+        <div class="ewp-card p-4">
           <!-- Draft Alert Banner & Quick Publish Action -->
           @if (selectedTemplate()?.status === 'DRAFT') {
             <div class="mb-3 p-3 rounded-lg bg-amber-50/80 border border-amber-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
@@ -187,22 +170,22 @@
                 <span class="font-bold font-mono text-sm">ⓘ</span>
                 <div>
                   <strong class="font-medium">Draft Workflow</strong>
-                  <p class="text-[11px] text-amber-800">This workflow is still in draft mode. Publish it when you are ready to use it.</p>
+                  <p class="text-[11px] text-amber-800">This workflow is in draft mode. Publish it to enable execution.</p>
                 </div>
               </div>
 
-              <!-- Action Buttons -->
               <div class="flex items-center gap-2 shrink-0">
                 <button (click)="openEditDraft()"
+                        type="button"
                         class="px-3 py-1.5 rounded bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold tracking-tight transition flex items-center gap-1.5 cursor-pointer shadow-xs">
                   <span>✏️</span>
                   <span>Edit Draft</span>
                 </button>
 
-                <!-- Publish Button -->
                 <button (click)="publishSelectedTemplate()"
                         [disabled]="isPublishing()"
-                        class="px-3 py-1.5 rounded bg-zinc-950 hover:bg-zinc-800 disabled:opacity-50 text-white text-xs font-medium tracking-tight transition flex items-center gap-1.5 cursor-pointer shadow-xs shrink-0">
+                        type="button"
+                        class="ewp-btn-primary">
                   @if (isPublishing()) {
                     <span class="animate-spin text-xs">↻</span>
                     <span>Publishing...</span>
@@ -221,7 +204,7 @@
                 <h2 class="text-sm font-bold text-zinc-950" [title]="'ID: ' + selectedTemplate()?.templateKey">
                   {{ selectedTemplate()?.name }}
                 </h2>
-                <span class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-mono font-medium border border-blue-200 shrink-0">
+                <span class="ewp-badge-sm ewp-badge-info shrink-0">
                   v{{ selectedTemplate()?.version }}
                 </span>
               </div>
@@ -234,8 +217,9 @@
             <div class="flex items-center gap-2 shrink-0">
               @if (selectedTemplate()?.status === 'PUBLISHED') {
                 <button (click)="openNewVersionDraft()"
+                        type="button"
                         title="Create a new draft version from this workflow"
-                        class="px-2.5 py-1 rounded bg-white hover:bg-zinc-100 text-zinc-800 text-xs font-medium border border-zinc-300 transition cursor-pointer flex items-center gap-1.5 shadow-2xs whitespace-nowrap">
+                        class="ewp-btn-secondary whitespace-nowrap">
                   <span>🌱</span>
                   <span>+ New Version</span>
                 </button>
@@ -244,20 +228,23 @@
               <!-- View Switcher Tabs -->
               <div class="ewp-segmented-bar text-xs">
                 <button (click)="setViewMode('canvas')"
+                        type="button"
                         class="ewp-segmented-btn px-2.5 py-1 flex items-center gap-1.5"
-                        [ngClass]="viewMode() === 'canvas' ? 'ewp-segmented-btn-active' : 'ewp-segmented-btn-idle'">
+                        [ngClass]="viewMode() === 'canvas' ? 'bg-white text-zinc-950 font-bold shadow-2xs' : 'text-zinc-600 hover:text-zinc-950'">
                   <span>◈</span>
                   <span>Flow</span>
                 </button>
                 <button (click)="setViewMode('pipeline')"
+                        type="button"
                         class="ewp-segmented-btn px-2.5 py-1 flex items-center gap-1.5"
-                        [ngClass]="viewMode() === 'pipeline' ? 'ewp-segmented-btn-active' : 'ewp-segmented-btn-idle'">
+                        [ngClass]="viewMode() === 'pipeline' ? 'bg-white text-zinc-950 font-bold shadow-2xs' : 'text-zinc-600 hover:text-zinc-950'">
                   <span>≡</span>
                   <span>Steps</span>
                 </button>
                 <button (click)="setViewMode('dsl')"
+                        type="button"
                         class="ewp-segmented-btn px-2.5 py-1 flex items-center gap-1.5"
-                        [ngClass]="viewMode() === 'dsl' ? 'ewp-segmented-btn-active' : 'ewp-segmented-btn-idle'">
+                        [ngClass]="viewMode() === 'dsl' ? 'bg-white text-zinc-950 font-bold shadow-2xs' : 'text-zinc-600 hover:text-zinc-950'">
                   <span>&#123; &#125;</span>
                   <span>JSON</span>
                 </button>
@@ -266,27 +253,25 @@
           </div>
         </div>
 
-        <!-- ============================================================= -->
-        <!-- VIEW 1: INTERACTIVE 2D NODE GRAPH CANVAS                       -->
-        <!-- ============================================================= -->
+        <!-- VIEW 1: INTERACTIVE 2D NODE GRAPH CANVAS -->
         @if (viewMode() === 'canvas') {
           <div class="space-y-2">
-            
             <div class="px-1 py-1 flex items-center justify-between gap-3 text-xs border-b border-zinc-100 pb-2">
               <div class="flex items-center gap-2 min-w-0">
                 <span class="font-bold text-zinc-800 text-xs whitespace-nowrap">Workflow Flow</span>
-                <span class="font-mono text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/80 whitespace-nowrap shrink-0">
+                <span class="ewp-badge-sm ewp-badge-success shrink-0">
                   {{ previewFlowNodes().length }} steps &bull; {{ previewFlowEdges().length }} connections
                 </span>
               </div>
 
               <div class="flex items-center gap-2.5 shrink-0">
                 <span class="text-[10px] font-mono text-zinc-400 whitespace-nowrap hidden lg:inline">
-                  Click a step for details &bull; Drag canvas to move
+                  Click a step for details
                 </span>
                 <button (click)="toggleFullscreen(true)"
-                        title="Expand to Fullscreen Big Canvas"
-                        class="px-2.5 py-1 rounded border border-zinc-200 hover:border-zinc-900 hover:bg-zinc-100 bg-white text-zinc-800 text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 shadow-xs">
+                        type="button"
+                        title="Expand to Fullscreen Canvas View"
+                        class="ewp-btn-secondary text-[11px] font-mono flex items-center gap-1.5 shadow-xs">
                   <span>⛶</span>
                   <span>Full Screen</span>
                 </button>
@@ -294,1203 +279,98 @@
             </div>
 
             <!-- Canvas Viewport Frame -->
-            <div class="relative bg-zinc-50 border border-zinc-200 rounded-xl shadow-xs overflow-hidden h-[540px] select-none"
-                 style="background-image: radial-gradient(#d4d4d8 1.2px, transparent 1.2px); background-size: 20px 20px; background-color: #fafafa;">
-
-              <!-- Floating Canvas Controls Dock -->
-              <div class="canvas-controls absolute bottom-3 right-3 z-30 flex items-center gap-1 bg-white/95 backdrop-blur-xs border border-zinc-200 rounded-lg p-1 shadow-md text-xs font-mono">
-                <button (click)="zoomIn()"
-                        title="Zoom In"
-                        class="w-7 h-7 flex items-center justify-center rounded hover:bg-zinc-100 text-zinc-700 font-bold transition cursor-pointer">
-                  +
-                </button>
-                <button (click)="zoomOut()"
-                        title="Zoom Out"
-                        class="w-7 h-7 flex items-center justify-center rounded hover:bg-zinc-100 text-zinc-700 font-bold transition cursor-pointer">
-                  &minus;
-                </button>
-                <div class="w-px h-4 bg-zinc-200 mx-0.5"></div>
-                <button (click)="resetZoom()"
-                        title="Fit to Center"
-                        class="px-2.5 h-7 flex items-center justify-center rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-[11px] font-semibold transition cursor-pointer">
-                  Fit View
-                </button>
-                <div class="w-px h-4 bg-zinc-200 mx-0.5"></div>
-                <button (click)="toggleFullscreen(true)"
-                        title="Expand to Big Canvas"
-                        class="px-2.5 h-7 flex items-center justify-center gap-1 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-[11px] font-semibold transition cursor-pointer shadow-xs">
-                  <span>⛶</span>
-                  <span>Expand</span>
-                </button>
-              </div>
-
-              <!-- Floating Canvas Legend -->
-              <div class="canvas-controls absolute top-3 left-3 z-20 flex flex-wrap items-center gap-2.5 bg-white/90 backdrop-blur-xs border border-zinc-200/80 rounded-lg px-2.5 py-1.5 shadow-xs text-[10px] font-mono text-zinc-600 pointer-events-none">
-                <div class="flex items-center gap-1">
-                  <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                  <span>Start</span>
-                </div>
-                <div class="flex items-center gap-1">
-                  <span class="w-2 h-2 rounded-full bg-zinc-900"></span>
-                  <span>Step</span>
-                </div>
-                <div class="flex items-center gap-1">
-                  <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                  <span>Completed</span>
-                </div>
-                <div class="flex items-center gap-1">
-                  <span class="w-2 h-2 rounded-full bg-rose-500"></span>
-                  <span>Rejected</span>
-                </div>
-              </div>
-
-              <!-- Modern ngx-vflow Interactive Graph Canvas -->
-              <vflow #previewVflow
-                     [view]="'auto'"
-                     [background]="'transparent'"
-                     [nodes]="previewFlowNodes()"
-                     [edges]="previewFlowEdges()"
-                     [minZoom]="0.4"
-                     [maxZoom]="1.5"
-                     class="w-full h-full">
-
-                <!-- Custom HTML Node Card Template -->
-                <ng-template nodeHtml let-ctx>
-                  <handle type="target" position="left" />
-                  <handle type="source" position="right" />
-
-                  <div (click)="selectNodeByKey(ctx.data().stateKey)"
-                       class="canvas-node-card w-[240px] h-[105px] bg-white rounded-xl border p-3 shadow-xs hover:shadow-md transition cursor-pointer select-none group flex flex-col justify-between"
-                       [ngClass]="{
-                         'border-zinc-950 ring-2 ring-zinc-950 shadow-md bg-zinc-50/60': selectedNode()?.stateKey === ctx.data().stateKey,
-                         'border-emerald-300 bg-emerald-50/20': ctx.data().isTerminal && !ctx.data().isRejectTerminal && selectedNode()?.stateKey !== ctx.data().stateKey,
-                         'border-rose-300 bg-rose-50/20': ctx.data().isTerminal && ctx.data().isRejectTerminal && selectedNode()?.stateKey !== ctx.data().stateKey,
-                         'border-amber-300 bg-amber-50/10': ctx.data().isInitial && selectedNode()?.stateKey !== ctx.data().stateKey,
-                         'border-zinc-200 hover:border-zinc-400': !ctx.data().isTerminal && !ctx.data().isInitial && selectedNode()?.stateKey !== ctx.data().stateKey
-                       }">
-
-                    <!-- Card Header -->
-                    <div class="flex items-center justify-between gap-1.5 mb-1.5">
-                      <div class="flex items-center gap-1.5">
-                        <span class="px-1.5 py-0.2 rounded font-mono text-[9px] font-bold"
-                              [ngClass]="{
-                                'bg-emerald-600 text-white': ctx.data().isTerminal && !ctx.data().isRejectTerminal,
-                                'bg-rose-600 text-white': ctx.data().isTerminal && ctx.data().isRejectTerminal,
-                                'bg-amber-600 text-white': ctx.data().isInitial,
-                                'bg-zinc-800 text-white': !ctx.data().isTerminal && !ctx.data().isInitial
-                              }">
-                          {{ ctx.data().isTerminal ? 'END' : (ctx.data().isInitial ? 'START' : 'STEP ' + ctx.data().order) }}
-                        </span>
-                        <span class="font-mono text-[10px] text-zinc-400 truncate max-w-[95px]">{{ ctx.data().stateKey }}</span>
-                      </div>
-
-                      <span class="text-[9px] font-mono text-zinc-400 group-hover:text-zinc-900 transition">
-                        Details &rarr;
-                      </span>
-                    </div>
-
-                    <!-- Card Title -->
-                    <h4 class="text-xs font-bold text-zinc-950 truncate tracking-tight mb-2">
-                      {{ ctx.data().name }}
-                    </h4>
-
-                    <!-- Card Metadata Badges -->
-                    <div class="flex flex-wrap items-center gap-1.5 text-[10px]">
-                      <span class="px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-700 font-medium border border-zinc-200/80">
-                        {{ ctx.data().type === 'DOCUMENT_SUBMISSION' ? 'Form Upload' : (ctx.data().type === 'APPROVAL' ? 'Approval' : (ctx.data().type === 'MANUAL_TASK' ? 'Task' : (ctx.data().type === 'AUTOMATED_TASK' ? 'Auto Step' : (ctx.data().type === 'TERMINAL' ? 'End' : ctx.data().type)))) }}
-                      </span>
-
-                      @if (ctx.data().requiredRole) {
-                        <span class="px-1.5 py-0.2 rounded font-mono text-[9px] bg-purple-50 text-purple-700 border border-purple-200 truncate max-w-[105px]"
-                              [title]="ctx.data().requiredRole">
-                          {{ ctx.data().roleDisplay }}
-                        </span>
-                      } @else {
-                        <span class="px-1.5 py-0.2 rounded font-mono text-[9px] bg-zinc-100 text-zinc-600 border border-zinc-200">
-                          {{ ctx.data().actorScope }}
-                        </span>
-                      }
-
-                      @if (ctx.data().slaHours) {
-                        <span class="px-1.5 py-0.2 rounded font-mono text-[9px] bg-blue-50 text-blue-700 border border-blue-200">
-                          ⏱ {{ ctx.data().slaHours }}h
-                        </span>
-                      }
-                    </div>
-
-                  </div>
-                </ng-template>
-
-                <!-- Edge Action Label Pill Template -->
-                <ng-template edgeLabelHtml let-ctx>
-                  <div class="canvas-action-pill select-none">
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold tracking-tight border shadow-xs transition inline-flex items-center gap-1 pointer-events-none"
-                          [ngClass]="{
-                            'bg-rose-50 text-rose-700 border-rose-300 ring-2 ring-rose-500/20': getEdgeData(ctx.edge).isDanger,
-                            'bg-white text-zinc-800 border-zinc-300 hover:border-zinc-900': !getEdgeData(ctx.edge).isDanger
-                          }">
-                      <span>{{ getEdgeData(ctx.edge).isDanger ? '✕' : '➔' }}</span>
-                      <span>{{ getEdgeData(ctx.edge).action }}</span>
-                    </span>
-                  </div>
-                </ng-template>
-
-              </vflow>
-
+            <div class="w-full h-[520px] rounded-xl border border-zinc-200 overflow-hidden shadow-2xs bg-zinc-50 relative">
+              <app-workflow-canvas #previewCanvas
+                                   [nodes]="previewFlowNodes()"
+                                   [edges]="previewFlowEdges()"
+                                   [selectedKey]="selectedNode()?.stateKey"
+                                   (nodeSelect)="selectNodeByKey($event)"
+                                   class="w-full h-full">
+              </app-workflow-canvas>
             </div>
-
           </div>
         }
 
-        <!-- ============================================================= -->
-        <!-- VIEW 2: SEQUENTIAL PIPELINE LIST VIEW                          -->
-        <!-- ============================================================= -->
+        <!-- VIEW 2: SEQUENTIAL PIPELINE LIST VIEW -->
         @if (viewMode() === 'pipeline') {
           <div class="space-y-3">
-            
             <div class="px-1 py-1 flex items-center justify-between gap-3 text-xs border-b border-zinc-100 pb-2">
               <div class="flex items-center gap-2 min-w-0">
                 <span class="font-bold text-zinc-800 text-xs whitespace-nowrap">Workflow Steps</span>
-                <span class="font-mono text-[10px] font-semibold text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200/80 whitespace-nowrap shrink-0">
+                <span class="ewp-badge-sm ewp-badge-info shrink-0">
                   {{ dagNodes().length }} Steps
                 </span>
               </div>
 
-              <div class="flex items-center gap-2.5 shrink-0">
-                <span class="text-[10px] font-mono text-zinc-400 whitespace-nowrap hidden lg:inline">
-                  Click step for details
-                </span>
-                <button (click)="toggleFullscreen(true)"
-                        title="Expand to Fullscreen Steps View"
-                        class="px-2.5 py-1 rounded border border-zinc-200 hover:border-zinc-900 hover:bg-zinc-100 bg-white text-zinc-800 text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1.5 shadow-xs">
-                  <span>⛶</span>
-                  <span>Full Screen</span>
-                </button>
-              </div>
+              <button (click)="toggleFullscreen(true)"
+                      type="button"
+                      title="Expand to Fullscreen Steps View"
+                      class="ewp-btn-secondary text-[11px] font-mono flex items-center gap-1.5 shadow-xs">
+                <span>⛶</span>
+                <span>Full Screen</span>
+              </button>
             </div>
 
-            <!-- Sequential Pipeline -->
-            <div class="space-y-3">
-              @for (node of dagNodes(); track node.stateKey; let idx = $index; let isLast = $last) {
-                
-                <!-- Node Card -->
-                <div (click)="selectNode(node)"
-                     class="bg-white border rounded-lg p-4 shadow-xs transition cursor-pointer hover:border-zinc-400 relative"
-                     [ngClass]="{
-                       'border-zinc-900 ring-2 ring-zinc-900 bg-zinc-50/20': selectedNode()?.stateKey === node.stateKey,
-                       'border-zinc-200': selectedNode()?.stateKey !== node.stateKey
-                     }">
-                  
-                  <div class="flex items-start justify-between gap-3">
-                    <div class="flex items-center gap-2">
-                      <!-- Step Order Pill -->
-                      <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold"
-                            [ngClass]="node.isTerminal ? 'bg-zinc-800 text-white' : 'bg-zinc-200 text-zinc-800'">
-                        {{ node.isTerminal ? 'END' : 'STEP ' + node.order }}
-                      </span>
-
-                      <!-- State Name -->
-                      <h4 class="text-xs font-bold text-zinc-950">{{ node.name }}</h4>
-
-                      <!-- Initial State Badge -->
-                      @if (node.isInitial) {
-                        <span class="px-1.5 py-0.2 rounded bg-amber-50 text-amber-800 text-[9px] font-mono font-semibold border border-amber-200">
-                          START
-                        </span>
-                      }
-                    </div>
-
-                    <!-- State Key & Inspect Prompt -->
-                    <div class="flex items-center gap-2 shrink-0">
-                      <span class="font-mono text-[10px] text-zinc-400 font-medium">
-                        {{ node.stateKey }}
-                      </span>
-                      <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600 border border-zinc-200">
-                        Details &rarr;
-                      </span>
-                    </div>
-                  </div>
-
-                  <!-- Metadata Attributes Bar -->
-                  <div class="mt-2.5 flex flex-wrap items-center gap-2 text-[11px]">
-                    <!-- Step Type -->
-                    <span class="px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 font-medium border border-zinc-200">
-                      {{ node.type === 'DOCUMENT_SUBMISSION' ? 'Form Upload' : (node.type === 'APPROVAL' ? 'Approval' : (node.type === 'MANUAL_TASK' ? 'Task' : (node.type === 'AUTOMATED_TASK' ? 'Auto Step' : (node.type === 'TERMINAL' ? 'End' : node.type)))) }}
-                    </span>
-
-                    <!-- Actor Scope / Authority -->
-                    <span class="px-2 py-0.5 rounded font-mono text-[10px]"
-                          [ngClass]="node.requiredRole ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-zinc-100 text-zinc-600 border border-zinc-200'">
-                      {{ node.requiredRole ? 'Role: ' + node.requiredRole.replace('ROLE_', '') : 'Assigned: ' + node.actorScope }}
-                    </span>
-
-                    <!-- SLA -->
-                    @if (node.slaHours) {
-                      <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-mono text-[10px] border border-blue-200">
-                        ⏱ {{ node.slaHours }}h limit
-                      </span>
-                    }
-
-                    <!-- Terminal -->
-                    @if (node.isTerminal) {
-                      <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono text-[10px] border border-emerald-200">
-                        ✓ End Step
-                      </span>
-                    }
-                  </div>
-
-                  <!-- Required Payload Attributes (if any) -->
-                  @if (node.requiredPayloadKeys && node.requiredPayloadKeys.length > 0) {
-                    <div class="mt-2.5 pt-2 border-t border-zinc-100 flex items-center gap-1.5 text-[11px]">
-                      <span class="text-zinc-400 text-[10px] font-mono">Required Fields:</span>
-                      <div class="flex flex-wrap gap-1">
-                        @for (key of node.requiredPayloadKeys; track key) {
-                          <span class="px-1.5 py-0.2 rounded bg-zinc-100 font-mono text-zinc-700 text-[10px] border border-zinc-200">
-                            {{ key }}
-                          </span>
-                        }
-                      </div>
-                    </div>
-                  }
-
-                  <!-- Outgoing State Transitions -->
-                  @if (node.outgoingTransitions.length > 0) {
-                    <div class="mt-3 pt-2.5 border-t border-zinc-100 space-y-1.5">
-                      <span class="text-[10px] font-medium text-zinc-400 uppercase tracking-wider block">
-                        Next Steps
-                      </span>
-                      <div class="flex flex-wrap gap-2">
-                        @for (trans of node.outgoingTransitions; track trans.action) {
-                          <div class="flex items-center gap-1 bg-zinc-50 border border-zinc-200 rounded px-2 py-1 text-[11px] font-mono">
-                            <span class="text-zinc-900 font-semibold">[{{ trans.action }}]</span>
-                            <span class="text-zinc-400 font-bold">➔</span>
-                            <span class="px-1.5 py-0.2 rounded bg-zinc-900 text-white text-[10px]">
-                              {{ trans.targetState }}
-                            </span>
-                          </div>
-                        }
-                      </div>
-                    </div>
-                  }
-                </div>
-
-                <!-- Directed Arrow Connector -->
-                @if (!isLast) {
-                  <div class="flex items-center justify-center py-0.5">
-                    <div class="flex flex-col items-center">
-                      <div class="w-0.5 h-3 bg-zinc-300"></div>
-                      <span class="text-zinc-400 text-xs leading-none">▼</span>
-                    </div>
-                  </div>
-                }
-              }
-            </div>
+            <app-workflow-pipeline [nodes]="dagNodes()"
+                                   [selectedKey]="selectedNode()?.stateKey"
+                                   (nodeSelect)="selectNodeByKey($event)">
+            </app-workflow-pipeline>
           </div>
         }
 
-        <!-- ============================================================= -->
-        <!-- VIEW 3: RAW BLUEPRINT DSL (JSON)                              -->
-        <!-- ============================================================= -->
+        <!-- VIEW 3: RAW BLUEPRINT DSL (JSON) -->
         @if (viewMode() === 'dsl') {
-          <div class="bg-zinc-950 text-zinc-100 rounded-lg p-4 font-mono text-xs shadow-xs relative overflow-hidden">
-            <div class="flex items-center justify-between pb-3 mb-3 border-b border-zinc-800">
-              <span class="text-[11px] text-zinc-400">workflow-definition.json</span>
-              <div class="flex items-center gap-2">
-                <button (click)="toggleFullscreen(true)"
-                        title="Expand to Fullscreen JSON View"
-                        class="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-white text-[11px] transition cursor-pointer flex items-center gap-1 border border-zinc-700">
-                  <span>⛶</span>
-                  <span>Full Screen</span>
-                </button>
-                <button (click)="copyDsl()"
-                        class="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-white text-[11px] transition cursor-pointer border border-zinc-700">
-                  Copy JSON
-                </button>
-              </div>
-            </div>
-            <pre class="overflow-x-auto text-[11px] leading-relaxed text-emerald-400 font-mono">{{ selectedTemplateDsl() }}</pre>
-          </div>
+          <app-workflow-json-viewer [json]="selectedTemplateDsl()"
+                                    title="workflow-definition.json"
+                                    (copied)="onJsonCopied()">
+          </app-workflow-json-viewer>
         }
 
       } @else {
-        <div class="bg-white border border-zinc-200 rounded-lg p-12 text-center text-xs text-zinc-400">
+        <div class="ewp-card p-12 text-center text-xs text-zinc-400">
           Select a workflow template from the list to view its steps and flow.
         </div>
       }
     </div>
   </div>
 
-  <!-- =================================================================== -->
-  <!-- VISUAL BLUEPRINT CREATOR STUDIO DIALOG                              -->
-  <!-- Dual-mode: Interactive Visual Builder & Raw JSON DSL                -->
-  <!-- =================================================================== -->
-  @if (isCreateModalOpen()) {
-    <div class="fixed inset-0 z-50 bg-zinc-950/75 backdrop-blur-sm select-none animate-in fade-in duration-150"
-         [ngClass]="isStudioFullscreen() ? 'p-1 sm:p-2.5 flex flex-col' : 'p-3 sm:p-6 flex items-center justify-center'"
-         (wheel)="$event.preventDefault()">
-      
-      <!-- Studio Modal Container -->
-      <div class="bg-white border border-zinc-200 shadow-2xl flex flex-col overflow-hidden select-text relative"
-           [ngClass]="isStudioFullscreen() ? 'w-full h-full rounded-xl' : 'w-full max-w-6xl h-[92vh] max-h-[980px] rounded-2xl'"
-           (click)="$event.stopPropagation()"
-           (wheel)="$event.stopPropagation()">
-        
-        <!-- Studio Header Bar -->
-        <div class="px-5 py-3 border-b border-zinc-200 bg-zinc-50/90 flex flex-wrap items-center justify-between gap-3 shrink-0">
-          <div class="flex items-center gap-3">
-            <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold text-white shrink-0 tracking-wider"
-                  [ngClass]="isEditingDraft() ? 'bg-amber-600' : 'bg-zinc-900'">
-              {{ isEditingDraft() ? 'EDIT DRAFT' : 'WORKFLOW BUILDER' }}
-            </span>
-            <div>
-              <h3 class="text-sm font-bold text-zinc-950 tracking-tight">
-                {{ builderName() || 'Untitled Workflow' }}
-              </h3>
-              <p class="text-[11px] text-zinc-500 font-mono">
-                ID: <span class="text-zinc-800 font-semibold">{{ builderKey() || 'UNTITLED' }}</span>
-                @if (isEditingDraft()) {
-                  <span> &bull; Version: <span class="text-purple-700 font-semibold">v{{ editingTemplate()?.version }}</span></span>
-                }
-                &bull; Status: <span class="text-amber-700 font-semibold">DRAFT</span>
-              </p>
-            </div>
-          </div>
-
-          <!-- Quick Presets & Mode Switcher -->
-          <div class="flex items-center gap-2.5 shrink-0">
-            <!-- Preset Templates Dropdown -->
-            <div class="flex items-center gap-1.5 text-xs font-mono">
-              <span class="text-zinc-400 text-[11px] hidden sm:inline">Presets:</span>
-              <select [ngModel]="selectedPresetId()"
-                      (ngModelChange)="loadPreset($event)"
-                      aria-label="Load workflow preset"
-                      class="px-2.5 py-1 text-xs font-mono bg-white hover:bg-zinc-100 border border-zinc-300 rounded-md text-zinc-800 transition cursor-pointer outline-none shadow-2xs">
-                @for (preset of builderPresets; track preset.id) {
-                  <option [value]="preset.id">{{ preset.name }} ({{ preset.badge }})</option>
-                }
-              </select>
-            </div>
-
-            <!-- Mode Switcher Tabs -->
-            <div class="ewp-segmented-bar text-xs">
-              <button (click)="switchBuilderMode('visual')"
-                      class="ewp-segmented-btn px-2.5 py-1 flex items-center gap-1"
-                      [ngClass]="builderMode() === 'visual' ? 'ewp-segmented-btn-active' : 'ewp-segmented-btn-idle'">
-                <span>🎨</span>
-                <span>Visual Builder</span>
-              </button>
-              <button (click)="switchBuilderMode('dsl')"
-                      class="ewp-segmented-btn px-2.5 py-1 flex items-center gap-1"
-                      [ngClass]="builderMode() === 'dsl' ? 'ewp-segmented-btn-active' : 'ewp-segmented-btn-idle'">
-                <span>&#123; &#125;</span>
-                <span>Raw JSON</span>
-              </button>
-            </div>
-
-            <!-- Fullscreen / Windowed Toggle Button -->
-            <button (click)="toggleStudioFullscreen()"
-                    [title]="isStudioFullscreen() ? 'Switch to Windowed' : 'Expand to Full Screen'"
-                    class="px-2.5 py-1 text-xs font-mono font-medium rounded border border-zinc-300 hover:border-zinc-900 bg-white hover:bg-zinc-100 text-zinc-800 transition cursor-pointer flex items-center gap-1 shadow-2xs">
-              <span>{{ isStudioFullscreen() ? '▫' : '⛶' }}</span>
-              <span class="hidden md:inline">{{ isStudioFullscreen() ? 'Windowed' : 'Full Screen' }}</span>
-            </button>
-
-            <!-- Close Studio Button -->
-            <button (click)="closeCreateModal()"
-                    aria-label="Close Builder"
-                    class="p-1.5 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-200/60 rounded-md transition cursor-pointer text-sm leading-none font-mono">
-              ✕
-            </button>
-          </div>
-        </div>
-
-        <!-- Studio Body -->
-        <div class="flex-1 overflow-hidden flex flex-col">
-          
-          <!-- MODE 1: VISUAL STUDIO (2-COLUMN SPLIT) -->
-          @if (builderMode() === 'visual') {
-            <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
-              
-              <!-- Left Column: Form & Node Configuration (Scrollable) -->
-              <div class="w-full lg:w-1/2 xl:w-5/12 flex flex-col border-b lg:border-b-0 lg:border-r border-zinc-200 overflow-y-auto p-4 sm:p-6 space-y-5 bg-white">
-                
-                <!-- Section 1: Basic Details Card -->
-                <div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4 space-y-3 shadow-2xs">
-                  <div class="flex items-center justify-between">
-                    <span class="text-[11px] font-bold text-zinc-700 uppercase tracking-wider font-mono">
-                      1. Basic Info
-                    </span>
-                    <span class="text-[10px] font-mono text-zinc-400">General Details</span>
-                  </div>
-
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <div class="flex items-center justify-between mb-1">
-                        <label class="block text-zinc-600 font-medium">
-                          Workflow ID <span class="text-rose-500">*</span>
-                        </label>
-                        @if (isEditingDraft()) {
-                          <span class="text-[9px] font-mono text-amber-700 bg-amber-100 px-1 rounded font-semibold">Locked</span>
-                        }
-                      </div>
-                      <input type="text"
-                             [disabled]="isEditingDraft()"
-                             [ngModel]="builderKey()"
-                             (ngModelChange)="builderKey.set(($event || '').toUpperCase().replace(/[^A-Z0-9_]/g, '_'))"
-                             placeholder="e.g. VENDOR_ONBOARDING_V1"
-                             class="w-full px-2.5 py-1.5 font-mono text-xs bg-white border border-zinc-300 rounded-md outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition disabled:bg-zinc-100 disabled:text-zinc-500 disabled:cursor-not-allowed">
-                      @if (isEditingDraft()) {
-                        <span class="text-[10px] font-mono text-amber-700 mt-0.5 block">Locked for existing draft version</span>
-                      }
-                    </div>
-
-                    <div>
-                      <label class="block text-zinc-600 font-medium mb-1">
-                        Workflow Name <span class="text-rose-500">*</span>
-                      </label>
-                      <input type="text"
-                             [(ngModel)]="builderName"
-                             placeholder="e.g. Enterprise Vendor Onboarding"
-                             class="w-full px-2.5 py-1.5 text-xs bg-white border border-zinc-300 rounded-md outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition">
-                    </div>
-                  </div>
-
-                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                    <div class="sm:col-span-2">
-                      <label class="block text-zinc-600 font-medium mb-1">Description</label>
-                      <input type="text"
-                             [(ngModel)]="builderDescription"
-                             placeholder="e.g. Multi-stage onboarding with legal compliance and review steps"
-                             class="w-full px-2.5 py-1.5 text-xs bg-white border border-zinc-300 rounded-md outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition">
-                    </div>
-
-                    <div>
-                      <label class="block text-zinc-600 font-medium mb-1">
-                        Starting Step <span class="text-rose-500">*</span>
-                      </label>
-                      <select [ngModel]="builderInitialState()"
-                              (ngModelChange)="setInitialState($event)"
-                              class="w-full px-2.5 py-1.5 font-mono text-xs bg-white border border-zinc-300 rounded-md outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition cursor-pointer">
-                        @for (s of builderStates(); track s.id) {
-                          <option [value]="s.stateKey">{{ s.stateKey }}</option>
-                        }
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Section 2: Steps & Connections -->
-                <div class="space-y-3">
-                  <div class="flex items-center justify-between pb-1 border-b border-zinc-200">
-                    <div class="flex items-center gap-2">
-                      <span class="text-xs font-bold text-zinc-900 uppercase tracking-wider font-mono">
-                        2. Steps & Connections
-                      </span>
-                      <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold bg-zinc-100 text-zinc-700 border border-zinc-200">
-                        {{ builderStates().length }} Steps
-                      </span>
-                    </div>
-
-                    <button (click)="addState()"
-                            class="px-2.5 py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium transition cursor-pointer flex items-center gap-1 shadow-xs">
-                      <span>+</span>
-                      <span>Add Step</span>
-                    </button>
-                  </div>
-
-                  <!-- States Cards List -->
-                  <div class="space-y-3">
-                    @for (state of builderStates(); track state.id; let idx = $index; let isFirst = $first; let isLast = $last) {
-                      <div [id]="'step-card-' + state.stateKey"
-                           class="bg-white border rounded-xl p-4 shadow-2xs hover:shadow-xs transition space-y-3 relative group scroll-mt-4"
-                           [ngClass]="{
-                             'border-amber-300 ring-1 ring-amber-300/40 bg-amber-50/10': state.isInitial,
-                             'border-emerald-300 ring-1 ring-emerald-300/40 bg-emerald-50/10': state.isTerminal && !['REJECTED', 'CANCELLED'].includes(state.stateKey.toUpperCase()),
-                             'border-rose-300 ring-1 ring-rose-300/40 bg-rose-50/10': state.isTerminal && ['REJECTED', 'CANCELLED'].includes(state.stateKey.toUpperCase()),
-                             'border-zinc-200': !state.isInitial && !state.isTerminal
-                           }">
-                        
-                        <!-- Card Header -->
-                        <div class="flex items-center justify-between gap-2 pb-2 border-b border-zinc-100">
-                          <div class="flex items-center gap-2 min-w-0">
-                            <!-- Order Badge -->
-                            <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold"
-                                  [ngClass]="{
-                                    'bg-amber-600 text-white': state.isInitial,
-                                    'bg-emerald-600 text-white': state.isTerminal && !['REJECTED', 'CANCELLED'].includes(state.stateKey.toUpperCase()),
-                                    'bg-rose-600 text-white': state.isTerminal && ['REJECTED', 'CANCELLED'].includes(state.stateKey.toUpperCase()),
-                                    'bg-zinc-800 text-white': !state.isInitial && !state.isTerminal
-                                  }">
-                              {{ state.isInitial ? 'START' : (state.isTerminal ? 'END' : 'STEP ' + (idx + 1)) }}
-                            </span>
-
-                            <h4 class="text-xs font-bold text-zinc-950 truncate">{{ state.stepName }}</h4>
-                            <span class="font-mono text-[10px] text-zinc-400 truncate">({{ state.stateKey }})</span>
-                          </div>
-
-                          <!-- Action Controls (Reorder, Set Initial, Delete) -->
-                          <div class="flex items-center gap-1.5 shrink-0">
-                            @if (!state.isInitial) {
-                              <button (click)="setInitialState(state.stateKey)"
-                                      title="Set as starting step"
-                                      class="px-2 py-0.5 rounded text-[10px] font-mono text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition cursor-pointer">
-                                Set Start
-                              </button>
-                            }
-
-                            <!-- Move Up -->
-                            <button (click)="moveState(idx, 'up')"
-                                    [disabled]="isFirst"
-                                    title="Move Step Up"
-                                    class="p-1 rounded text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 disabled:opacity-30 transition cursor-pointer text-xs leading-none">
-                              ▲
-                            </button>
-
-                            <!-- Move Down -->
-                            <button (click)="moveState(idx, 'down')"
-                                    [disabled]="isLast"
-                                    title="Move Step Down"
-                                    class="p-1 rounded text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 disabled:opacity-30 transition cursor-pointer text-xs leading-none">
-                              ▼
-                            </button>
-
-                            <!-- Delete State -->
-                            <button (click)="removeState(idx)"
-                                    [disabled]="builderStates().length <= 2"
-                                    title="Delete Step"
-                                    class="p-1 rounded text-rose-500 hover:text-rose-700 hover:bg-rose-50 disabled:opacity-30 transition cursor-pointer text-xs leading-none font-bold">
-                              ✕
-                            </button>
-                          </div>
-                        </div>
-
-                        <!-- Card Core Fields (State Key & Name) -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                          <div>
-                            <label class="block text-zinc-500 text-[11px] font-mono mb-1">Step ID</label>
-                            <input type="text"
-                                   [ngModel]="state.stateKey"
-                                   (ngModelChange)="updateStateKey(idx, $event)"
-                                   placeholder="e.g. INVOICE_VERIFICATION"
-                                   class="w-full px-2.5 py-1.5 font-mono text-xs bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:bg-white focus:border-zinc-900 transition">
-                          </div>
-
-                          <div>
-                            <label class="block text-zinc-500 text-[11px] font-mono mb-1">Step Name</label>
-                            <input type="text"
-                                   [(ngModel)]="state.stepName"
-                                   placeholder="e.g. Invoice Verification & Match"
-                                   class="w-full px-2.5 py-1.5 text-xs bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:bg-white focus:border-zinc-900 transition">
-                          </div>
-                        </div>
-
-                        <!-- Terminal State Checkbox & Indicator Row -->
-                        <div class="pt-2 border-t border-zinc-100 flex flex-wrap items-center justify-between gap-3 text-xs">
-                          <label class="flex items-center gap-2 cursor-pointer font-medium text-zinc-800 shrink-0">
-                            <input type="checkbox"
-                                   [checked]="state.isTerminal"
-                                   (change)="toggleTerminal(idx, $any($event.target).checked)"
-                                   class="w-4 h-4 rounded border-zinc-300 text-zinc-900 accent-zinc-900 focus:ring-zinc-900 cursor-pointer">
-                            <span>This is an ending step (Workflow finishes here)</span>
-                          </label>
-
-                          @if (state.isTerminal) {
-                            <div class="flex items-center gap-2 text-[11px] font-mono text-zinc-600 bg-zinc-100 px-2.5 py-1 rounded-md border border-zinc-200">
-                              <span class="w-2 h-2 rounded-full"
-                                    [ngClass]="['REJECTED', 'CANCELLED'].includes(state.stateKey.toUpperCase()) ? 'bg-rose-500' : 'bg-emerald-500'"></span>
-                              <span>🏁 Final Step &bull; Process finishes here</span>
-                            </div>
-                          }
-                        </div>
-
-                        <!-- Non-Terminal State Fields: Step Attributes, Payload Schema, Outgoing Transitions -->
-                        @if (!state.isTerminal) {
-                          <!-- Card Step Attributes (Type, Scope, Role, SLA) -->
-                          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs pt-1 border-t border-zinc-100">
-                            <div>
-                              <label class="block text-zinc-500 text-[11px] font-mono mb-1">Step Type</label>
-                              <select [(ngModel)]="state.stepType"
-                                      class="w-full px-2 py-1.5 text-xs bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:bg-white focus:border-zinc-900 transition cursor-pointer">
-                                @for (st of availableStepTypes; track st.value) {
-                                  @if (st.value !== 'TERMINAL') {
-                                    <option [value]="st.value">{{ st.label }}</option>
-                                  }
-                                }
-                              </select>
-                            </div>
-
-                            <div>
-                              <label class="block text-zinc-500 text-[11px] font-mono mb-1">Assigned To</label>
-                              <select [(ngModel)]="state.actorScope"
-                                      class="w-full px-2 py-1.5 text-xs bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:bg-white focus:border-zinc-900 transition cursor-pointer">
-                                @for (sc of availableActorScopes; track sc.value) {
-                                  <option [value]="sc.value">{{ sc.label }}</option>
-                                }
-                              </select>
-                            </div>
-
-                            <div>
-                              <div class="flex items-center justify-between mb-1">
-                                <label class="block text-zinc-500 text-[11px] font-mono">Required Role</label>
-                                @if (state.actorScope === 'ROLE' && isCustomRole(state.requiredRole)) {
-                                  <span class="text-[9px] font-mono text-purple-700 bg-purple-100 px-1 rounded font-semibold">Custom</span>
-                                }
-                              </div>
-
-                              @if (state.actorScope === 'PARALLEL_ROLES' || state.stepType === 'PARALLEL_APPROVAL') {
-                                <div class="space-y-1.5">
-                                  <div class="flex flex-wrap gap-1 p-1.5 bg-blue-50/70 border border-blue-200 rounded-md min-h-[32px]">
-                                    @for (role of (state.requiredRoles || []); track role) {
-                                      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-100 text-blue-900 font-mono text-[10px] font-semibold border border-blue-300">
-                                        <span>{{ role.replace('ROLE_', '') }}</span>
-                                        <button (click)="toggleParallelRole(state, role)"
-                                                type="button"
-                                                class="hover:text-rose-600 cursor-pointer font-bold leading-none">×</button>
-                                      </span>
-                                    }
-                                    @if (!state.requiredRoles || state.requiredRoles.length === 0) {
-                                      <span class="text-blue-500 text-[10px] font-mono italic self-center">Select roles below...</span>
-                                    }
-                                  </div>
-
-                                  <div class="flex items-center gap-1">
-                                    <select (change)="toggleParallelRole(state, $any($event.target).value); $any($event.target).value = ''"
-                                            class="flex-1 px-2 py-1 font-mono text-[10px] bg-white border border-blue-300 rounded outline-none focus:border-blue-700 text-blue-900 cursor-pointer">
-                                      <option value="" disabled selected>+ Add Role...</option>
-                                      @for (r of availableRoles; track r) {
-                                        @if (!isParallelRoleSelected(state, r)) {
-                                          <option [value]="r">{{ r.replace('ROLE_', '') }}</option>
-                                        }
-                                      }
-                                    </select>
-                                    <input #customParallelInput
-                                           type="text"
-                                           placeholder="Custom Role"
-                                           (keydown.enter)="addCustomParallelRole(state, customParallelInput)"
-                                           class="w-24 px-1.5 py-1 font-mono text-[10px] bg-white border border-blue-200 rounded outline-none text-blue-900">
-                                    <button (click)="addCustomParallelRole(state, customParallelInput)"
-                                            type="button"
-                                            class="px-1.5 py-1 bg-blue-600 text-white font-mono text-[10px] rounded hover:bg-blue-700 cursor-pointer font-bold">
-                                      +
-                                    </button>
-                                  </div>
-                                  <span class="text-[9px] text-blue-600 font-mono block">Fork-join: Spawns independent tasks for each role.</span>
-                                </div>
-                              } @else if (state.actorScope === 'ROLE') {
-                                <div class="space-y-1.5">
-                                  <select [ngModel]="isCustomRole(state.requiredRole) ? '__CUSTOM__' : state.requiredRole"
-                                          (ngModelChange)="onRoleSelectChange(state, $event)"
-                                          class="w-full px-2 py-1.5 font-mono text-[11px] bg-purple-50 text-purple-900 border border-purple-200 rounded-md outline-none focus:bg-white focus:border-purple-600 transition cursor-pointer">
-                                    @for (role of availableRoles; track role) {
-                                      <option [value]="role">{{ role.replace('ROLE_', '') }}</option>
-                                    }
-                                    <option value="__CUSTOM__">➕ Other (Specify Custom Role...)</option>
-                                  </select>
-
-                                  @if (isCustomRole(state.requiredRole)) {
-                                    <div class="animate-in fade-in duration-150">
-                                      <input type="text"
-                                             [ngModel]="state.requiredRole"
-                                             (ngModelChange)="onCustomRoleInput(state, $event)"
-                                             placeholder="e.g. ROLE_COMPLIANCE_OFFICER"
-                                             class="w-full px-2 py-1 font-mono text-[11px] bg-white border border-purple-300 rounded outline-none focus:border-purple-700 focus:ring-1 focus:ring-purple-700 text-purple-900 font-semibold shadow-2xs">
-                                      <span class="text-[9px] text-zinc-400 font-mono mt-0.5 block leading-tight">
-                                        Specify exact role identifier
-                                      </span>
-                                    </div>
-                                  }
-                                </div>
-                              } @else {
-                                <input type="text"
-                                       disabled
-                                       value="Inherited"
-                                       class="w-full px-2 py-1.5 font-mono text-xs bg-zinc-100 text-zinc-400 border border-zinc-200 rounded-md cursor-not-allowed">
-                              }
-                            </div>
-
-                            <div>
-                              <label class="block text-zinc-500 text-[11px] font-mono mb-1">Time Limit</label>
-                              <div class="flex items-center">
-                                <input type="number"
-                                       [(ngModel)]="state.slaHours"
-                                       placeholder="None"
-                                       min="1"
-                                       max="720"
-                                       class="w-full px-2 py-1.5 font-mono text-xs bg-zinc-50 border border-zinc-200 rounded-l-md outline-none focus:bg-white focus:border-zinc-900 transition">
-                                <span class="px-2 py-1.5 bg-zinc-100 text-zinc-600 border border-l-0 border-zinc-200 rounded-r-md text-[11px] font-mono">
-                                  hrs
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <!-- Payload Input -->
-                          <div class="pt-2 border-t border-zinc-100 flex items-center gap-2 text-xs">
-                            <span class="text-zinc-500 text-[11px] font-mono whitespace-nowrap">Required Fields:</span>
-                            <input type="text"
-                                   [(ngModel)]="state.payloadKeysInput"
-                                   placeholder="e.g. invoiceNumber, amount, vendorEmail (comma-separated)"
-                                   class="flex-1 px-2.5 py-1.5 font-mono text-xs bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:bg-white focus:border-zinc-900 transition">
-                          </div>
-
-                          <!-- Outgoing Transitions Section -->
-                          <div class="pt-2 border-t border-zinc-100 space-y-2">
-                            <div class="flex items-center justify-between">
-                              <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">
-                                Next Steps ({{ state.transitions.length }})
-                              </span>
-                              <button (click)="addTransition(idx)"
-                                      class="px-2.5 py-1 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1">
-                                <span>+</span>
-                                <span>Add Next Step</span>
-                              </button>
-                            </div>
-
-                            @if (state.transitions.length === 0) {
-                              <div class="p-2.5 rounded bg-amber-50/70 border border-amber-200 text-amber-900 text-xs font-mono">
-                                ⚠️ Every intermediate step requires at least 1 next step. Click "+ Add Next Step".
-                              </div>
-                            } @else {
-                              <div class="space-y-1.5">
-                                @for (trans of state.transitions; track $index; let tIdx = $index) {
-                                  <div class="flex items-center gap-2 bg-zinc-50 border border-zinc-200 rounded-lg p-2 text-xs font-mono">
-                                    <span class="text-zinc-400 text-[10px] uppercase">Action:</span>
-                                    <input type="text"
-                                           [ngModel]="trans.action"
-                                           (ngModelChange)="trans.action = ($event || '').toUpperCase().replace(/[^A-Z0-9_]/g, '_')"
-                                           placeholder="e.g. APPROVE"
-                                           class="w-40 px-2.5 py-1.5 font-mono text-xs bg-white border border-zinc-300 rounded outline-none focus:border-zinc-900">
-                                    
-                                    <span class="text-zinc-400 font-bold">&rarr;</span>
-                                    <span class="text-zinc-400 text-[10px] uppercase">Goes to:</span>
-                                    <select [(ngModel)]="trans.targetState"
-                                            class="flex-1 min-w-[140px] px-2.5 py-1.5 font-mono text-xs bg-white border border-zinc-300 rounded outline-none focus:border-zinc-900 cursor-pointer">
-                                      @for (targetState of builderStates(); track targetState.id) {
-                                        <option [value]="targetState.stateKey">
-                                          {{ targetState.stateKey }} ({{ targetState.stepName }})
-                                        </option>
-                                      }
-                                    </select>
-
-                                    <button (click)="removeTransition(idx, tIdx)"
-                                            title="Remove Next Step"
-                                            class="p-1.5 rounded text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer text-xs font-bold leading-none">
-                                      ✕
-                                    </button>
-                                  </div>
-                                }
-                              </div>
-                            }
-                          </div>
-
-                          <!-- Dynamic Conditional Transitions Section (Rules Engine) -->
-                          <div class="pt-2 border-t border-zinc-100 space-y-2">
-                            <div class="flex items-center justify-between">
-                              <div class="flex items-center gap-1.5">
-                                <span class="text-[10px] font-bold text-indigo-700 uppercase tracking-wider font-mono">
-                                  ⚡ Dynamic Rules ({{ state.conditionalTransitions.length || 0 }})
-                                </span>
-                                <span class="px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 text-[9px] font-mono border border-indigo-200">
-                                  SpEL
-                                </span>
-                              </div>
-                              <button (click)="addConditionalTransition(idx)"
-                                      type="button"
-                                      class="px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[10px] font-mono font-medium transition cursor-pointer flex items-center gap-1">
-                                <span>+</span>
-                                <span>Add Rule</span>
-                              </button>
-                            </div>
-
-                            @if (state.conditionalTransitions && state.conditionalTransitions.length > 0) {
-                              <div class="space-y-2">
-                                @for (cond of state.conditionalTransitions; track $index; let cIdx = $index) {
-                                  <div class="p-2.5 bg-indigo-50/50 border border-indigo-200 rounded-lg space-y-2 text-xs font-mono">
-                                    <div class="flex items-center justify-between text-[10px]">
-                                      <div class="flex items-center gap-2">
-                                        <span class="px-1.5 py-0.5 rounded bg-indigo-600 text-white font-bold text-[9px]">RULE #{{ cIdx + 1 }}</span>
-                                        <span class="text-zinc-500 text-[10px]">Priority:</span>
-                                        <input type="number"
-                                               [(ngModel)]="cond.priority"
-                                               min="1"
-                                               max="99"
-                                               class="w-12 px-1 py-0.5 text-[10px] font-mono bg-white border border-indigo-200 rounded text-center outline-none">
-                                      </div>
-                                      <button (click)="removeConditionalTransition(idx, cIdx)"
-                                              type="button"
-                                              class="p-1 rounded text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer font-bold text-xs leading-none">
-                                        ✕
-                                      </button>
-                                    </div>
-
-                                    <div class="flex items-center gap-2">
-                                      <span class="text-zinc-500 text-[10px] uppercase">Action:</span>
-                                      <input type="text"
-                                             [ngModel]="cond.action"
-                                             (ngModelChange)="cond.action = ($event || '').toUpperCase().replace(/[^A-Z0-9_]/g, '_')"
-                                             placeholder="APPROVE"
-                                             class="w-32 px-2 py-1 font-mono text-xs bg-white border border-zinc-300 rounded outline-none focus:border-indigo-600 font-semibold">
-                                      
-                                      <span class="text-zinc-400 font-bold">&rarr;</span>
-                                      <span class="text-zinc-500 text-[10px] uppercase">Routes to:</span>
-                                      <select [(ngModel)]="cond.targetState"
-                                              class="flex-1 min-w-[120px] px-2 py-1 font-mono text-xs bg-white border border-zinc-300 rounded outline-none focus:border-indigo-600 cursor-pointer">
-                                        @for (targetState of builderStates(); track targetState.id) {
-                                          <option [value]="targetState.stateKey">
-                                            {{ targetState.stateKey }} ({{ targetState.stepName }})
-                                          </option>
-                                        }
-                                      </select>
-                                    </div>
-
-                                    <div class="flex items-center gap-2 pt-1.5 border-t border-indigo-100/80">
-                                      <span class="text-indigo-700 text-[10px] whitespace-nowrap font-bold">IF:</span>
-                                      <input type="text"
-                                             [(ngModel)]="cond.condition"
-                                             placeholder="#amount > 10000 or #department == 'FINANCE'"
-                                             class="flex-1 px-2.5 py-1 font-mono text-xs bg-white border border-indigo-300 rounded outline-none focus:border-indigo-700 text-indigo-950 font-medium placeholder:text-zinc-400">
-                                    </div>
-                                  </div>
-                                }
-                              </div>
-                            } @else {
-                              <div class="p-2 rounded bg-zinc-50/80 border border-dashed border-zinc-200 text-zinc-400 text-[11px] font-mono flex items-center justify-between">
-                                <span>Static routing (click "+ Add Rule" for SpEL conditions)</span>
-                              </div>
-                            }
-                          </div>
-                        }
-
-                      </div>
-                    }
-                  </div>
-
-                </div>
-
-              </div>
-
-              <!-- Right Column: Live Interactive Topology Canvas & Preview -->
-              <div class="w-full lg:w-1/2 xl:w-7/12 flex flex-col bg-zinc-50 overflow-hidden">
-                
-                <!-- Preview Toolbar Header -->
-                <div class="px-4 py-2.5 border-b border-zinc-200 bg-white flex items-center justify-between gap-2 shrink-0">
-                  <div class="flex items-center gap-1.5 bg-zinc-100 p-0.5 rounded border border-zinc-200 text-xs font-mono">
-                    <button (click)="builderPreviewTab.set('canvas')"
-                            class="px-2 py-0.5 rounded font-medium transition cursor-pointer flex items-center gap-1"
-                            [ngClass]="builderPreviewTab() === 'canvas' ? 'bg-white text-zinc-900 font-bold shadow-2xs' : 'text-zinc-600 hover:text-zinc-900'">
-                      <span>◈</span>
-                      <span>Flow Preview</span>
-                    </button>
-                    <button (click)="builderPreviewTab.set('dsl')"
-                            class="px-2 py-0.5 rounded font-medium transition cursor-pointer flex items-center gap-1"
-                            [ngClass]="builderPreviewTab() === 'dsl' ? 'bg-white text-zinc-900 font-bold shadow-2xs' : 'text-zinc-600 hover:text-zinc-900'">
-                      <span>&#123; &#125;</span>
-                      <span>JSON Preview</span>
-                    </button>
-                  </div>
-
-                  <span class="font-mono text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    {{ builderFlowNodes().length }} Steps &bull; {{ builderFlowEdges().length }} Connections
-                  </span>
-                </div>
-
-                <!-- Preview Main Content Frame -->
-                <div class="flex-1 relative overflow-hidden bg-zinc-50 flex flex-col">
-                  
-                  <!-- TAB 1: LIVE GRAPH CANVAS -->
-                  @if (builderPreviewTab() === 'canvas') {
-                    <div class="flex-1 relative overflow-hidden select-none"
-                         style="background-image: radial-gradient(#d4d4d8 1.2px, transparent 1.2px); background-size: 18px 18px; background-color: #fafafa;">
-
-                      <!-- Floating Zoom Controls -->
-                      <div class="canvas-controls absolute bottom-3 right-3 z-30 flex items-center gap-1 bg-white/95 backdrop-blur-xs border border-zinc-200 rounded-lg p-1 shadow-md text-xs font-mono">
-                        <button (click)="zoomInBuilder()"
-                                title="Zoom In"
-                                class="w-7 h-7 flex items-center justify-center rounded hover:bg-zinc-100 text-zinc-700 font-bold transition cursor-pointer">
-                          +
-                        </button>
-                        <button (click)="zoomOutBuilder()"
-                                title="Zoom Out"
-                                class="w-7 h-7 flex items-center justify-center rounded hover:bg-zinc-100 text-zinc-700 font-bold transition cursor-pointer">
-                          &minus;
-                        </button>
-                        <div class="w-px h-4 bg-zinc-200 mx-0.5"></div>
-                        <button (click)="resetBuilderZoom()"
-                                title="Reset View"
-                                class="px-2 h-7 flex items-center justify-center rounded hover:bg-zinc-100 text-zinc-700 text-[11px] font-medium transition cursor-pointer">
-                          Fit
-                        </button>
-                      </div>
-
-                      <!-- Canvas Legend & Drag-to-Connect Tip -->
-                      <div class="canvas-controls absolute top-3 left-3 z-20 flex flex-wrap items-center gap-2 bg-white/90 backdrop-blur-xs border border-zinc-200 rounded-md px-2.5 py-1 text-[10px] font-mono text-zinc-600 shadow-2xs">
-                        <div class="flex items-center gap-1">
-                          <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                          <span>Start</span>
-                        </div>
-                        <div class="flex items-center gap-1">
-                          <span class="w-2 h-2 rounded-full bg-zinc-900"></span>
-                          <span>Step</span>
-                        </div>
-                        <div class="flex items-center gap-1">
-                          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                          <span>Completed</span>
-                        </div>
-                        <div class="flex items-center gap-1">
-                          <span class="w-2 h-2 rounded-full bg-rose-500"></span>
-                          <span>Rejected</span>
-                        </div>
-                        <span class="text-indigo-600 font-semibold pl-1.5 border-l border-zinc-200">
-                          ✨ Drag handle to connect
-                        </span>
-                      </div>
-
-                      <!-- Interactive ngx-vflow Canvas with Drag-to-Connect -->
-                      <vflow #builderVflow
-                             [view]="'auto'"
-                             [background]="'transparent'"
-                             [nodes]="builderFlowNodes()"
-                             [edges]="builderFlowEdges()"
-                             [minZoom]="0.4"
-                             [maxZoom]="1.5"
-                             (connect)="onBuilderConnect($event)"
-                             class="w-full h-full">
-
-                        <!-- Custom HTML Node Card Template with Drag Handles -->
-                        <ng-template nodeHtml let-ctx>
-                          <handle type="target" position="left" />
-                          <handle type="source" position="right" />
-
-                          <div (click)="focusBuilderStep(ctx.data().stateKey)"
-                               class="canvas-node-card w-[240px] h-[105px] bg-white rounded-xl border p-3 shadow-xs hover:shadow-md transition select-none cursor-pointer group flex flex-col justify-between"
-                               [ngClass]="{
-                                 'border-emerald-400 bg-emerald-50/20': ctx.data().isTerminal && !ctx.data().isRejectTerminal,
-                                 'border-rose-400 bg-rose-50/20': ctx.data().isTerminal && ctx.data().isRejectTerminal,
-                                 'border-amber-400 bg-amber-50/10': ctx.data().isInitial,
-                                 'border-zinc-300 hover:border-zinc-500': !ctx.data().isTerminal && !ctx.data().isInitial
-                               }">
-                            
-                            <div class="flex items-center justify-between gap-1 mb-1">
-                              <span class="px-1.5 py-0.2 rounded font-mono text-[9px] font-bold"
-                                    [ngClass]="{
-                                      'bg-emerald-600 text-white': ctx.data().isTerminal && !ctx.data().isRejectTerminal,
-                                      'bg-rose-600 text-white': ctx.data().isTerminal && ctx.data().isRejectTerminal,
-                                      'bg-amber-600 text-white': ctx.data().isInitial,
-                                      'bg-zinc-800 text-white': !ctx.data().isTerminal && !ctx.data().isInitial
-                                    }">
-                                {{ ctx.data().isTerminal ? 'END' : (ctx.data().isInitial ? 'START' : 'STEP ' + ctx.data().order) }}
-                              </span>
-                              <span class="font-mono text-[10px] text-zinc-400 truncate max-w-[110px]">{{ ctx.data().stateKey }}</span>
-                            </div>
-
-                            <h4 class="text-xs font-bold text-zinc-950 truncate tracking-tight mb-1.5">
-                              {{ ctx.data().name }}
-                            </h4>
-
-                            <div class="flex flex-wrap items-center gap-1 text-[9px] font-mono">
-                              <span class="px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-700 border border-zinc-200">
-                                {{ ctx.data().type }}
-                              </span>
-                              @if (ctx.data().requiredRole) {
-                                <span class="px-1.5 py-0.2 rounded bg-purple-50 text-purple-700 border border-purple-200 truncate max-w-[100px]"
-                                      [title]="ctx.data().requiredRole">
-                                  {{ ctx.data().roleDisplay }}
-                                </span>
-                              }
-                              @if (ctx.data().slaHours) {
-                                <span class="px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200">
-                                  ⏱ {{ ctx.data().slaHours }}h
-                                </span>
-                              }
-                            </div>
-                          </div>
-                        </ng-template>
-
-                        <!-- Edge Action Label Pill Template -->
-                        <ng-template edgeLabelHtml let-ctx>
-                          <div class="select-none pointer-events-none">
-                            <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-semibold tracking-tight border shadow-2xs inline-flex items-center gap-1"
-                                  [ngClass]="getEdgeData(ctx.edge).isDanger ? 'bg-rose-50 text-rose-700 border-rose-300' : 'bg-white text-zinc-800 border-zinc-300'">
-                              <span>{{ getEdgeData(ctx.edge).isDanger ? '✕' : '➔' }}</span>
-                              <span>{{ getEdgeData(ctx.edge).action }}</span>
-                            </span>
-                          </div>
-                        </ng-template>
-
-                      </vflow>
-
-                    </div>
-                  }
-
-                  <!-- TAB 2: SYNTHESIZED JSON DSL -->
-                  @else if (builderPreviewTab() === 'dsl') {
-                    <div class="flex-1 flex flex-col bg-zinc-950 p-4 select-text overflow-hidden">
-                      <div class="flex items-center justify-between pb-2 mb-2 border-b border-zinc-800 shrink-0">
-                        <span class="text-xs font-mono text-zinc-400">{{ builderKey() }}.json</span>
-                        <button (click)="copyBuilderDsl()"
-                                class="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-mono transition cursor-pointer flex items-center gap-1">
-                          <span>📋</span>
-                          <span>Copy JSON</span>
-                        </button>
-                      </div>
-                      <div class="flex-1 overflow-auto rounded-lg border border-zinc-800 bg-zinc-900/60 p-3 font-mono text-xs text-emerald-400">
-                        <pre class="select-text whitespace-pre">{{ builderDslPreview() }}</pre>
-                      </div>
-                    </div>
-                  }
-
-                  <!-- Bottom Validation Status Checklist -->
-                  <div class="p-3 border-t border-zinc-200 bg-white shrink-0">
-                    @if (builderValidationErrors().length === 0) {
-                      <div class="flex items-center gap-2 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-mono">
-                        <span class="font-bold">✓</span>
-                        <span>All steps and connections look good! Ready to save or publish.</span>
-                      </div>
-                    } @else {
-                      <div class="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-900 text-xs space-y-1">
-                        <div class="font-bold font-mono text-[11px] flex items-center gap-1 text-rose-800">
-                          <span>⚠️</span>
-                          <span>{{ builderValidationErrors().length }} Issue(s) to fix:</span>
-                        </div>
-                        <ul class="list-disc list-inside space-y-0.5 text-[11px] font-mono text-rose-700 max-h-24 overflow-y-auto">
-                          @for (err of builderValidationErrors(); track err) {
-                            <li>{{ err }}</li>
-                          }
-                        </ul>
-                      </div>
-                    }
-                  </div>
-
-                </div>
-
-              </div>
-
-            </div>
-          }
-
-          <!-- MODE 2: RAW JSON SPECIFICATION EDITOR -->
-          @else if (builderMode() === 'dsl') {
-            <div class="flex-1 flex flex-col p-5 bg-zinc-900 text-zinc-100 select-text overflow-hidden space-y-3">
-              <div class="flex items-center justify-between">
-                <div>
-                  <h4 class="text-xs font-bold font-mono text-zinc-200">Raw Workflow JSON Specification</h4>
-                  <p class="text-xs text-zinc-400">Directly edit the workflow JSON. Toggling back to Visual Builder will update the design.</p>
-                </div>
-                <button (click)="copyBuilderDsl()"
-                        class="px-3 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-mono transition cursor-pointer">
-                  Copy JSON
-                </button>
-              </div>
-
-              @if (createError()) {
-                <div class="p-3 rounded-lg bg-rose-950 border border-rose-800 text-rose-300 text-xs font-mono">
-                  {{ createError() }}
-                </div>
-              }
-
-              <textarea [(ngModel)]="newTemplateJson"
-                        rows="22"
-                        class="flex-1 w-full font-mono text-xs bg-zinc-950 text-emerald-400 p-4 rounded-xl border border-zinc-800 outline-none focus:border-zinc-700 transition leading-relaxed"></textarea>
-            </div>
-          }
-
-        </div>
-
-        <!-- Studio Footer: Save as Draft vs Deploy & Publish -->
-        <div class="px-5 py-3 border-t border-zinc-200 bg-zinc-50 flex items-center justify-between shrink-0">
-          <div class="flex items-center gap-3">
-            <button (click)="closeCreateModal()"
-                    class="px-3.5 py-1.5 rounded-md border border-zinc-200 hover:bg-zinc-100 text-zinc-700 text-xs font-medium transition cursor-pointer">
-              Cancel
-            </button>
-            @if (createError()) {
-              <span class="text-rose-600 text-xs font-mono font-medium truncate max-w-[450px]">
-                {{ createError() }}
-              </span>
-            }
-          </div>
-
-          <div class="flex items-center gap-2">
-            <!-- Save as Draft / Update Draft -->
-            <button (click)="submitNewTemplate(false)"
-                    [disabled]="isSubmitting() || (builderMode() === 'visual' && builderValidationErrors().length > 0)"
-                    class="px-4 py-1.5 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-100 disabled:opacity-40 text-zinc-800 text-xs font-medium transition cursor-pointer shadow-2xs">
-              {{ isEditingDraft() ? 'Update Draft' : 'Save as Draft' }}
-            </button>
-
-            <!-- Deploy & Publish / Update & Publish -->
-            <button (click)="submitNewTemplate(true)"
-                    [disabled]="isSubmitting() || (builderMode() === 'visual' && builderValidationErrors().length > 0)"
-                    class="px-4 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 disabled:opacity-40 text-white text-xs font-medium transition flex items-center gap-1.5 cursor-pointer shadow-xs">
-              @if (isSubmitting()) {
-                <span class="animate-spin text-xs">↻</span>
-                <span>{{ isEditingDraft() ? 'Publishing...' : 'Publishing...' }}</span>
-              } @else {
-                <span>🚀</span>
-                <span>{{ isEditingDraft() ? 'Update & Publish' : 'Save & Publish Now' }}</span>
-              }
-            </button>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  }
-
-  <!-- =================================================================== -->
-  <!-- FULLSCREEN / POP-UP BIG CANVAS MODAL                                -->
-  <!-- =================================================================== -->
+  <!-- FULLSCREEN / POP-UP BIG CANVAS MODAL -->
   @if (isFullscreenCanvas()) {
     <div class="fixed inset-0 z-50 bg-zinc-950/70 backdrop-blur-sm flex flex-col p-2 sm:p-4 select-none animate-in fade-in duration-150">
-      
-      <!-- Fullscreen Modal Container -->
-      <div class="w-full h-full bg-white rounded-xl border border-zinc-200 shadow-2xl flex flex-col overflow-hidden relative">
-        
+      <div class="w-full h-full bg-white rounded-2xl shadow-2xl border border-zinc-200 flex flex-col overflow-hidden">
         <!-- Fullscreen Top Bar Header -->
-        <div class="px-5 py-3 border-b border-zinc-200 bg-zinc-50 flex items-center justify-between gap-4 shrink-0">
-          <div class="flex items-center gap-3 min-w-0">
-            <span class="px-2.5 py-1 rounded font-mono text-[10px] font-bold bg-zinc-900 text-white shrink-0 tracking-wider">
-              {{ viewMode() === 'canvas' ? 'FLOW VIEW' : (viewMode() === 'pipeline' ? 'STEPS' : 'RAW JSON') }}
+        <div class="px-5 py-3 border-b border-zinc-200 bg-white flex items-center justify-between gap-4 shrink-0">
+          <div class="min-w-0 flex items-center gap-2">
+            <h3 class="text-sm font-bold text-zinc-950 truncate">{{ selectedTemplate()?.name }}</h3>
+            <span class="ewp-badge-sm ewp-badge-neutral shrink-0">
+              v{{ selectedTemplate()?.version }}
             </span>
-            <div class="min-w-0 flex items-center gap-2">
-              <h3 class="text-sm font-bold text-zinc-950 truncate" [title]="'ID: ' + selectedTemplate()?.templateKey">{{ selectedTemplate()?.name }}</h3>
-              <span class="px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-700 text-[10px] font-mono font-medium border border-zinc-200 shrink-0">
-                v{{ selectedTemplate()?.version }}
-              </span>
-              @if (viewMode() === 'canvas') {
-                <span class="font-mono text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/80 shrink-0">
-                  {{ previewFlowNodes().length }} Steps &bull; {{ previewFlowEdges().length }} Connections
-                </span>
-              } @else if (viewMode() === 'pipeline') {
-                <span class="font-mono text-[10px] font-semibold text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200/80 shrink-0">
-                  {{ dagNodes().length }} Steps in Sequence
-                </span>
-              } @else {
-                <span class="font-mono text-[10px] font-semibold text-zinc-700 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200 shrink-0">
-                  Workflow Definition
-                </span>
-              }
-            </div>
+            <span class="ewp-badge-sm ewp-badge-success shrink-0">
+              {{ previewFlowNodes().length }} Steps &bull; {{ previewFlowEdges().length }} Connections
+            </span>
           </div>
 
-          <div class="flex items-center gap-2.5 shrink-0">
+          <div class="flex items-center gap-3 shrink-0">
             <!-- View Switcher in Fullscreen -->
-            <div class="flex items-center bg-zinc-200/80 p-0.5 rounded border border-zinc-300 text-xs">
+            <div class="ewp-segmented-bar text-xs">
               <button (click)="setViewMode('canvas')"
-                      class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1"
-                      [ngClass]="viewMode() === 'canvas' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
+                      type="button"
+                      class="ewp-segmented-btn px-3 py-1 flex items-center gap-1.5"
+                      [ngClass]="viewMode() === 'canvas' ? 'bg-white text-zinc-950 font-bold shadow-2xs' : 'text-zinc-600 hover:text-zinc-950'">
                 <span>◈</span>
-                <span>Flow</span>
+                <span>Canvas</span>
               </button>
               <button (click)="setViewMode('pipeline')"
-                      class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1"
-                      [ngClass]="viewMode() === 'pipeline' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
+                      type="button"
+                      class="ewp-segmented-btn px-3 py-1 flex items-center gap-1.5"
+                      [ngClass]="viewMode() === 'pipeline' ? 'bg-white text-zinc-950 font-bold shadow-2xs' : 'text-zinc-600 hover:text-zinc-950'">
                 <span>≡</span>
                 <span>Steps</span>
               </button>
               <button (click)="setViewMode('dsl')"
-                      class="px-2.5 py-1 font-medium rounded transition cursor-pointer flex items-center gap-1"
-                      [ngClass]="viewMode() === 'dsl' ? 'bg-white text-zinc-950 font-semibold shadow-xs' : 'text-zinc-600 hover:text-zinc-950'">
+                      type="button"
+                      class="ewp-segmented-btn px-3 py-1 flex items-center gap-1.5"
+                      [ngClass]="viewMode() === 'dsl' ? 'bg-white text-zinc-950 font-bold shadow-2xs' : 'text-zinc-600 hover:text-zinc-950'">
                 <span>&#123; &#125;</span>
                 <span>JSON</span>
               </button>
@@ -1498,508 +378,62 @@
 
             <!-- Exit Fullscreen Button -->
             <button (click)="toggleFullscreen(false)"
-                    class="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-mono font-semibold transition cursor-pointer flex items-center gap-1.5 shadow-xs">
-              <span>✕</span>
-              <span>Exit Fullscreen (Esc)</span>
+                    type="button"
+                    class="ewp-modal-close-btn"
+                    title="Exit Fullscreen (Esc)">
+              ✕
             </button>
           </div>
         </div>
 
-        <!-- ============================================================= -->
-        <!-- VIEW 1: FULLSCREEN 2D GRAPH CANVAS                            -->
-        <!-- ============================================================= -->
-        @if (viewMode() === 'canvas') {
-          <div class="flex-1 relative overflow-hidden bg-zinc-50 select-none"
-               style="background-image: radial-gradient(#d4d4d8 1.2px, transparent 1.2px); background-size: 20px 20px; background-color: #fafafa;">
+        <!-- Fullscreen Content -->
+        <div class="flex-1 relative overflow-hidden bg-zinc-50 flex flex-col">
+          @if (viewMode() === 'canvas') {
+            <app-workflow-canvas #fullscreenCanvas
+                                 [nodes]="previewFlowNodes()"
+                                 [edges]="previewFlowEdges()"
+                                 [selectedKey]="selectedNode()?.stateKey"
+                                 (nodeSelect)="selectNodeByKey($event)"
+                                 class="w-full h-full">
+            </app-workflow-canvas>
+          }
 
-            <!-- Floating Canvas Controls Dock (Fullscreen) -->
-            <div class="canvas-controls absolute bottom-4 right-4 z-30 flex items-center gap-1 bg-white/95 backdrop-blur-xs border border-zinc-200 rounded-lg p-1.5 shadow-lg text-xs font-mono">
-              <button (click)="zoomIn()"
-                      title="Zoom In"
-                      class="w-8 h-8 flex items-center justify-center rounded hover:bg-zinc-100 text-zinc-700 font-bold transition cursor-pointer text-sm">
-                +
-              </button>
-              <button (click)="zoomOut()"
-                      title="Zoom Out"
-                      class="w-8 h-8 flex items-center justify-center rounded hover:bg-zinc-100 text-zinc-700 font-bold transition cursor-pointer text-sm">
-                &minus;
-              </button>
-              <div class="w-px h-5 bg-zinc-200 mx-1"></div>
-              <button (click)="resetZoom()"
-                      title="Fit to Center"
-                      class="px-3 h-8 flex items-center justify-center rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold transition cursor-pointer shadow-xs">
-                Fit View
-              </button>
+          @if (viewMode() === 'pipeline') {
+            <div class="p-6 overflow-y-auto flex-1 max-w-4xl mx-auto w-full">
+              <app-workflow-pipeline [nodes]="dagNodes()"
+                                     [selectedKey]="selectedNode()?.stateKey"
+                                     (nodeSelect)="selectNodeByKey($event)">
+              </app-workflow-pipeline>
             </div>
+          }
 
-            <!-- Floating Canvas Legend (Fullscreen) -->
-            <div class="canvas-controls absolute top-4 left-4 z-20 flex flex-wrap items-center gap-3 bg-white/90 backdrop-blur-xs border border-zinc-200 rounded-lg px-3 py-2 shadow-xs text-xs font-mono text-zinc-600 pointer-events-none">
-              <div class="flex items-center gap-1.5">
-                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                <span>Start</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span class="w-2.5 h-2.5 rounded-full bg-zinc-900"></span>
-                <span>Step</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                <span>Completed</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-                <span>Rejected</span>
-              </div>
+          @if (viewMode() === 'dsl') {
+            <div class="p-6 overflow-y-auto flex-1 max-w-4xl mx-auto w-full">
+              <app-workflow-json-viewer [json]="selectedTemplateDsl()"
+                                        title="workflow-definition.json"
+                                        maxHeight="calc(100vh - 220px)"
+                                        (copied)="onJsonCopied()">
+              </app-workflow-json-viewer>
             </div>
-
-            <!-- Fullscreen ngx-vflow Graph Canvas -->
-            <vflow #fullscreenVflow
-                   [view]="'auto'"
-                   [background]="'transparent'"
-                   [nodes]="previewFlowNodes()"
-                   [edges]="previewFlowEdges()"
-                   [minZoom]="0.4"
-                   [maxZoom]="1.5"
-                   class="w-full h-full">
-
-              <!-- Custom HTML Node Card Template -->
-              <ng-template nodeHtml let-ctx>
-                <handle type="target" position="left" />
-                <handle type="source" position="right" />
-
-                <div (click)="selectNodeByKey(ctx.data().stateKey)"
-                     class="canvas-node-card w-[240px] h-[105px] bg-white rounded-xl border p-3 shadow-xs hover:shadow-md transition cursor-pointer select-none group flex flex-col justify-between"
-                     [ngClass]="{
-                       'border-zinc-950 ring-2 ring-zinc-950 shadow-md bg-zinc-50/60': selectedNode()?.stateKey === ctx.data().stateKey,
-                       'border-emerald-300 bg-emerald-50/20': ctx.data().isTerminal && !ctx.data().isRejectTerminal && selectedNode()?.stateKey !== ctx.data().stateKey,
-                       'border-rose-300 bg-rose-50/20': ctx.data().isTerminal && ctx.data().isRejectTerminal && selectedNode()?.stateKey !== ctx.data().stateKey,
-                       'border-amber-300 bg-amber-50/10': ctx.data().isInitial && selectedNode()?.stateKey !== ctx.data().stateKey,
-                       'border-zinc-200 hover:border-zinc-400': !ctx.data().isTerminal && !ctx.data().isInitial && selectedNode()?.stateKey !== ctx.data().stateKey
-                     }">
-
-                  <div class="flex items-center justify-between gap-1.5 mb-1.5">
-                    <div class="flex items-center gap-1.5">
-                      <span class="px-1.5 py-0.2 rounded font-mono text-[9px] font-bold"
-                            [ngClass]="{
-                              'bg-emerald-600 text-white': ctx.data().isTerminal && !ctx.data().isRejectTerminal,
-                              'bg-rose-600 text-white': ctx.data().isTerminal && ctx.data().isRejectTerminal,
-                              'bg-amber-600 text-white': ctx.data().isInitial,
-                              'bg-zinc-800 text-white': !ctx.data().isTerminal && !ctx.data().isInitial
-                            }">
-                        {{ ctx.data().isTerminal ? 'END' : (ctx.data().isInitial ? 'START' : 'STEP ' + ctx.data().order) }}
-                      </span>
-                      <span class="font-mono text-[10px] text-zinc-400 truncate max-w-[95px]">{{ ctx.data().stateKey }}</span>
-                    </div>
-
-                    <span class="text-[9px] font-mono text-zinc-400 group-hover:text-zinc-900 transition">
-                      Details &rarr;
-                    </span>
-                  </div>
-
-                  <h4 class="text-xs font-bold text-zinc-950 truncate tracking-tight mb-2">
-                    {{ ctx.data().name }}
-                  </h4>
-
-                  <div class="flex flex-wrap items-center gap-1.5 text-[10px]">
-                    <span class="px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-700 font-medium border border-zinc-200/80">
-                      {{ ctx.data().type === 'DOCUMENT_SUBMISSION' ? 'Form Upload' : (ctx.data().type === 'APPROVAL' ? 'Approval' : (ctx.data().type === 'MANUAL_TASK' ? 'Task' : (ctx.data().type === 'AUTOMATED_TASK' ? 'Auto Step' : (ctx.data().type === 'TERMINAL' ? 'End' : ctx.data().type)))) }}
-                    </span>
-
-                    @if (ctx.data().requiredRole) {
-                      <span class="px-1.5 py-0.2 rounded font-mono text-[9px] bg-purple-50 text-purple-700 border border-purple-200 truncate max-w-[105px]"
-                            [title]="ctx.data().requiredRole">
-                        {{ ctx.data().roleDisplay }}
-                      </span>
-                    } @else {
-                      <span class="px-1.5 py-0.2 rounded font-mono text-[9px] bg-zinc-100 text-zinc-600 border border-zinc-200">
-                        {{ ctx.data().actorScope }}
-                      </span>
-                    }
-
-                    @if (ctx.data().slaHours) {
-                      <span class="px-1.5 py-0.2 rounded font-mono text-[9px] bg-blue-50 text-blue-700 border border-blue-200">
-                        ⏱ {{ ctx.data().slaHours }}h
-                      </span>
-                    }
-                  </div>
-
-                </div>
-              </ng-template>
-
-              <!-- Edge Action Label Pill Template -->
-              <ng-template edgeLabelHtml let-ctx>
-                <div class="canvas-action-pill select-none">
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold tracking-tight border shadow-xs transition inline-flex items-center gap-1 pointer-events-none"
-                        [ngClass]="{
-                          'bg-rose-50 text-rose-700 border-rose-300 ring-2 ring-rose-500/20': getEdgeData(ctx.edge).isDanger,
-                          'bg-white text-zinc-800 border-zinc-300 hover:border-zinc-900': !getEdgeData(ctx.edge).isDanger
-                        }">
-                    <span>{{ getEdgeData(ctx.edge).isDanger ? '✕' : '➔' }}</span>
-                    <span>{{ getEdgeData(ctx.edge).action }}</span>
-                  </span>
-                </div>
-              </ng-template>
-
-            </vflow>
-
-          </div>
-        }
-
-        <!-- ============================================================= -->
-        <!-- VIEW 2: FULLSCREEN SEQUENTIAL PIPELINE                        -->
-        <!-- ============================================================= -->
-        @else if (viewMode() === 'pipeline') {
-          <div class="flex-1 overflow-y-auto bg-zinc-50/70 p-6 sm:p-8 select-text">
-            <div class="max-w-4xl mx-auto space-y-4">
-              
-              <div class="flex items-center justify-between pb-3 border-b border-zinc-200">
-                <div>
-                  <h4 class="text-xs font-bold text-zinc-900 uppercase tracking-wider">Workflow Steps</h4>
-                  <p class="text-xs text-zinc-500 mt-0.5">Step-by-step progression of this workflow</p>
-                </div>
-                <span class="text-[11px] font-mono text-zinc-400">Click any step to view details</span>
-              </div>
-
-              <!-- Pipeline Cards -->
-              <div class="space-y-3 pb-8">
-                @for (node of dagNodes(); track node.stateKey; let idx = $index; let isLast = $last) {
-                  
-                  <div (click)="selectNode(node)"
-                       class="bg-white border rounded-xl p-5 shadow-xs transition cursor-pointer hover:border-zinc-400 hover:shadow-md relative group"
-                       [ngClass]="{
-                         'border-zinc-950 ring-2 ring-zinc-950 bg-zinc-50/20': selectedNode()?.stateKey === node.stateKey,
-                         'border-zinc-200': selectedNode()?.stateKey !== node.stateKey
-                       }">
-                    
-                    <div class="flex items-start justify-between gap-3">
-                      <div class="flex items-center gap-2.5">
-                        <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold"
-                              [ngClass]="node.isTerminal ? 'bg-zinc-800 text-white' : (node.isInitial ? 'bg-amber-600 text-white' : 'bg-zinc-200 text-zinc-800')">
-                          {{ node.isTerminal ? 'END' : (node.isInitial ? 'START' : 'STEP ' + node.order) }}
-                        </span>
-                        <h4 class="text-sm font-bold text-zinc-950">{{ node.name }}</h4>
-                        @if (node.isInitial) {
-                          <span class="px-1.5 py-0.2 rounded bg-amber-50 text-amber-800 text-[10px] font-mono font-semibold border border-amber-200">
-                            START
-                          </span>
-                        }
-                      </div>
-
-                      <div class="flex items-center gap-2 shrink-0">
-                        <span class="font-mono text-xs text-zinc-400 font-medium">{{ node.stateKey }}</span>
-                        <span class="text-xs font-mono px-2 py-0.5 rounded bg-zinc-100 group-hover:bg-zinc-900 group-hover:text-white text-zinc-600 border border-zinc-200 transition">
-                          Details &rarr;
-                        </span>
-                      </div>
-                    </div>
-
-                    <div class="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                      <span class="px-2.5 py-0.5 rounded bg-zinc-100 text-zinc-700 font-medium border border-zinc-200">
-                        {{ node.type }}
-                      </span>
-                      <span class="px-2.5 py-0.5 rounded font-mono text-xs"
-                            [ngClass]="node.requiredRole ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-zinc-100 text-zinc-600 border border-zinc-200'">
-                        {{ node.requiredRole ? 'Role: ' + node.requiredRole.replace('ROLE_', '') : 'Assigned: ' + node.actorScope }}
-                      </span>
-                      @if (node.slaHours) {
-                        <span class="px-2.5 py-0.5 rounded bg-blue-50 text-blue-700 font-mono text-xs border border-blue-200">
-                          ⏱ {{ node.slaHours }}h limit
-                        </span>
-                      }
-                      @if (node.isTerminal) {
-                        <span class="px-2.5 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono text-xs border border-emerald-200">
-                          ✓ End Step
-                        </span>
-                      }
-                    </div>
-
-                    @if (node.requiredPayloadKeys && node.requiredPayloadKeys.length > 0) {
-                      <div class="mt-3 pt-2.5 border-t border-zinc-100 flex items-center gap-2 text-xs">
-                        <span class="text-zinc-400 text-xs font-mono">Required Fields:</span>
-                        <div class="flex flex-wrap gap-1">
-                          @for (key of node.requiredPayloadKeys; track key) {
-                            <span class="px-2 py-0.5 rounded bg-zinc-100 font-mono text-zinc-700 text-xs border border-zinc-200">
-                              {{ key }}
-                            </span>
-                          }
-                        </div>
-                      </div>
-                    }
-
-                    @if (node.outgoingTransitions.length > 0) {
-                      <div class="mt-3 pt-2.5 border-t border-zinc-100 space-y-1.5">
-                        <span class="text-[10px] font-medium text-zinc-400 uppercase tracking-wider block">
-                          Next Steps
-                        </span>
-                        <div class="flex flex-wrap gap-2">
-                          @for (trans of node.outgoingTransitions; track trans.action) {
-                            <div class="flex items-center gap-1.5 bg-zinc-50 border border-zinc-200 rounded-md px-2.5 py-1 text-xs font-mono">
-                              <span class="text-zinc-900 font-semibold">[{{ trans.action }}]</span>
-                              <span class="text-zinc-400 font-bold">➔</span>
-                              <span class="px-2 py-0.5 rounded bg-zinc-900 text-white text-xs font-medium">
-                                {{ trans.targetState }}
-                              </span>
-                            </div>
-                          }
-                        </div>
-                      </div>
-                    }
-                  </div>
-
-                  @if (!isLast) {
-                    <div class="flex items-center justify-center py-1">
-                      <div class="flex flex-col items-center">
-                        <div class="w-0.5 h-4 bg-zinc-300"></div>
-                        <span class="text-zinc-400 text-xs leading-none">▼</span>
-                      </div>
-                    </div>
-                  }
-                }
-              </div>
-
-            </div>
-          </div>
-        }
-
-        <!-- ============================================================= -->
-        <!-- VIEW 3: FULLSCREEN RAW BLUEPRINT DSL (JSON)                   -->
-        <!-- ============================================================= -->
-        @else if (viewMode() === 'dsl') {
-          <div class="flex-1 flex flex-col bg-zinc-950 p-6 sm:p-8 select-text overflow-hidden">
-            <div class="flex items-center justify-between pb-3 mb-3 border-b border-zinc-800 shrink-0">
-              <div class="flex items-center gap-3">
-                <span class="text-xs font-mono text-zinc-300 flex items-center gap-1.5">
-                  <span class="text-zinc-500">&#123; &#125;</span>
-                  <span>{{ selectedTemplate()?.templateKey }}.json</span>
-                </span>
-                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/60">
-                  Workflow Definition
-                </span>
-                <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-blue-950 text-blue-300 border border-blue-800/80">
-                  v{{ selectedTemplate()?.version }}
-                </span>
-              </div>
-              <button (click)="copyDsl()"
-                      class="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-mono transition cursor-pointer flex items-center gap-1.5 border border-zinc-700 shadow-xs">
-                <span>📋</span>
-                <span>Copy JSON</span>
-              </button>
-            </div>
-            <div class="flex-1 overflow-auto rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 font-mono text-xs leading-relaxed text-emerald-400">
-              <pre class="select-text whitespace-pre">{{ selectedTemplateDsl() }}</pre>
-            </div>
-          </div>
-        }
-
+          }
+        </div>
       </div>
-
     </div>
   }
 
-  <!-- =================================================================== -->
-  <!-- STEP DETAILS SIDE DRAWER                                              -->
-  <!-- =================================================================== -->
-  @if (selectedNode(); as node) {
-    <!-- Backdrop Overlay -->
-    <div class="fixed inset-0 z-60 bg-zinc-950/20 backdrop-blur-xs transition-opacity"
-         (click)="selectedNode.set(null)"></div>
+  <!-- STEP DETAILS SIDE DRAWER -->
+  <app-step-details-drawer [node]="selectedNode()"
+                           (closeDrawer)="selectedNode.set(null)"
+                           (stepSelect)="selectNodeByKey($event)">
+  </app-step-details-drawer>
 
-    <!-- Slide-Over Drawer Container -->
-    <aside class="fixed right-0 top-0 bottom-0 z-[70] w-full sm:w-[480px] bg-white border-l border-zinc-200 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-200 select-text">
-      
-      <!-- Drawer Header -->
-      <div class="p-4 sm:p-5 border-b border-zinc-200 bg-zinc-50 flex items-start justify-between gap-3">
-        <div class="space-y-1">
-          <div class="flex items-center gap-2">
-            <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold"
-                  [ngClass]="node.isTerminal ? 'bg-zinc-800 text-white' : 'bg-zinc-900 text-white'">
-              {{ node.isTerminal ? 'END' : (node.isInitial ? 'START' : 'STEP ' + node.order) }}
-            </span>
-            @if (node.isInitial) {
-              <span class="px-1.5 py-0.2 rounded bg-amber-50 text-amber-800 text-[9px] font-mono font-semibold border border-amber-200">
-                STARTING STEP
-              </span>
-            }
-            <span class="font-mono text-xs text-zinc-500 font-semibold">{{ node.stateKey }}</span>
-          </div>
-          <h2 class="text-base font-bold text-zinc-950 tracking-tight">{{ node.name }}</h2>
-        </div>
-
-        <button (click)="selectedNode.set(null)"
-                aria-label="Close details"
-                class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200/60 transition cursor-pointer text-sm font-mono leading-none">
-          ✕
-        </button>
-      </div>
-
-      <!-- Drawer Scrollable Body -->
-      <div class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5 text-xs">
-
-        <!-- 1. Step Identity & Governance -->
-        <div class="space-y-2">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Assignment & Rules</span>
-          <div class="border border-zinc-200 rounded-lg divide-y divide-zinc-100 bg-white shadow-xs">
-            <div class="p-2.5 flex items-center justify-between">
-              <span class="text-zinc-500">Step Type</span>
-              <span class="font-mono font-semibold text-zinc-900 px-2 py-0.5 rounded bg-zinc-100">{{ node.type }}</span>
-            </div>
-            <div class="p-2.5 flex items-center justify-between">
-              <span class="text-zinc-500">Assigned To</span>
-              <span class="font-mono font-semibold text-zinc-900">{{ node.actorScope }}</span>
-            </div>
-            <div class="p-2.5 flex items-center justify-between">
-              <span class="text-zinc-500">Required Role(s)</span>
-              @if (node.rawStep?.requiredRoles && node.rawStep.requiredRoles.length > 0) {
-                <div class="flex flex-wrap gap-1 justify-end max-w-[280px]">
-                  @for (r of node.rawStep.requiredRoles; track r) {
-                    <span class="font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 font-semibold">{{ r.replace('ROLE_', '') }}</span>
-                  }
-                </div>
-              } @else if (node.requiredRole) {
-                <span class="font-mono text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 font-medium">{{ node.requiredRole.replace('ROLE_', '') }}</span>
-              } @else {
-                <span class="font-mono text-zinc-400">None (Anyone can perform)</span>
-              }
-            </div>
-            <div class="p-2.5 flex items-center justify-between">
-              <span class="text-zinc-500">Time Limit</span>
-              @if (node.slaHours) {
-                <span class="font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 font-medium">⏱ {{ node.slaHours }} Hours</span>
-              } @else {
-                <span class="text-zinc-400">No time limit</span>
-              }
-            </div>
-            <div class="p-2.5 flex items-center justify-between">
-              <span class="text-zinc-500">Final Step</span>
-              <span class="font-mono text-zinc-800 font-medium">{{ node.isTerminal ? 'Yes (Workflow completes here)' : 'No (Workflow continues to next steps)' }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 2. Next Steps -->
-        <div class="space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Next Steps</span>
-            <span class="font-mono text-[10px] text-zinc-400">{{ node.outgoingTransitions.length }} option(s)</span>
-          </div>
-
-          @if (node.outgoingTransitions.length > 0) {
-            <div class="space-y-2">
-              @for (trans of node.outgoingTransitions; track trans.action) {
-                <div class="p-3 bg-zinc-50 border border-zinc-200 rounded-lg flex items-center justify-between gap-3 font-mono text-[11px]">
-                  <div class="flex items-center gap-2">
-                    <span class="px-2 py-0.5 rounded bg-zinc-900 text-white font-semibold">[{{ trans.action }}]</span>
-                    <span class="text-zinc-400 font-bold">&rarr;</span>
-                  </div>
-                  <span class="font-semibold text-zinc-900 px-2 py-0.5 rounded bg-white border border-zinc-200 truncate">{{ trans.targetState }}</span>
-                </div>
-              }
-            </div>
-          } @else {
-            <div class="p-3 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-400 text-center italic text-xs">
-              No next steps (Workflow finishes here).
-            </div>
-          }
-        </div>
-
-        <!-- 3. Dynamic Conditional Rules (SpEL) -->
-        @if (node.rawStep?.conditionalTransitions && node.rawStep.conditionalTransitions.length > 0) {
-          <div class="space-y-2">
-            <div class="flex items-center justify-between">
-              <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-700 font-mono">⚡ Dynamic Rules (SpEL)</span>
-              <span class="font-mono text-[10px] text-indigo-700 font-semibold">{{ node.rawStep.conditionalTransitions.length }} rule(s)</span>
-            </div>
-            <div class="space-y-2">
-              @for (rule of node.rawStep.conditionalTransitions; track $index) {
-                <div class="p-2.5 bg-indigo-50/50 border border-indigo-200 rounded-lg space-y-1 font-mono text-[11px]">
-                  <div class="flex items-center justify-between text-[10px]">
-                    <span class="px-1.5 py-0.2 rounded bg-indigo-600 text-white font-bold">Rule #{{ rule.priority || ($index + 1) }}</span>
-                    <span class="text-zinc-600">Action: <strong>{{ rule.action }}</strong> &rarr; {{ rule.targetState }}</span>
-                  </div>
-                  <div class="text-indigo-950 font-medium bg-white p-1.5 rounded border border-indigo-100 text-[10px]">
-                    IF: <code class="text-indigo-700 font-bold">{{ rule.condition }}</code>
-                  </div>
-                </div>
-              }
-            </div>
-          </div>
-        }
-
-        <!-- 4. Inbound Transitions (Comes From) -->
-        <div class="space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Comes From</span>
-            <span class="font-mono text-[10px] text-zinc-400">{{ node.incomingTransitions.length }} source(s)</span>
-          </div>
-
-          @if (node.incomingTransitions.length > 0) {
-            <div class="space-y-1.5">
-              @for (inbound of node.incomingTransitions; track inbound.sourceState + inbound.action) {
-                <div class="p-2.5 bg-zinc-50 border border-zinc-200 rounded-lg flex items-center justify-between gap-2 font-mono text-[11px]">
-                  <span class="font-medium text-zinc-700 truncate">{{ inbound.sourceState }}</span>
-                  <div class="flex items-center gap-1.5 shrink-0">
-                    <span class="text-zinc-400 text-[10px] font-sans">via</span>
-                    <span class="px-1.5 py-0.2 rounded bg-zinc-200 text-zinc-800 text-[10px] font-semibold">[{{ inbound.action }}]</span>
-                  </div>
-                </div>
-              }
-            </div>
-          } @else {
-            <div class="p-3 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-400 text-center italic text-xs">
-              Starting step &mdash; this is where the workflow begins.
-            </div>
-          }
-        </div>
-
-        <!-- 4. Required Fields -->
-        <div class="space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Required Fields</span>
-            <span class="font-mono text-[10px] text-zinc-400">{{ node.requiredPayloadKeys.length }} required</span>
-          </div>
-
-          @if (node.requiredPayloadKeys.length > 0) {
-            <div class="border border-zinc-200 rounded-lg divide-y divide-zinc-100 bg-white shadow-xs">
-              @for (key of node.requiredPayloadKeys; track key) {
-                <div class="p-2.5 flex items-center justify-between gap-3 text-xs">
-                  <div class="flex items-center gap-2">
-                    <span class="font-mono font-semibold text-zinc-900">{{ key }}</span>
-                    <span class="text-[9px] font-mono text-rose-600 bg-rose-50 px-1 py-0.2 rounded border border-rose-200">REQUIRED</span>
-                  </div>
-                  <span class="font-mono text-[11px] text-zinc-400">Text / Data</span>
-                </div>
-              }
-            </div>
-          } @else {
-            <div class="p-3 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-400 text-center italic text-xs">
-              No additional fields required for this step.
-            </div>
-          }
-        </div>
-
-        <!-- 5. Step Raw JSON Specification -->
-        <div class="space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Step Code (JSON)</span>
-            <button (click)="copyStepDsl(node)"
-                    class="text-[10px] font-mono text-zinc-600 hover:text-zinc-950 font-medium px-2 py-0.5 rounded border border-zinc-200 hover:border-zinc-400 transition cursor-pointer">
-              Copy Step JSON
-            </button>
-          </div>
-          <pre class="p-3 rounded-lg bg-zinc-950 text-emerald-400 font-mono text-[11px] overflow-x-auto leading-relaxed border border-zinc-800">{{ stepDsl(node) }}</pre>
-        </div>
-
-      </div>
-
-      <!-- Drawer Footer -->
-      <div class="p-3 border-t border-zinc-200 bg-zinc-50 flex items-center justify-end">
-        <button (click)="selectedNode.set(null)"
-                class="px-3 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium transition cursor-pointer shadow-xs">
-          Close
-        </button>
-      </div>
-
-    </aside>
-  }
+  <!-- WORKFLOW STUDIO MODAL -->
+  <app-template-studio-modal [isOpen]="isCreateModalOpen()"
+                             [editingTemplate]="editingTemplate()"
+                             [isSubmitting]="isSubmitting()"
+                             [errorMessage]="createError()"
+                             (save)="handleSaveTemplate($event)"
+                             (closeModal)="closeCreateModal()">
+  </app-template-studio-modal>
 
 </div>

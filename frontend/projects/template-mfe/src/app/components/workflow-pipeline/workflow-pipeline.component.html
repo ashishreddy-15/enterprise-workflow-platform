@@ -1,0 +1,104 @@
+<div class="space-y-3">
+  @for (node of nodes(); track node.stateKey; let idx = $index; let isLast = $last) {
+    <!-- Node Card -->
+    <div (click)="onSelect(node.stateKey)"
+         class="ewp-pipeline-card group"
+         [ngClass]="{
+           'border-zinc-900 ring-2 ring-zinc-900 bg-zinc-50/20': selectedKey() === node.stateKey,
+           'border-zinc-200': selectedKey() !== node.stateKey
+         }">
+
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <!-- Step Order Pill -->
+          <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold"
+                [ngClass]="node.isTerminal ? 'bg-zinc-800 text-white' : 'bg-zinc-200 text-zinc-800'">
+            {{ node.isTerminal ? 'END' : 'STEP ' + node.order }}
+          </span>
+
+          <!-- State Name -->
+          <h4 class="text-xs font-bold text-zinc-950">{{ node.name }}</h4>
+
+          <!-- Initial State Badge -->
+          @if (node.isInitial) {
+            <span class="ewp-badge-sm ewp-badge-warning">
+              START
+            </span>
+          }
+        </div>
+
+        <!-- State Key & Inspect Prompt -->
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="font-mono text-[10px] text-zinc-400 font-medium">
+            {{ node.stateKey }}
+          </span>
+          <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600 border border-zinc-200">
+            Details &rarr;
+          </span>
+        </div>
+      </div>
+
+      <!-- Metadata Attributes Bar -->
+      <div class="mt-2.5 flex flex-wrap items-center gap-2 text-[11px]">
+        <!-- Step Type -->
+        <span class="ewp-badge-sm ewp-badge-neutral">
+          {{ node.type === 'DOCUMENT_SUBMISSION' ? 'Form Upload' : (node.type === 'APPROVAL' ? 'Approval' : (node.type === 'MANUAL_TASK' ? 'Task' : (node.type === 'AUTOMATED_TASK' ? 'Auto Step' : (node.type === 'TERMINAL' ? 'End' : node.type)))) }}
+        </span>
+
+        <!-- Actor Scope / Authority -->
+        <span class="px-2 py-0.5 rounded font-mono text-[10px]"
+              [ngClass]="node.requiredRole ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-zinc-100 text-zinc-600 border border-zinc-200'">
+          {{ node.requiredRole ? 'Role: ' + node.requiredRole.replace('ROLE_', '') : 'Assigned: ' + node.actorScope }}
+        </span>
+
+        <!-- SLA -->
+        @if (node.slaHours) {
+          <span class="ewp-badge-sm ewp-badge-info">
+            ⏱ {{ node.slaHours }}h limit
+          </span>
+        }
+
+        <!-- Terminal -->
+        @if (node.isTerminal) {
+          <span class="ewp-badge-sm ewp-badge-success">
+            ✓ End Step
+          </span>
+        }
+      </div>
+
+      <!-- Required Payload Attributes (if any) -->
+      @if (node.requiredPayloadKeys && node.requiredPayloadKeys.length > 0) {
+        <div class="mt-2.5 pt-2 border-t border-zinc-100 flex items-center gap-1.5 text-[11px]">
+          <span class="text-zinc-400 text-[10px] font-mono">Required Fields:</span>
+          <div class="flex flex-wrap gap-1">
+            @for (key of node.requiredPayloadKeys; track key) {
+              <span class="px-1.5 py-0.2 rounded bg-zinc-100 font-mono text-zinc-700 text-[10px] border border-zinc-200">
+                {{ key }}
+              </span>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Outgoing State Transitions -->
+      @if (node.outgoingTransitions.length > 0) {
+        <div class="mt-3 pt-2.5 border-t border-zinc-100 space-y-1.5">
+          <span class="ewp-meta-label">
+            Next Steps
+          </span>
+          <div class="flex flex-wrap gap-2">
+            @for (trans of node.outgoingTransitions; track trans.action) {
+              <div class="flex items-center gap-1 bg-zinc-50 border border-zinc-200 rounded px-2 py-1 text-[11px] font-mono">
+                <span class="text-zinc-900 font-semibold">[{{ trans.action }}]</span>
+                <span class="text-zinc-400 font-bold">➔</span>
+                <span class="px-1.5 py-0.2 rounded bg-zinc-900 text-white text-[10px]">
+                  {{ trans.targetState }}
+                </span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

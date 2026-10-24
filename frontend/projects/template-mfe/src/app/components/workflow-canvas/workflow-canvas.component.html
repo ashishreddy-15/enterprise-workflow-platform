@@ -1,0 +1,142 @@
+<div class="w-full h-full relative overflow-hidden bg-zinc-50 flex flex-col">
+  <!-- Floating Canvas Controls Dock -->
+  <div class="ewp-canvas-dock">
+    <button (click)="zoomIn()"
+            type="button"
+            title="Zoom In"
+            class="ewp-canvas-dock-btn">
+      +
+    </button>
+    <button (click)="zoomOut()"
+            type="button"
+            title="Zoom Out"
+            class="ewp-canvas-dock-btn">
+      &minus;
+    </button>
+    <div class="w-px h-4 bg-zinc-200 mx-0.5"></div>
+    <button (click)="fitView()"
+            type="button"
+            title="Fit to Canvas"
+            class="ewp-canvas-dock-fit">
+      Fit
+    </button>
+  </div>
+
+  <!-- Floating Canvas Legend -->
+  <div class="ewp-canvas-legend">
+    <div class="flex items-center gap-1">
+      <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+      <span>Start</span>
+    </div>
+    <div class="flex items-center gap-1">
+      <span class="w-2 h-2 rounded-full bg-zinc-900"></span>
+      <span>Step</span>
+    </div>
+    <div class="flex items-center gap-1">
+      <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+      <span>Completed</span>
+    </div>
+    <div class="flex items-center gap-1">
+      <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+      <span>Rejected</span>
+    </div>
+    @if (!readOnly()) {
+      <span class="text-indigo-600 font-semibold pl-1.5 border-l border-zinc-200">
+        ✨ Drag handle to connect
+      </span>
+    }
+  </div>
+
+  <!-- Interactive ngx-vflow Graph Canvas -->
+  <vflow #vflow
+         [view]="'auto'"
+         [background]="'transparent'"
+         [nodes]="nodes()"
+         [edges]="edges()"
+         [minZoom]="minZoom()"
+         [maxZoom]="maxZoom()"
+         (connect)="onConnect($event)"
+         class="w-full h-full">
+
+    <!-- Custom HTML Node Card Template -->
+    <ng-template nodeHtml let-ctx>
+      <handle type="target" position="left" />
+      <handle type="source" position="right" />
+
+      <div (click)="onNodeClick(ctx.data().stateKey)"
+           class="ewp-canvas-node-card group"
+           [ngClass]="{
+             'border-zinc-950 ring-2 ring-zinc-950 shadow-md bg-zinc-50/60': selectedKey() === ctx.data().stateKey,
+             'border-emerald-300 bg-emerald-50/20': ctx.data().isTerminal && !ctx.data().isRejectTerminal && selectedKey() !== ctx.data().stateKey,
+             'border-rose-300 bg-rose-50/20': ctx.data().isTerminal && ctx.data().isRejectTerminal && selectedKey() !== ctx.data().stateKey,
+             'border-amber-300 bg-amber-50/10': ctx.data().isInitial && selectedKey() !== ctx.data().stateKey,
+             'border-zinc-200 hover:border-zinc-400': !ctx.data().isTerminal && !ctx.data().isInitial && selectedKey() !== ctx.data().stateKey
+           }">
+
+        <!-- Card Header -->
+        <div class="flex items-center justify-between gap-1.5 mb-1.5">
+          <div class="flex items-center gap-1.5">
+            <span class="px-1.5 py-0.2 rounded font-mono text-[9px] font-bold"
+                  [ngClass]="{
+                    'bg-emerald-600 text-white': ctx.data().isTerminal && !ctx.data().isRejectTerminal,
+                    'bg-rose-600 text-white': ctx.data().isTerminal && ctx.data().isRejectTerminal,
+                    'bg-amber-600 text-white': ctx.data().isInitial,
+                    'bg-zinc-800 text-white': !ctx.data().isTerminal && !ctx.data().isInitial
+                  }">
+              {{ ctx.data().isTerminal ? 'END' : (ctx.data().isInitial ? 'START' : 'STEP ' + ctx.data().order) }}
+            </span>
+            <span class="font-mono text-[10px] text-zinc-400 truncate max-w-[95px]">{{ ctx.data().stateKey }}</span>
+          </div>
+
+          <span class="text-[9px] font-mono text-zinc-400 group-hover:text-zinc-900 transition">
+            Details &rarr;
+          </span>
+        </div>
+
+        <!-- Card Title -->
+        <h4 class="text-xs font-bold text-zinc-950 truncate tracking-tight mb-2">
+          {{ ctx.data().name }}
+        </h4>
+
+        <!-- Card Metadata Badges -->
+        <div class="flex flex-wrap items-center gap-1.5 text-[10px]">
+          <span class="ewp-badge-sm ewp-badge-neutral">
+            {{ ctx.data().type === 'DOCUMENT_SUBMISSION' ? 'Form Upload' : (ctx.data().type === 'APPROVAL' ? 'Approval' : (ctx.data().type === 'MANUAL_TASK' ? 'Task' : (ctx.data().type === 'AUTOMATED_TASK' ? 'Auto Step' : (ctx.data().type === 'TERMINAL' ? 'End' : ctx.data().type)))) }}
+          </span>
+
+          @if (ctx.data().requiredRole) {
+            <span class="px-1.5 py-0.2 rounded font-mono text-[9px] bg-purple-50 text-purple-700 border border-purple-200 truncate max-w-[105px]"
+                  [title]="ctx.data().requiredRole">
+              {{ ctx.data().roleDisplay }}
+            </span>
+          } @else {
+            <span class="px-1.5 py-0.2 rounded font-mono text-[9px] bg-zinc-100 text-zinc-600 border border-zinc-200">
+              {{ ctx.data().actorScope }}
+            </span>
+          }
+
+          @if (ctx.data().slaHours) {
+            <span class="ewp-badge-sm ewp-badge-info">
+              ⏱ {{ ctx.data().slaHours }}h
+            </span>
+          }
+        </div>
+
+      </div>
+    </ng-template>
+
+    <!-- Edge Action Label Pill Template -->
+    <ng-template edgeLabelHtml let-ctx>
+      <div class="canvas-action-pill select-none">
+        <span class="ewp-canvas-edge-pill"
+              [ngClass]="{
+                'bg-rose-50 text-rose-700 border-rose-300 ring-2 ring-rose-500/20': getEdgeData(ctx.edge).isDanger,
+                'bg-white text-zinc-800 border-zinc-300 hover:border-zinc-900': !getEdgeData(ctx.edge).isDanger
+              }">
+          {{ getEdgeData(ctx.edge).action }}
+        </span>
+      </div>
+    </ng-template>
+
+  </vflow>
+</div>

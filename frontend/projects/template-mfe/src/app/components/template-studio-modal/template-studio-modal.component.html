@@ -1,0 +1,669 @@
+@if (isOpen()) {
+  <div class="ewp-modal-backdrop"
+       (wheel)="$event.preventDefault()">
+
+    <!-- Studio Modal Container -->
+    <div class="bg-white border border-zinc-200 shadow-2xl flex flex-col overflow-hidden select-text relative"
+         [ngClass]="isStudioFullscreen() ? 'w-full h-full rounded-xl' : 'w-full max-w-6xl h-[92vh] max-h-[980px] rounded-2xl'"
+         (click)="$event.stopPropagation()"
+         (wheel)="$event.stopPropagation()">
+
+      <!-- Studio Header Bar -->
+      <div class="px-5 py-3 border-b border-zinc-200 bg-zinc-50/90 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div class="flex items-center gap-3">
+          <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold text-white shrink-0 tracking-wider"
+                [ngClass]="isEditingDraft() ? 'bg-amber-600' : 'bg-zinc-900'">
+            {{ isEditingDraft() ? 'EDIT DRAFT' : 'WORKFLOW BUILDER' }}
+          </span>
+          <div>
+            <h3 class="text-sm font-bold text-zinc-950 tracking-tight">
+              {{ builderName() || 'Untitled Workflow' }}
+            </h3>
+            <p class="text-[11px] text-zinc-500 font-mono">
+              ID: <span class="text-zinc-800 font-semibold">{{ builderKey() || 'UNTITLED' }}</span>
+              @if (isEditingDraft()) {
+                <span> &bull; Version: <span class="text-purple-700 font-semibold">v{{ editingTemplate()?.version }}</span></span>
+              }
+              &bull; Status: <span class="text-amber-700 font-semibold">DRAFT</span>
+            </p>
+          </div>
+        </div>
+
+        <!-- Quick Presets & Mode Switcher -->
+        <div class="flex items-center gap-2.5 shrink-0">
+          <!-- Preset Templates Dropdown -->
+          <div class="flex items-center gap-1.5 text-xs font-mono">
+            <span class="text-zinc-400 text-[11px] hidden sm:inline">Presets:</span>
+            <select [ngModel]="selectedPresetId()"
+                    (ngModelChange)="loadPreset($event)"
+                    aria-label="Load workflow preset"
+                    class="px-2.5 py-1 text-xs font-mono bg-white hover:bg-zinc-100 border border-zinc-300 rounded-md text-zinc-800 transition cursor-pointer outline-none shadow-2xs">
+              @for (preset of builderPresets; track preset.id) {
+                <option [value]="preset.id">{{ preset.name }} ({{ preset.badge }})</option>
+              }
+            </select>
+          </div>
+
+          <!-- Mode Switcher Tabs -->
+          <div class="ewp-segmented-bar text-xs">
+            <button (click)="switchBuilderMode('visual')"
+                    type="button"
+                    class="ewp-segmented-btn px-2.5 py-1 flex items-center gap-1"
+                    [ngClass]="builderMode() === 'visual' ? 'bg-white text-zinc-950 font-bold shadow-2xs' : 'text-zinc-600 hover:text-zinc-950'">
+              <span>🎨</span>
+              <span>Visual Builder</span>
+            </button>
+            <button (click)="switchBuilderMode('dsl')"
+                    type="button"
+                    class="ewp-segmented-btn px-2.5 py-1 flex items-center gap-1"
+                    [ngClass]="builderMode() === 'dsl' ? 'bg-white text-zinc-950 font-bold shadow-2xs' : 'text-zinc-600 hover:text-zinc-950'">
+              <span>&#123; &#125;</span>
+              <span>Raw JSON</span>
+            </button>
+          </div>
+
+          <!-- Fullscreen / Windowed Toggle Button -->
+          <button (click)="toggleStudioFullscreen()"
+                  type="button"
+                  [title]="isStudioFullscreen() ? 'Switch to Windowed' : 'Expand to Full Screen'"
+                  class="px-2.5 py-1 text-xs font-mono font-medium rounded border border-zinc-300 hover:border-zinc-900 bg-white hover:bg-zinc-100 text-zinc-800 transition cursor-pointer flex items-center gap-1 shadow-2xs">
+            <span>{{ isStudioFullscreen() ? '▫' : '⛶' }}</span>
+            <span class="hidden md:inline">{{ isStudioFullscreen() ? 'Windowed' : 'Full Screen' }}</span>
+          </button>
+
+          <!-- Close Studio Button -->
+          <button (click)="onClose()"
+                  type="button"
+                  aria-label="Close Builder"
+                  class="ewp-modal-close-btn">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Toast Feedback Message -->
+      @if (toastMessage()) {
+        <div class="bg-indigo-600 text-white px-4 py-2 text-xs font-mono flex items-center justify-between">
+          <span>{{ toastMessage() }}</span>
+          <button (click)="toastMessage.set(null)" type="button" class="text-white hover:opacity-80 font-bold cursor-pointer">✕</button>
+        </div>
+      }
+
+      <!-- Studio Body -->
+      <div class="flex-1 overflow-hidden flex flex-col">
+        <!-- MODE 1: VISUAL STUDIO (2-COLUMN SPLIT) -->
+        @if (builderMode() === 'visual') {
+          <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+
+            <!-- Left Column: Form & Node Configuration (Scrollable) -->
+            <div class="w-full lg:w-1/2 xl:w-5/12 flex flex-col border-b lg:border-b-0 lg:border-r border-zinc-200 overflow-y-auto p-4 sm:p-6 space-y-5 bg-white">
+
+              <!-- Section 1: Basic Details Card -->
+              <div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4 space-y-3 shadow-2xs">
+                <div class="flex items-center justify-between">
+                  <span class="ewp-label">1. Basic Info</span>
+                  <span class="text-[10px] font-mono text-zinc-400">General Details</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <div class="flex items-center justify-between mb-1">
+                      <label class="block text-zinc-600 font-medium">
+                        Workflow ID <span class="text-rose-500">*</span>
+                      </label>
+                      @if (isEditingDraft()) {
+                        <span class="text-[9px] font-mono text-amber-700 bg-amber-100 px-1 rounded font-semibold">Locked</span>
+                      }
+                    </div>
+                    <input type="text"
+                           [disabled]="isEditingDraft()"
+                           [ngModel]="builderKey()"
+                           (ngModelChange)="builderKey.set(($event || '').toUpperCase().replace(/[^A-Z0-9_]/g, '_'))"
+                           placeholder="e.g. VENDOR_ONBOARDING_V1"
+                           class="w-full px-2.5 py-1.5 font-mono text-xs bg-white border border-zinc-300 rounded-md outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition disabled:bg-zinc-100 disabled:text-zinc-500 disabled:cursor-not-allowed">
+                  </div>
+
+                  <div>
+                    <label class="block text-zinc-600 font-medium mb-1">
+                      Workflow Name <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="text"
+                           [(ngModel)]="builderName"
+                           placeholder="e.g. Enterprise Vendor Onboarding"
+                           class="w-full px-2.5 py-1.5 text-xs bg-white border border-zinc-300 rounded-md outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition">
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div class="sm:col-span-2">
+                    <label class="block text-zinc-600 font-medium mb-1">Description</label>
+                    <input type="text"
+                           [(ngModel)]="builderDescription"
+                           placeholder="e.g. Multi-stage onboarding with legal compliance and review steps"
+                           class="w-full px-2.5 py-1.5 text-xs bg-white border border-zinc-300 rounded-md outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition">
+                  </div>
+
+                  <div>
+                    <label class="block text-zinc-600 font-medium mb-1">
+                      Starting Step <span class="text-rose-500">*</span>
+                    </label>
+                    <select [ngModel]="builderInitialState()"
+                            (ngModelChange)="setInitialState($event)"
+                            class="w-full px-2.5 py-1.5 font-mono text-xs bg-white border border-zinc-300 rounded-md outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition cursor-pointer">
+                      @for (s of builderStates(); track s.id) {
+                        <option [value]="s.stateKey">{{ s.stateKey }}</option>
+                      }
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Section 2: Steps & Connections -->
+              <div class="space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-zinc-200">
+                  <div class="flex items-center gap-2">
+                    <span class="ewp-label">2. Steps & Connections</span>
+                    <span class="ewp-badge-sm ewp-badge-neutral">
+                      {{ builderStates().length }} Steps
+                    </span>
+                  </div>
+
+                  <button (click)="addState()"
+                          type="button"
+                          class="ewp-btn-primary">
+                    <span>+</span>
+                    <span>Add Step</span>
+                  </button>
+                </div>
+
+                <!-- States Cards List -->
+                <div class="space-y-3">
+                  @for (state of builderStates(); track state.id; let idx = $index; let isFirst = $first; let isLast = $last) {
+                    <div [id]="'step-card-' + state.stateKey"
+                         class="bg-white border rounded-xl p-4 shadow-2xs hover:shadow-xs transition space-y-3 relative group scroll-mt-4"
+                         [ngClass]="{
+                           'border-amber-300 ring-1 ring-amber-300/40 bg-amber-50/10': state.isInitial,
+                           'border-emerald-300 ring-1 ring-emerald-300/40 bg-emerald-50/10': state.isTerminal && !['REJECTED', 'CANCELLED'].includes(state.stateKey.toUpperCase()),
+                           'border-rose-300 ring-1 ring-rose-300/40 bg-rose-50/10': state.isTerminal && ['REJECTED', 'CANCELLED'].includes(state.stateKey.toUpperCase()),
+                           'border-zinc-200': !state.isInitial && !state.isTerminal
+                         }">
+
+                      <!-- Card Header -->
+                      <div class="flex items-center justify-between gap-2 pb-2 border-b border-zinc-100">
+                        <div class="flex items-center gap-2 min-w-0">
+                          <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold"
+                                [ngClass]="{
+                                  'bg-amber-600 text-white': state.isInitial,
+                                  'bg-emerald-600 text-white': state.isTerminal && !['REJECTED', 'CANCELLED'].includes(state.stateKey.toUpperCase()),
+                                  'bg-rose-600 text-white': state.isTerminal && ['REJECTED', 'CANCELLED'].includes(state.stateKey.toUpperCase()),
+                                  'bg-zinc-800 text-white': !state.isInitial && !state.isTerminal
+                                }">
+                            {{ state.isInitial ? 'START' : (state.isTerminal ? 'END' : 'STEP ' + (idx + 1)) }}
+                          </span>
+
+                          <h4 class="text-xs font-bold text-zinc-950 truncate">{{ state.stepName }}</h4>
+                          <span class="font-mono text-[10px] text-zinc-400 truncate">({{ state.stateKey }})</span>
+                        </div>
+
+                        <!-- Action Controls (Reorder, Set Initial, Delete) -->
+                        <div class="flex items-center gap-1.5 shrink-0">
+                          @if (!state.isInitial) {
+                            <button (click)="setInitialState(state.stateKey)"
+                                    type="button"
+                                    title="Set as starting step"
+                                    class="px-2 py-0.5 rounded text-[10px] font-mono text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition cursor-pointer">
+                              Set Start
+                            </button>
+                          }
+
+                          <button (click)="moveState(idx, 'up')"
+                                  [disabled]="isFirst"
+                                  type="button"
+                                  title="Move Step Up"
+                                  class="p-1 rounded text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 disabled:opacity-30 transition cursor-pointer text-xs leading-none">
+                            ▲
+                          </button>
+
+                          <button (click)="moveState(idx, 'down')"
+                                  [disabled]="isLast"
+                                  type="button"
+                                  title="Move Step Down"
+                                  class="p-1 rounded text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 disabled:opacity-30 transition cursor-pointer text-xs leading-none">
+                            ▼
+                          </button>
+
+                          <button (click)="removeState(idx)"
+                                  [disabled]="builderStates().length <= 2"
+                                  type="button"
+                                  title="Delete Step"
+                                  class="p-1 rounded text-rose-500 hover:text-rose-700 hover:bg-rose-50 disabled:opacity-30 transition cursor-pointer text-xs leading-none font-bold">
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+
+                      <!-- Card Core Fields (State Key & Name) -->
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <label class="block text-zinc-500 text-[11px] font-mono mb-1">Step ID</label>
+                          <input type="text"
+                                 [ngModel]="state.stateKey"
+                                 (ngModelChange)="updateStateKey(idx, $event)"
+                                 placeholder="e.g. INVOICE_VERIFICATION"
+                                 class="w-full px-2.5 py-1.5 font-mono text-xs bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:bg-white focus:border-zinc-900 transition">
+                        </div>
+
+                        <div>
+                          <label class="block text-zinc-500 text-[11px] font-mono mb-1">Step Name</label>
+                          <input type="text"
+                                 [(ngModel)]="state.stepName"
+                                 placeholder="e.g. Invoice Verification & Match"
+                                 class="w-full px-2.5 py-1.5 text-xs bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:bg-white focus:border-zinc-900 transition">
+                        </div>
+                      </div>
+
+                      <!-- Terminal State Checkbox & Indicator Row -->
+                      <div class="pt-2 border-t border-zinc-100 flex flex-wrap items-center justify-between gap-3 text-xs">
+                        <label class="flex items-center gap-2 cursor-pointer font-medium text-zinc-800 shrink-0">
+                          <input type="checkbox"
+                                 [checked]="state.isTerminal"
+                                 (change)="toggleTerminal(idx, $any($event.target).checked)"
+                                 class="w-4 h-4 rounded border-zinc-300 text-zinc-900 accent-zinc-900 focus:ring-zinc-900 cursor-pointer">
+                          <span>This is an ending step (Workflow finishes here)</span>
+                        </label>
+
+                        @if (state.isTerminal) {
+                          <div class="flex items-center gap-2 text-[11px] font-mono text-zinc-600 bg-zinc-100 px-2.5 py-1 rounded-md border border-zinc-200">
+                            <span class="w-2 h-2 rounded-full"
+                                  [ngClass]="['REJECTED', 'CANCELLED'].includes(state.stateKey.toUpperCase()) ? 'bg-rose-500' : 'bg-emerald-500'"></span>
+                            <span>🏁 Final Step &bull; Process finishes here</span>
+                          </div>
+                        }
+                      </div>
+
+                      <!-- Non-Terminal State Fields -->
+                      @if (!state.isTerminal) {
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs pt-1 border-t border-zinc-100">
+                          <div>
+                            <label class="block text-zinc-500 text-[11px] font-mono mb-1">Step Type</label>
+                            <select [(ngModel)]="state.stepType"
+                                    class="w-full px-2 py-1.5 text-xs bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:bg-white focus:border-zinc-900 transition cursor-pointer">
+                              @for (st of availableStepTypes; track st.value) {
+                                @if (st.value !== 'TERMINAL') {
+                                  <option [value]="st.value">{{ st.label }}</option>
+                                }
+                              }
+                            </select>
+                          </div>
+
+                          <div>
+                            <label class="block text-zinc-500 text-[11px] font-mono mb-1">Assigned To</label>
+                            <select [(ngModel)]="state.actorScope"
+                                    class="w-full px-2 py-1.5 text-xs bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:bg-white focus:border-zinc-900 transition cursor-pointer">
+                              @for (sc of availableActorScopes; track sc.value) {
+                                <option [value]="sc.value">{{ sc.label }}</option>
+                              }
+                            </select>
+                          </div>
+
+                          <div>
+                            <div class="flex items-center justify-between mb-1">
+                              <label class="block text-zinc-500 text-[11px] font-mono">Required Role</label>
+                              @if (state.actorScope === 'ROLE' && isCustomRole(state.requiredRole)) {
+                                <span class="text-[9px] font-mono text-purple-700 bg-purple-100 px-1 rounded font-semibold">Custom</span>
+                              }
+                            </div>
+
+                            @if (state.actorScope === 'PARALLEL_ROLES' || state.stepType === 'PARALLEL_APPROVAL') {
+                              <div class="space-y-1.5">
+                                <div class="flex flex-wrap gap-1 p-1.5 bg-blue-50/70 border border-blue-200 rounded-md min-h-[32px]">
+                                  @for (role of (state.requiredRoles || []); track role) {
+                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-100 text-blue-900 font-mono text-[10px] font-semibold border border-blue-300">
+                                      <span>{{ role.replace('ROLE_', '') }}</span>
+                                      <button (click)="toggleParallelRole(state, role)"
+                                              type="button"
+                                              class="hover:text-rose-600 cursor-pointer font-bold leading-none">×</button>
+                                    </span>
+                                  }
+                                  @if (!state.requiredRoles || state.requiredRoles.length === 0) {
+                                    <span class="text-blue-500 text-[10px] font-mono italic self-center">Select roles below...</span>
+                                  }
+                                </div>
+
+                                <div class="flex items-center gap-1">
+                                  <select (change)="toggleParallelRole(state, $any($event.target).value); $any($event.target).value = ''"
+                                          class="flex-1 px-2 py-1 font-mono text-[10px] bg-white border border-blue-300 rounded outline-none focus:border-blue-700 text-blue-900 cursor-pointer">
+                                    <option value="" disabled selected>+ Add Role...</option>
+                                    @for (r of availableRoles; track r) {
+                                      @if (!isParallelRoleSelected(state, r)) {
+                                        <option [value]="r">{{ r.replace('ROLE_', '') }}</option>
+                                      }
+                                    }
+                                  </select>
+                                  <input #customParallelInput
+                                         type="text"
+                                         placeholder="Custom Role"
+                                         (keydown.enter)="addCustomParallelRole(state, customParallelInput)"
+                                         class="w-24 px-1.5 py-1 font-mono text-[10px] bg-white border border-blue-200 rounded outline-none text-blue-900">
+                                  <button (click)="addCustomParallelRole(state, customParallelInput)"
+                                          type="button"
+                                          class="px-1.5 py-1 bg-blue-600 text-white font-mono text-[10px] rounded hover:bg-blue-700 cursor-pointer font-bold">
+                                    +
+                                  </button>
+                                </div>
+                                <span class="text-[9px] text-blue-600 font-mono block">Fork-join: Spawns independent tasks for each role.</span>
+                              </div>
+                            } @else if (state.actorScope === 'ROLE') {
+                              <div class="space-y-1.5">
+                                <select [ngModel]="isCustomRole(state.requiredRole) ? '__CUSTOM__' : state.requiredRole"
+                                        (ngModelChange)="onRoleSelectChange(state, $event)"
+                                        class="w-full px-2 py-1.5 font-mono text-[11px] bg-purple-50 text-purple-900 border border-purple-200 rounded-md outline-none focus:bg-white focus:border-purple-600 transition cursor-pointer">
+                                  @for (role of availableRoles; track role) {
+                                    <option [value]="role">{{ role.replace('ROLE_', '') }}</option>
+                                  }
+                                  <option value="__CUSTOM__">➕ Other (Specify Custom Role...)</option>
+                                </select>
+
+                                @if (isCustomRole(state.requiredRole)) {
+                                  <div class="animate-in fade-in duration-150">
+                                    <input type="text"
+                                           [ngModel]="state.requiredRole"
+                                           (ngModelChange)="onCustomRoleInput(state, $event)"
+                                           placeholder="e.g. ROLE_COMPLIANCE_OFFICER"
+                                           class="w-full px-2 py-1 font-mono text-[11px] bg-white border border-purple-300 rounded outline-none focus:border-purple-700 focus:ring-1 focus:ring-purple-700 text-purple-900 font-semibold shadow-2xs">
+                                  </div>
+                                }
+                              </div>
+                            } @else {
+                              <input type="text"
+                                     disabled
+                                     value="Inherited"
+                                     class="w-full px-2 py-1.5 font-mono text-xs bg-zinc-100 text-zinc-400 border border-zinc-200 rounded-md cursor-not-allowed">
+                            }
+                          </div>
+
+                          <div>
+                            <label class="block text-zinc-500 text-[11px] font-mono mb-1">Time Limit</label>
+                            <div class="flex items-center">
+                              <input type="number"
+                                     [(ngModel)]="state.slaHours"
+                                     placeholder="None"
+                                     min="1"
+                                     max="720"
+                                     class="w-full px-2 py-1.5 font-mono text-xs bg-zinc-50 border border-zinc-200 rounded-l-md outline-none focus:bg-white focus:border-zinc-900 transition">
+                              <span class="px-2 py-1.5 bg-zinc-100 text-zinc-600 border border-l-0 border-zinc-200 rounded-r-md text-[11px] font-mono">
+                                hrs
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Payload Input -->
+                        <div class="pt-2 border-t border-zinc-100 flex items-center gap-2 text-xs">
+                          <span class="text-zinc-500 text-[11px] font-mono whitespace-nowrap">Required Fields:</span>
+                          <input type="text"
+                                 [(ngModel)]="state.payloadKeysInput"
+                                 placeholder="e.g. invoiceNumber, amount, vendorEmail (comma-separated)"
+                                 class="flex-1 px-2.5 py-1.5 font-mono text-xs bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:bg-white focus:border-zinc-900 transition">
+                        </div>
+
+                        <!-- Outgoing Transitions Section -->
+                        <div class="pt-2 border-t border-zinc-100 space-y-2">
+                          <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider font-mono">
+                              Next Steps ({{ state.transitions.length }})
+                            </span>
+                            <button (click)="addTransition(idx)"
+                                    type="button"
+                                    class="px-2.5 py-1 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-[11px] font-mono font-medium transition cursor-pointer flex items-center gap-1">
+                              <span>+</span>
+                              <span>Add Next Step</span>
+                            </button>
+                          </div>
+
+                          @if (state.transitions.length === 0) {
+                            <div class="p-2.5 rounded bg-amber-50/70 border border-amber-200 text-amber-900 text-xs font-mono">
+                              ⚠️ Every intermediate step requires at least 1 next step. Click "+ Add Next Step".
+                            </div>
+                          } @else {
+                            <div class="space-y-1.5">
+                              @for (trans of state.transitions; track $index; let tIdx = $index) {
+                                <div class="flex items-center gap-2 bg-zinc-50 border border-zinc-200 rounded-lg p-2 text-xs font-mono">
+                                  <span class="text-zinc-400 text-[10px] uppercase">Action:</span>
+                                  <input type="text"
+                                         [ngModel]="trans.action"
+                                         (ngModelChange)="trans.action = ($event || '').toUpperCase().replace(/[^A-Z0-9_]/g, '_')"
+                                         placeholder="e.g. APPROVE"
+                                         class="w-40 px-2.5 py-1.5 font-mono text-xs bg-white border border-zinc-300 rounded outline-none focus:border-zinc-900">
+
+                                  <span class="text-zinc-400 font-bold">&rarr;</span>
+                                  <span class="text-zinc-400 text-[10px] uppercase">Goes to:</span>
+                                  <select [(ngModel)]="trans.targetState"
+                                          class="flex-1 min-w-[140px] px-2.5 py-1.5 font-mono text-xs bg-white border border-zinc-300 rounded outline-none focus:border-zinc-900 cursor-pointer">
+                                    @for (targetState of builderStates(); track targetState.id) {
+                                      <option [value]="targetState.stateKey">
+                                        {{ targetState.stateKey }} ({{ targetState.stepName }})
+                                      </option>
+                                    }
+                                  </select>
+
+                                  <button (click)="removeTransition(idx, tIdx)"
+                                          type="button"
+                                          title="Remove Next Step"
+                                          class="p-1.5 rounded text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer text-xs font-bold leading-none">
+                                    ✕
+                                  </button>
+                                </div>
+                              }
+                            </div>
+                          }
+                        </div>
+
+                        <!-- Dynamic Conditional Transitions Section (Rules Engine) -->
+                        <div class="pt-2 border-t border-zinc-100 space-y-2">
+                          <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-1.5">
+                              <span class="text-[10px] font-bold text-indigo-700 uppercase tracking-wider font-mono">
+                                ⚡ Dynamic Rules ({{ state.conditionalTransitions.length || 0 }})
+                              </span>
+                              <span class="px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 text-[9px] font-mono border border-indigo-200">
+                                SpEL
+                              </span>
+                            </div>
+                            <button (click)="addConditionalTransition(idx)"
+                                    type="button"
+                                    class="px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[10px] font-mono font-medium transition cursor-pointer flex items-center gap-1">
+                              <span>+</span>
+                              <span>Add Rule</span>
+                            </button>
+                          </div>
+
+                          @if (state.conditionalTransitions && state.conditionalTransitions.length > 0) {
+                            <div class="space-y-2">
+                              @for (cond of state.conditionalTransitions; track $index; let cIdx = $index) {
+                                <div class="p-2.5 bg-indigo-50/50 border border-indigo-200 rounded-lg space-y-2 text-xs font-mono">
+                                  <div class="flex items-center justify-between text-[10px]">
+                                    <div class="flex items-center gap-2">
+                                      <span class="px-1.5 py-0.5 rounded bg-indigo-600 text-white font-bold text-[9px]">RULE #{{ cIdx + 1 }}</span>
+                                      <span class="text-zinc-500 text-[10px]">Priority:</span>
+                                      <input type="number"
+                                             [(ngModel)]="cond.priority"
+                                             min="1"
+                                             max="99"
+                                             class="w-12 px-1 py-0.5 text-[10px] font-mono bg-white border border-indigo-200 rounded text-center outline-none">
+                                    </div>
+                                    <button (click)="removeConditionalTransition(idx, cIdx)"
+                                            type="button"
+                                            class="p-1 rounded text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer font-bold text-xs leading-none">
+                                      ✕
+                                    </button>
+                                  </div>
+
+                                  <div class="flex items-center gap-2">
+                                    <span class="text-zinc-500 text-[10px] uppercase">Action:</span>
+                                    <input type="text"
+                                           [ngModel]="cond.action"
+                                           (ngModelChange)="cond.action = ($event || '').toUpperCase().replace(/[^A-Z0-9_]/g, '_')"
+                                           placeholder="APPROVE"
+                                           class="w-32 px-2 py-1 font-mono text-xs bg-white border border-zinc-300 rounded outline-none focus:border-indigo-600 font-semibold">
+
+                                    <span class="text-zinc-400 font-bold">&rarr;</span>
+                                    <span class="text-zinc-500 text-[10px] uppercase">Routes to:</span>
+                                    <select [(ngModel)]="cond.targetState"
+                                            class="flex-1 min-w-[120px] px-2 py-1 font-mono text-xs bg-white border border-zinc-300 rounded outline-none focus:border-indigo-600 cursor-pointer">
+                                      @for (targetState of builderStates(); track targetState.id) {
+                                        <option [value]="targetState.stateKey">
+                                          {{ targetState.stateKey }} ({{ targetState.stepName }})
+                                        </option>
+                                      }
+                                    </select>
+                                  </div>
+
+                                  <div class="flex items-center gap-2 pt-1.5 border-t border-indigo-100/80">
+                                    <span class="text-indigo-700 text-[10px] whitespace-nowrap font-bold">IF:</span>
+                                    <input type="text"
+                                           [(ngModel)]="cond.condition"
+                                           placeholder="#amount > 10000 or #department == 'FINANCE'"
+                                           class="flex-1 px-2.5 py-1 font-mono text-xs bg-white border border-indigo-300 rounded outline-none focus:border-indigo-700 text-indigo-950 font-medium placeholder:text-zinc-400">
+                                  </div>
+                                </div>
+                              }
+                            </div>
+                          } @else {
+                            <div class="p-2 rounded bg-zinc-50/80 border border-dashed border-zinc-200 text-zinc-400 text-[11px] font-mono flex items-center justify-between">
+                              <span>Static routing (click "+ Add Rule" for SpEL conditions)</span>
+                            </div>
+                          }
+                        </div>
+                      }
+
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column: Live Interactive Topology Canvas & Preview -->
+            <div class="w-full lg:w-1/2 xl:w-7/12 flex flex-col bg-zinc-50 overflow-hidden">
+              <!-- Preview Toolbar Header -->
+              <div class="px-4 py-2.5 border-b border-zinc-200 bg-white flex items-center justify-between gap-2 shrink-0">
+                <div class="ewp-segmented-bar text-xs">
+                  <button (click)="builderPreviewTab.set('canvas')"
+                          type="button"
+                          class="ewp-segmented-btn flex items-center gap-1"
+                          [ngClass]="builderPreviewTab() === 'canvas' ? 'bg-white text-zinc-900 font-bold shadow-2xs' : 'text-zinc-600 hover:text-zinc-900'">
+                    <span>📊</span>
+                    <span>Live Graph Canvas</span>
+                  </button>
+                  <button (click)="builderPreviewTab.set('pipeline')"
+                          type="button"
+                          class="ewp-segmented-btn flex items-center gap-1"
+                          [ngClass]="builderPreviewTab() === 'pipeline' ? 'bg-white text-zinc-900 font-bold shadow-2xs' : 'text-zinc-600 hover:text-zinc-900'">
+                    <span>📋</span>
+                    <span>Step Pipeline</span>
+                  </button>
+                  <button (click)="builderPreviewTab.set('dsl')"
+                          type="button"
+                          class="ewp-segmented-btn flex items-center gap-1"
+                          [ngClass]="builderPreviewTab() === 'dsl' ? 'bg-white text-zinc-900 font-bold shadow-2xs' : 'text-zinc-600 hover:text-zinc-900'">
+                    <span>&#123; &#125;</span>
+                    <span>JSON Preview</span>
+                  </button>
+                </div>
+
+                <span class="ewp-badge-sm ewp-badge-success">
+                  {{ builderFlowNodes().length }} Steps &bull; {{ builderFlowEdges().length }} Connections
+                </span>
+              </div>
+
+              <!-- Preview Main Content Frame -->
+              <div class="flex-1 relative overflow-hidden bg-zinc-50 flex flex-col">
+                <!-- TAB 1: LIVE GRAPH CANVAS -->
+                @if (builderPreviewTab() === 'canvas') {
+                  <app-workflow-canvas [nodes]="builderFlowNodes()"
+                                       [edges]="builderFlowEdges()"
+                                       [readOnly]="false"
+                                       (connect)="onBuilderConnect($event)"
+                                       (nodeSelect)="focusStep($event)"
+                                       class="w-full h-full">
+                  </app-workflow-canvas>
+                }
+
+                <!-- TAB 2: PIPELINE PREVIEW -->
+                @if (builderPreviewTab() === 'pipeline') {
+                  <div class="p-4 overflow-y-auto flex-1">
+                    <app-workflow-pipeline [nodes]="builderDagNodes()"
+                                           (nodeSelect)="focusStep($event)">
+                    </app-workflow-pipeline>
+                  </div>
+                }
+
+                <!-- TAB 3: JSON PREVIEW -->
+                @if (builderPreviewTab() === 'dsl') {
+                  <div class="p-4 overflow-y-auto flex-1">
+                    <app-workflow-json-viewer [json]="builderDslPreview()"
+                                              title="Workflow DSL Preview"
+                                              maxHeight="calc(100vh - 280px)">
+                    </app-workflow-json-viewer>
+                  </div>
+                }
+              </div>
+            </div>
+
+          </div>
+        }
+
+        <!-- MODE 2: RAW JSON / DSL EDITOR -->
+        @if (builderMode() === 'dsl') {
+          <div class="flex-1 p-6 bg-zinc-900 flex flex-col overflow-hidden space-y-3">
+            <div class="flex items-center justify-between text-xs font-mono text-zinc-400">
+              <span>Direct JSON Specification Editor</span>
+            </div>
+            <textarea [(ngModel)]="newTemplateJson"
+                      rows="22"
+                      class="flex-1 w-full font-mono text-xs bg-zinc-950 text-emerald-400 p-4 rounded-xl border border-zinc-800 outline-none focus:border-zinc-700 transition leading-relaxed"></textarea>
+          </div>
+        }
+      </div>
+
+      <!-- Studio Footer -->
+      <div class="ewp-modal-footer shrink-0">
+        <div class="flex items-center gap-3">
+          <button (click)="onClose()"
+                  type="button"
+                  class="ewp-btn-secondary">
+            Cancel
+          </button>
+          @if (localError() || errorMessage()) {
+            <span class="text-rose-600 text-xs font-mono font-medium truncate max-w-[450px]">
+              {{ localError() || errorMessage() }}
+            </span>
+          }
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button (click)="onSubmit(false)"
+                  type="button"
+                  [disabled]="isSubmitting() || (builderMode() === 'visual' && builderValidationErrors().length > 0)"
+                  class="ewp-btn-secondary">
+            {{ isEditingDraft() ? 'Update Draft' : 'Save as Draft' }}
+          </button>
+
+          <button (click)="onSubmit(true)"
+                  type="button"
+                  [disabled]="isSubmitting() || (builderMode() === 'visual' && builderValidationErrors().length > 0)"
+                  class="ewp-btn-primary">
+            @if (isSubmitting()) {
+              <span class="animate-spin text-xs">↻</span>
+              <span>Publishing...</span>
+            } @else {
+              <span>🚀</span>
+              <span>{{ isEditingDraft() ? 'Update & Publish' : 'Save & Publish Now' }}</span>
+            }
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+}

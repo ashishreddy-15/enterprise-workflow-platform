@@ -584,3 +584,65 @@ code, kbd, samp, pre {
 .ewp-btn-disabled {
   @apply opacity-40 cursor-not-allowed;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   WORKFLOW CANVAS & DESIGNER PRIMITIVES
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Canvas Floating Controls Dock */
+.ewp-canvas-dock {
+  @apply absolute bottom-3 right-3 z-30 flex items-center gap-1 bg-white/95 backdrop-blur-xs border border-zinc-200 rounded-lg p-1 shadow-md text-xs font-mono;
+}
+
+.ewp-canvas-dock-btn {
+  @apply w-7 h-7 flex items-center justify-center rounded hover:bg-zinc-100 text-zinc-700 font-bold transition cursor-pointer;
+}
+
+.ewp-canvas-dock-fit {
+  @apply px-2 h-7 flex items-center justify-center rounded hover:bg-zinc-100 text-zinc-700 text-[11px] font-medium transition cursor-pointer;
+}
+
+/* Canvas Legend Overlay */
+.ewp-canvas-legend {
+  @apply absolute top-3 left-3 z-20 flex flex-wrap items-center gap-2 bg-white/90 backdrop-blur-xs border border-zinc-200 rounded-md px-2.5 py-1 text-[10px] font-mono text-zinc-600 shadow-2xs;
+}
+
+/* Flow Node Card (240x105 standard) */
+.ewp-canvas-node-card {
+  @apply w-[240px] h-[105px] bg-white rounded-xl border p-3 shadow-xs hover:shadow-md transition cursor-pointer select-none flex flex-col justify-between;
+}
+
+/* Edge Action Label Pill */
+.ewp-canvas-edge-pill {
+  @apply px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold tracking-tight border shadow-xs transition inline-flex items-center gap-1 pointer-events-none;
+}
+
+/* Pipeline Cards */
+.ewp-pipeline-card {
+  @apply p-3.5 rounded-xl border bg-white shadow-2xs hover:shadow-xs transition cursor-pointer flex flex-col gap-2.5 relative;
+}
+
+/* Slide-Over Drawer */
+.ewp-drawer-overlay {
+  @apply fixed inset-0 bg-zinc-950/40 backdrop-blur-xs z-50 transition-opacity duration-300;
+}
+
+.ewp-drawer-container {
+  @apply fixed inset-y-0 right-0 max-w-full flex pl-10 z-50 pointer-events-none;
+}
+
+.ewp-drawer-panel {
+  @apply w-screen max-w-md bg-white border-l border-zinc-200 shadow-2xl flex flex-col pointer-events-auto transform transition-transform duration-300 ease-in-out;
+}
+
+.ewp-drawer-header {
+  @apply px-5 py-3.5 border-b border-zinc-200 bg-zinc-50/80 flex items-center justify-between gap-3;
+}
+
+.ewp-drawer-body {
+  @apply flex-1 overflow-y-auto p-5 space-y-5 text-xs;
+}
+
+.ewp-drawer-footer {
+  @apply px-5 py-3 border-t border-zinc-200 bg-zinc-50 flex items-center justify-between;
+}

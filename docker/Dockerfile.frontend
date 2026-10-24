@@ -3,9 +3,12 @@
 # ==============================================================================
 
 # Stage 1: Build all Micro-Frontends
-FROM node:22-alpine AS builder
+FROM node:22-slim AS builder
 
 WORKDIR /app
+
+# Prevent V8 heap exhaustion and SIGABRT (exit code 134) during heavy Angular + Federation compilation
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # Cache node dependencies layer
 COPY frontend/package.json frontend/package-lock.json ./
@@ -15,10 +18,7 @@ RUN npm ci
 COPY frontend/ ./
 
 # Build all 4 federated micro-frontends
-RUN npx ng build shell && \
-    npx ng build workflow-mfe && \
-    npx ng build template-mfe && \
-    npx ng build analytics-mfe
+RUN npm run build:all
 
 # Stage 2: Production Nginx Runtime
 FROM nginx:1.27-alpine

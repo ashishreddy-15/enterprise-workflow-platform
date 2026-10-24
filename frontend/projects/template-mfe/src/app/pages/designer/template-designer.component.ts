@@ -766,8 +766,16 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     const current = states[stateIndex];
     if (current.isTerminal) return;
 
-    const otherTarget = states.find(s => s.stateKey !== current.stateKey);
-    const defaultTarget = (otherTarget || current).stateKey;
+    // Prefer downstream next step or terminal completion step over looping back to step 0
+    let defaultTarget = '';
+    if (stateIndex + 1 < states.length && !states[stateIndex + 1].isTerminal) {
+      defaultTarget = states[stateIndex + 1].stateKey;
+    } else {
+      const terminalState = states.find(s => s.isTerminal && !['REJECTED', 'CANCELLED'].includes(s.stateKey.toUpperCase()))
+        || states.find(s => s.isTerminal)
+        || states.find(s => s.stateKey !== current.stateKey);
+      defaultTarget = terminalState ? terminalState.stateKey : current.stateKey;
+    }
     const ruleNum = (current.conditionalTransitions?.length || 0) + 1;
 
     if (!current.conditionalTransitions) {

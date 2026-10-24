@@ -187,4 +187,63 @@ describe('graph-layout.util', () => {
     // Verify multi-role display concatenation
     expect(jointNode.roleDisplay).toBe('LEGAL_COUNSEL + FINANCE_DIRECTOR');
   });
+
+  it('properly layers workflows with feedback cycles without inverting layout', () => {
+    // Exact scenario from user's screen:
+    // INITIATE -> SUBMIT -> STAGE_4
+    // STAGE_4 -> APPROVE [#amount > 10000] -> INITIATE (loop-back)
+    // INITIATE -> AUTO_APPROVE -> COMPLETED
+    const cycleTpl: WorkflowTemplate = {
+      templateKey: 'CUSTOM_WORKFLOW_V1',
+      version: 1,
+      name: 'Custom Workflow Template',
+      description: '',
+      status: 'DRAFT',
+      initialState: 'INITIATE',
+      steps: {
+        INITIATE: {
+          stepOrder: 1,
+          stepName: 'Initiate Request',
+          stepType: 'DOCUMENT_SUBMISSION',
+          actorScope: 'REQUESTER',
+          requiredPayloadKeys: ['amount'],
+          isTerminal: false,
+          transitions: {
+            SUBMIT: 'STAGE_4'
+          },
+          conditionalTransitions: []
+        },
+        STAGE_4: {
+          stepOrder: 2,
+          stepName: 'Stage 4 Review',
+          stepType: 'APPROVAL',
+          actorScope: 'ROLE',
+          requiredRole: 'ROLE_EMPLOYEE',
+          requiredPayloadKeys: [],
+          isTerminal: false,
+          transitions: {},
+          conditionalTransitions: [
+            { action: 'APPROVE', condition: '#amount > 10000', targetState: 'COMPLETED' },
+            { action: 'REVISE', condition: '#amount <= 10000', targetState: 'INITIATE' }
+          ]
+        },
+        COMPLETED: { stepOrder: 3, stepName: 'Approved & Completed', stepType: 'TERMINAL', isTerminal: true },
+        CANCELLED: { stepOrder: 4, stepName: 'Cancelled / Rejected', stepType: 'TERMINAL', isTerminal: true }
+      }
+    };
+
+    const dag = buildDagNodes(cycleTpl);
+    const layout = computeCanvasLayout(dag);
+
+    const initNode = layout.nodes.find(n => n.stateKey === 'INITIATE')!;
+    const s4Node = layout.nodes.find(n => n.stateKey === 'STAGE_4')!;
+    const compNode = layout.nodes.find(n => n.stateKey === 'COMPLETED')!;
+
+    // INITIATE MUST be at Column 0 (x=50)
+    expect(initNode.x).toBe(50);
+    // STAGE_4 MUST be downstream of INITIATE (x > initNode.x)
+    expect(s4Node.x).toBeGreaterThan(initNode.x);
+    // COMPLETED MUST be downstream of STAGE_4 (x > s4Node.x)
+    expect(compNode.x).toBeGreaterThan(s4Node.x);
+  });
 });

@@ -81,38 +81,53 @@ export function computeCanvasLayout(rawNodes: DAGNode[]): {
   // 1. Identify Entry / Initial Node
   const initialNode = rawNodes.find(n => n.isInitial) || rawNodes[0];
 
-  // 2. Propagate Ranks (Columns) via topological BFS
+  // 2. Propagate Ranks (Columns) via topological layering without cycle corruption
   const ranks = new Map<string, number>();
   ranks.set(initialNode.stateKey, 0);
 
   const queue: string[] = [initialNode.stateKey];
-  const visited = new Set<string>();
+  const inQueue = new Set<string>([initialNode.stateKey]);
 
   while (queue.length > 0) {
     const currentKey = queue.shift()!;
-    visited.add(currentKey);
+    inQueue.delete(currentKey);
     const currentRank = ranks.get(currentKey) ?? 0;
     const node = nodeMap.get(currentKey);
     if (!node) continue;
 
     for (const trans of node.outgoingTransitions) {
+      // Anchoring: never re-rank the initial starting node via outgoing transitions
+      if (trans.targetState === initialNode.stateKey) {
+        continue;
+      }
+
       const targetNode = nodeMap.get(trans.targetState);
       if (targetNode) {
-        const existingRank = ranks.get(trans.targetState) ?? 0;
+        const existingRank = ranks.get(trans.targetState);
         const newRank = currentRank + 1;
-        if (newRank > existingRank) {
+
+        // Only propagate forward along unvisited or downstream paths
+        if (existingRank === undefined) {
           ranks.set(trans.targetState, newRank);
-        }
-        if (!visited.has(trans.targetState) && !queue.includes(trans.targetState)) {
-          queue.push(trans.targetState);
+          if (!inQueue.has(trans.targetState)) {
+            queue.push(trans.targetState);
+            inQueue.add(trans.targetState);
+          }
+        } else if (newRank > existingRank && existingRank > currentRank) {
+          // Forward path that discovers a deeper layer
+          ranks.set(trans.targetState, newRank);
+          if (!inQueue.has(trans.targetState)) {
+            queue.push(trans.targetState);
+            inQueue.add(trans.targetState);
+          }
         }
       }
     }
   }
 
-  // Fallback for any disconnected nodes
+  // Fallback for any disconnected intermediate nodes
   for (const node of rawNodes) {
-    if (!ranks.has(node.stateKey)) {
+    if (!node.isTerminal && !ranks.has(node.stateKey)) {
       ranks.set(node.stateKey, Math.max(0, node.order - 1));
     }
   }
@@ -131,14 +146,20 @@ export function computeCanvasLayout(rawNodes: DAGNode[]): {
     }
   }
 
+  // Dense column normalization: map distinct ranks to contiguous 0, 1, 2, ...
+  const uniqueRanks = Array.from(new Set(ranks.values())).sort((a, b) => a - b);
+  const rankToCol = new Map<number, number>();
+  uniqueRanks.forEach((r, idx) => rankToCol.set(r, idx));
+
   // 3. Group Nodes by Column Rank and Sort Rows
   const rankGroups = new Map<number, DAGNode[]>();
   for (const node of rawNodes) {
-    const r = ranks.get(node.stateKey) ?? 0;
-    if (!rankGroups.has(r)) {
-      rankGroups.set(r, []);
+    const rawR = ranks.get(node.stateKey) ?? 0;
+    const colR = rankToCol.get(rawR) ?? 0;
+    if (!rankGroups.has(colR)) {
+      rankGroups.set(colR, []);
     }
-    rankGroups.get(r)!.push(node);
+    rankGroups.get(colR)!.push(node);
   }
 
   // Sort nodes within each column
@@ -204,19 +225,24 @@ export function computeCanvasLayout(rawNodes: DAGNode[]): {
       const actionUpper = trans.action.toUpperCase();
       const isDanger = actionUpper.includes('REJECT') || actionUpper.includes('CANCEL');
 
-      const sourceX = source.x + source.width;
-      const exitOffset = isDanger ? 22 : -15;
-      const sourceY = source.y + source.height / 2 + (source.outgoingTransitions.length > 1 ? exitOffset : 0);
-
-      const targetX = target.x;
-      const entryOffset = isDanger ? 18 : -15;
-      const targetY = target.y + target.height / 2 + (target.incomingTransitions.length > 1 ? entryOffset : 0);
-
       let pathD = '';
       let midX = 0;
       let midY = 0;
+      let sourceX = 0;
+      let sourceY = 0;
+      let targetX = 0;
+      let targetY = 0;
 
-      if (targetX > sourceX) {
+      if (target.x > source.x) {
+        // Forward transition: exits right of source, enters left of target
+        sourceX = source.x + source.width;
+        const exitOffset = isDanger ? 22 : -15;
+        sourceY = source.y + source.height / 2 + (source.outgoingTransitions.length > 1 ? exitOffset : 0);
+
+        targetX = target.x;
+        const entryOffset = isDanger ? 18 : -15;
+        targetY = target.y + target.height / 2 + (target.incomingTransitions.length > 1 ? entryOffset : 0);
+
         const deltaX = Math.max(50, (targetX - sourceX) * 0.45);
         const cp1x = sourceX + deltaX;
         const cp1y = sourceY;
@@ -239,8 +265,15 @@ export function computeCanvasLayout(rawNodes: DAGNode[]): {
           Math.pow(t, 3) * targetY
         );
       } else {
-        const loopY = Math.max(sourceY, targetY) + 70;
-        pathD = `M ${sourceX} ${sourceY} C ${sourceX + 60} ${loopY}, ${targetX - 60} ${loopY}, ${targetX} ${targetY}`;
+        // Backward / feedback / loop transition: exits bottom of source, curves underneath, enters bottom of target
+        sourceX = source.x + source.width * 0.4;
+        sourceY = source.y + source.height;
+
+        targetX = target.x + target.width * 0.6;
+        targetY = target.y + target.height;
+
+        const loopY = Math.max(sourceY, targetY) + 50;
+        pathD = `M ${sourceX} ${sourceY} C ${sourceX} ${loopY}, ${targetX} ${loopY}, ${targetX} ${targetY}`;
         midX = Math.round((sourceX + targetX) / 2);
         midY = loopY - 10;
       }

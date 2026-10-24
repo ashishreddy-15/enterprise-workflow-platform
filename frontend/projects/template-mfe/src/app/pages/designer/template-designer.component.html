@@ -346,11 +346,13 @@
 
               <!-- Modern ngx-vflow Interactive Graph Canvas -->
               <vflow #previewVflow
+                     [view]="'auto'"
+                     [background]="'transparent'"
                      [nodes]="previewFlowNodes()"
                      [edges]="previewFlowEdges()"
-                     [minZoom]="0.3"
-                     [maxZoom]="2.0"
-                     class="w-full h-full block">
+                     [minZoom]="0.4"
+                     [maxZoom]="1.5"
+                     class="w-full h-full">
 
                 <!-- Custom HTML Node Card Template -->
                 <ng-template nodeHtml let-ctx>
@@ -358,7 +360,7 @@
                   <handle type="source" position="right" />
 
                   <div (click)="selectNodeByKey(ctx.data().stateKey)"
-                       class="canvas-node-card w-[260px] h-[110px] bg-white rounded-xl border p-3.5 shadow-xs hover:shadow-md transition cursor-pointer select-none group"
+                       class="canvas-node-card w-[240px] h-[105px] bg-white rounded-xl border p-3 shadow-xs hover:shadow-md transition cursor-pointer select-none group flex flex-col justify-between"
                        [ngClass]="{
                          'border-zinc-950 ring-2 ring-zinc-950 shadow-md bg-zinc-50/60': selectedNode()?.stateKey === ctx.data().stateKey,
                          'border-emerald-300 bg-emerald-50/20': ctx.data().isTerminal && !ctx.data().isRejectTerminal && selectedNode()?.stateKey !== ctx.data().stateKey,
@@ -1245,12 +1247,14 @@
 
                       <!-- Interactive ngx-vflow Canvas with Drag-to-Connect -->
                       <vflow #builderVflow
+                             [view]="'auto'"
+                             [background]="'transparent'"
                              [nodes]="builderFlowNodes()"
                              [edges]="builderFlowEdges()"
-                             [minZoom]="0.3"
-                             [maxZoom]="2.0"
+                             [minZoom]="0.4"
+                             [maxZoom]="1.5"
                              (connect)="onBuilderConnect($event)"
-                             class="w-full h-full block">
+                             class="w-full h-full">
 
                         <!-- Custom HTML Node Card Template with Drag Handles -->
                         <ng-template nodeHtml let-ctx>
@@ -1258,7 +1262,7 @@
                           <handle type="source" position="right" />
 
                           <div (click)="focusBuilderStep(ctx.data().stateKey)"
-                               class="w-[260px] h-[110px] bg-white rounded-xl border p-3 shadow-xs hover:shadow-md transition select-none cursor-pointer group"
+                               class="canvas-node-card w-[240px] h-[105px] bg-white rounded-xl border p-3 shadow-xs hover:shadow-md transition select-none cursor-pointer group flex flex-col justify-between"
                                [ngClass]="{
                                  'border-emerald-400 bg-emerald-50/20': ctx.data().isTerminal && !ctx.data().isRejectTerminal,
                                  'border-rose-400 bg-rose-50/20': ctx.data().isTerminal && ctx.data().isRejectTerminal,
@@ -1550,11 +1554,13 @@
 
             <!-- Fullscreen ngx-vflow Graph Canvas -->
             <vflow #fullscreenVflow
+                   [view]="'auto'"
+                   [background]="'transparent'"
                    [nodes]="previewFlowNodes()"
                    [edges]="previewFlowEdges()"
-                   [minZoom]="0.3"
-                   [maxZoom]="2.0"
-                   class="w-full h-full block">
+                   [minZoom]="0.4"
+                   [maxZoom]="1.5"
+                   class="w-full h-full">
 
               <!-- Custom HTML Node Card Template -->
               <ng-template nodeHtml let-ctx>
@@ -1562,7 +1568,7 @@
                 <handle type="source" position="right" />
 
                 <div (click)="selectNodeByKey(ctx.data().stateKey)"
-                     class="canvas-node-card w-[260px] h-[110px] bg-white rounded-xl border p-3.5 shadow-xs hover:shadow-md transition cursor-pointer select-none group"
+                     class="canvas-node-card w-[240px] h-[105px] bg-white rounded-xl border p-3 shadow-xs hover:shadow-md transition cursor-pointer select-none group flex flex-col justify-between"
                      [ngClass]="{
                        'border-zinc-950 ring-2 ring-zinc-950 shadow-md bg-zinc-50/60': selectedNode()?.stateKey === ctx.data().stateKey,
                        'border-emerald-300 bg-emerald-50/20': ctx.data().isTerminal && !ctx.data().isRejectTerminal && selectedNode()?.stateKey !== ctx.data().stateKey,

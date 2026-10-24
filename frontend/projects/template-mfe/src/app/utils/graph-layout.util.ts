@@ -32,15 +32,15 @@ export function computeFlowLayout(rawNodes: DAGNode[]): {
     return { nodes: [], edges: [] };
   }
 
-  const NODE_WIDTH = 220;
-  const NODE_HEIGHT = 100;
+  const NODE_WIDTH = 240;
+  const NODE_HEIGHT = 105;
 
   const g = new dagre.graphlib.Graph();
   g.setGraph({
     rankdir: 'LR',
     align: 'UL',
-    nodesep: 45,
-    ranksep: 90,
+    nodesep: 50,
+    ranksep: 100,
     marginx: 40,
     marginy: 40
   });

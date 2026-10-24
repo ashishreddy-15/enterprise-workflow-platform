@@ -333,7 +333,7 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
         } else {
           this.selectedTemplate.set(null);
         }
-        this.resetZoom();
+        setTimeout(() => this.resetZoom(), 120);
       },
       error: (err: any) => {
         console.error('Failed to load templates:', err);
@@ -346,7 +346,7 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
   selectTemplate(tpl: WorkflowTemplate): void {
     this.selectedTemplate.set(tpl);
     this.selectedNode.set(null);
-    this.resetZoom();
+    setTimeout(() => this.resetZoom(), 100);
   }
 
   selectNode(node: DAGNode): void {
@@ -432,7 +432,7 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     this.isFullscreenCanvas.set(next);
     this.setScrollLock(next);
     if (next) {
-      setTimeout(() => this.resetZoom(), 60);
+      setTimeout(() => this.resetZoom(), 150);
     }
   }
 
@@ -462,7 +462,7 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
   resetZoom(): void {
     const activeFlow = this.isFullscreenCanvas() ? this.fullscreenVflow : this.previewVflow;
     if (activeFlow) {
-      activeFlow.fitView({ padding: 0.15 });
+      activeFlow.fitView({ padding: 0.2, duration: 250 });
       this.zoomLevel.set(activeFlow.viewport().zoom);
     } else {
       this.zoomLevel.set(1);
@@ -543,7 +543,7 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
 
   resetBuilderZoom(): void {
     if (this.builderVflow) {
-      this.builderVflow.fitView({ padding: 0.15 });
+      this.builderVflow.fitView({ padding: 0.2, duration: 250 });
       this.builderZoomLevel.set(this.builderVflow.viewport().zoom);
     } else {
       this.builderZoomLevel.set(1.0);
@@ -553,7 +553,7 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
 
   toggleStudioFullscreen(): void {
     this.isStudioFullscreen.update(f => !f);
-    setTimeout(() => this.resetBuilderZoom(), 50);
+    setTimeout(() => this.resetBuilderZoom(), 150);
   }
 
   @HostListener('window:mouseup')
@@ -601,7 +601,7 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     this.loadPreset('it-procurement');
     this.isCreateModalOpen.set(true);
     this.setScrollLock(true);
-    setTimeout(() => this.resetBuilderZoom(), 100);
+    setTimeout(() => this.resetBuilderZoom(), 150);
   }
 
   openEditDraft(target?: WorkflowTemplate): void {
@@ -613,9 +613,9 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     this.createError.set(null);
     this.isStudioFullscreen.set(true);
     this.applyTemplateToBuilder(tpl);
-    this.resetBuilderZoom();
     this.isCreateModalOpen.set(true);
     this.setScrollLock(true);
+    setTimeout(() => this.resetBuilderZoom(), 150);
   }
 
   openNewVersionDraft(target?: WorkflowTemplate): void {
@@ -627,9 +627,9 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     this.createError.set(null);
     this.isStudioFullscreen.set(true);
     this.applyTemplateToBuilder(tpl);
-    this.resetBuilderZoom();
     this.isCreateModalOpen.set(true);
     this.setScrollLock(true);
+    setTimeout(() => this.resetBuilderZoom(), 150);
   }
 
   closeCreateModal(): void {
@@ -644,7 +644,7 @@ export class TemplateDesignerComponent implements OnInit, OnDestroy {
     if (preset) {
       this.applyTemplateToBuilder(preset.template);
       this.createError.set(null);
-      this.resetBuilderZoom();
+      setTimeout(() => this.resetBuilderZoom(), 150);
     }
   }
 

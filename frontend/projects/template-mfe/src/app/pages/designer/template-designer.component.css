@@ -9,9 +9,13 @@ input[type="checkbox"] {
 
 /* Modern ngx-vflow Canvas Integration */
 ::ng-deep vflow {
-  width: 100%;
-  height: 100%;
-  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+::ng-deep .root-svg {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 /* Connection Handles Styling */
